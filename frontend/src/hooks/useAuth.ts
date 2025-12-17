@@ -133,6 +133,9 @@ export const useAuth = () => {
   const { data: user, isLoading, isFetching, error } = useQuery<UserPublic | null, Error>({
     queryKey: ["currentUser"],
     queryFn: async () => {
+      // Wait a bit for session to be ready (helps with race conditions)
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       // Always verify session before making API call
       const { data: { session: currentSession } } = await supabase.auth.getSession()
       if (!currentSession?.access_token) {
@@ -167,13 +170,25 @@ export const useAuth = () => {
             userDataRef.current = null
           }
           // Otherwise keep cached data - might be a temporary API issue
+          // Re-throw to trigger retry
+          throw error
         }
         
         // Return cached data if available, otherwise null
         return userDataRef.current
       }
     },
-    enabled: true, // Always enabled - we check session inside the function
+    enabled: hasSession, // Only enable when we have a session
+    // Retry logic for transient 403 errors
+    retry: (failureCount, error: any) => {
+      // Don't retry if it's a 403 and we've already tried 2 times
+      if (error?.status === 403 && failureCount >= 2) {
+        return false
+      }
+      // Retry up to 3 times for other errors
+      return failureCount < 3
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     // Use cached ref data as initial data to prevent null returns
     initialData: () => userDataRef.current,
     // Use select to always fall back to ref if query data is null
