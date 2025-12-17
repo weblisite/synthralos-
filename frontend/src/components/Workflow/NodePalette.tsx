@@ -144,16 +144,18 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
         if (response.ok) {
           const data = await response.json()
           const connectorsList = Array.isArray(data) ? data : (data.connectors || [])
-          // Filter to only stable/beta connectors for workflow builder
+          // Filter out deprecated connectors, show all others (draft, beta, stable)
           const activeConnectors = connectorsList.filter(
             (c: Connector & { status?: string }) =>
-              c.status === "stable" || c.status === "beta"
+              !c.status || c.status !== "deprecated"
           )
           setConnectors(activeConnectors)
+          console.log(`[NodePalette] Loaded ${activeConnectors.length} connectors`, activeConnectors.slice(0, 5))
+        } else {
+          console.error("[NodePalette] Failed to fetch connectors:", response.status, response.statusText)
         }
       } catch (error) {
-        console.error("Failed to fetch connectors:", error)
-      } finally {
+        console.error("[NodePalette] Failed to fetch connectors:", error)
         setIsConnectorsLoading(false)
       }
     }
