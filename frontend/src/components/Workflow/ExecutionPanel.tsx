@@ -398,24 +398,16 @@ export function ExecutionPanel({
       <div className="p-4 border-b space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Execution</h2>
-          <div className="flex gap-2">
-            {onClose && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+          {onClose && (
             <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setExecutionStatus(null)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         <div className="space-y-2">
