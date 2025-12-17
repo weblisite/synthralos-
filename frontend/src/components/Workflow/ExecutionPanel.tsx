@@ -42,6 +42,7 @@ interface ExecutionPanelProps {
   edges: Edge[]
   onExecutionStatusChange?: (status: ExecutionStatus) => void
   onNodeStatusChange?: (nodeId: string, status: string) => void
+  onClose?: () => void
 }
 
 export function ExecutionPanel({
