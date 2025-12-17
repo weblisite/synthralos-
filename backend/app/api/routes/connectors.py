@@ -144,12 +144,24 @@ def list_connectors(
         user_id=current_user.id,
     )
     
+    # Optimize: Load all versions in a single query to avoid N+1
+    connector_ids = [c.id for c in connectors]
+    latest_version_ids = [c.latest_version_id for c in connectors if c.latest_version_id]
+    
+    # Bulk load all versions in one query
+    versions_map = {}
+    if latest_version_ids:
+        versions = session.exec(
+            select(ConnectorVersion).where(ConnectorVersion.id.in_(latest_version_ids))
+        ).all()
+        versions_map = {v.id: v for v in versions}
+    
     result = []
     for connector in connectors:
-        # Get latest version info
+        # Get latest version from pre-loaded map
         latest_version = None
         if connector.latest_version_id:
-            latest_version = session.get(ConnectorVersion, connector.latest_version_id)
+            latest_version = versions_map.get(connector.latest_version_id)
         
         # Extract metadata from manifest
         manifest = latest_version.manifest if latest_version else {}

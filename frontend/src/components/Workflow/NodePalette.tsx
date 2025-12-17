@@ -123,7 +123,18 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
   const [isConnectorsExpanded, setIsConnectorsExpanded] = useState(false)
 
   useEffect(() => {
+    // Only fetch connectors when the section is expanded (lazy loading)
+    if (!isConnectorsExpanded) {
+      return
+    }
+
+    // If connectors are already loaded, don't fetch again
+    if (connectors.length > 0 && !isConnectorsLoading) {
+      return
+    }
+
     const fetchConnectors = async () => {
+      setIsConnectorsLoading(true)
       try {
         const {
           data: { session },
@@ -149,8 +160,9 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
             (c: Connector & { status?: string }) =>
               !c.status || c.status !== "deprecated"
           )
+          // Update connectors immediately to show progress
           setConnectors(activeConnectors)
-          console.log(`[NodePalette] Loaded ${activeConnectors.length} connectors`, activeConnectors.slice(0, 5))
+          console.log(`[NodePalette] Loaded ${activeConnectors.length} connectors`)
         } else {
           const errorText = await response.text()
           console.error("[NodePalette] Failed to fetch connectors:", response.status, response.statusText, errorText)
@@ -163,7 +175,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
     }
 
     fetchConnectors()
-  }, [])
+  }, [isConnectorsExpanded])
 
   const connectorNodes = useMemo(() => {
     return connectors.map((connector) => ({
@@ -279,8 +291,16 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
             <CollapsibleContent>
               <div className="space-y-1 mt-2">
                 {isConnectorsLoading ? (
-                  <div className="px-2 py-4 text-xs text-muted-foreground text-center">
-                    Loading connectors...
+                  <div className="px-2 py-4 text-xs text-muted-foreground text-center space-y-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="h-3 w-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                      <span>Loading connectors...</span>
+                    </div>
+                    {connectors.length > 0 && (
+                      <div className="text-xs text-muted-foreground/70">
+                        Loaded {connectors.length} so far...
+                      </div>
+                    )}
                   </div>
                 ) : connectorNodes.length === 0 ? (
                   <div className="px-2 py-4 text-xs text-muted-foreground text-center">
