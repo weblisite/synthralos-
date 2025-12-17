@@ -7,7 +7,6 @@ services:
     dockerContext: ./backend
     plan: starter  # Can be upgraded to standard, pro, etc.
     buildCommand: ""
-    startCommand: "/app/render-start.sh"
     healthCheckPath: /api/v1/utils/health-check
     envVars:
       - key: ENVIRONMENT
@@ -64,7 +63,6 @@ services:
     dockerContext: ./frontend
     plan: starter
     buildCommand: ""
-    startCommand: "nginx -g 'daemon off;'"
     envVars:
       - key: VITE_API_URL
         sync: false  # IMPORTANT: Set this to your backend URL after backend deploys (e.g., https://synthralos-backend.onrender.com/api/v1)
