@@ -4,17 +4,14 @@
  * Visual indicator overlay for node execution status.
  */
 
-import type { Node } from "@xyflow/react"
 import { CheckCircle2, Loader2, PauseCircle, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface NodeStatusIndicatorProps {
-  node: Node
   status: "idle" | "running" | "completed" | "failed" | "paused"
 }
 
 export function NodeStatusIndicator({
-  node,
   status,
 }: NodeStatusIndicatorProps) {
   if (status === "idle") {

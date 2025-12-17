@@ -7,7 +7,14 @@
 import { Handle, type NodeProps, Position } from "@xyflow/react"
 import { FileText } from "lucide-react"
 
-export function OCRSwitchNode({ data, selected }: NodeProps) {
+interface OCRSwitchNodeData extends Record<string, unknown> {
+  label?: string
+  config?: Record<string, any>
+}
+
+export function OCRSwitchNode(props: NodeProps) {
+  const { data, selected } = props
+  const nodeData = data as OCRSwitchNodeData
   return (
     <div
       className={`px-4 py-2 shadow-lg rounded-lg bg-gradient-to-br from-teal-50 to-emerald-50 border-2 min-w-[150px] ${
@@ -17,7 +24,7 @@ export function OCRSwitchNode({ data, selected }: NodeProps) {
       <div className="flex items-center gap-2">
         <FileText className="h-4 w-4 text-teal-600" />
         <div className="font-semibold text-sm">
-          {data.label || "OCR Switch"}
+          {nodeData.label || "OCR Switch"}
         </div>
       </div>
       <Handle type="target" position={Position.Left} className="w-3 h-3" />

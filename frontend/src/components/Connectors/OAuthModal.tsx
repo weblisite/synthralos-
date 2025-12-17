@@ -27,11 +27,11 @@ export function OAuthModal({
   connectorSlug,
   isOpen,
   onClose,
-  onSuccess,
+  onSuccess: _onSuccess,
 }: OAuthModalProps) {
   const [authUrl, setAuthUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { showErrorToast } = useCustomToast()
 
   useEffect(() => {
     if (isOpen && connectorSlug) {

@@ -10,7 +10,7 @@ import { useState } from "react"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { DataTable } from "@/components/Common/DataTable"
 import {
   Dialog,
@@ -23,7 +23,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -99,41 +98,6 @@ const createOCRJob = async (
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.detail || "Failed to create OCR job")
-  }
-
-  return response.json()
-}
-
-const createOCRJobFromUpload = async (
-  file: File,
-  engine?: string,
-): Promise<OCRJob> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to create OCR jobs")
-  }
-
-  const formData = new FormData()
-  formData.append("file", file)
-  formData.append("bucket", "ocr-documents")
-  if (engine) {
-    formData.append("engine", engine)
-  }
-
-  const response = await fetch("/api/v1/ocr/upload", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: formData,
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to create OCR job from upload")
   }
 
   return response.json()

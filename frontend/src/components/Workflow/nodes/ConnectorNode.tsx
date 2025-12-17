@@ -7,8 +7,19 @@
 import { Handle, type NodeProps, Position } from "@xyflow/react"
 import { Plug } from "lucide-react"
 
-export function ConnectorNode({ data, selected }: NodeProps) {
-  const connectorName = data.label || data.config?.connector_slug || "Connector"
+interface ConnectorNodeData extends Record<string, unknown> {
+  label?: string
+  config?: {
+    connector_slug?: string
+    action?: string
+    [key: string]: any
+  }
+}
+
+export function ConnectorNode(props: NodeProps) {
+  const { data, selected } = props
+  const nodeData = data as ConnectorNodeData
+  const connectorName = nodeData.label || nodeData.config?.connector_slug || "Connector"
   
   return (
     <div
@@ -20,9 +31,9 @@ export function ConnectorNode({ data, selected }: NodeProps) {
         <Plug className="h-4 w-4 text-green-600" />
         <div className="font-semibold text-sm">{connectorName}</div>
       </div>
-      {data.config?.action && (
+      {nodeData.config?.action && (
         <div className="text-xs text-muted-foreground mt-1">
-          {data.config.action}
+          {nodeData.config.action}
         </div>
       )}
       <Handle type="target" position={Position.Left} className="w-3 h-3" />

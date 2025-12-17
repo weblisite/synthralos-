@@ -224,8 +224,8 @@ class Settings(BaseSettings):
         return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
 
     EMAIL_TEST_USER: EmailStr = "test@synthralos.ai"
-    FIRST_SUPERUSER: EmailStr
-    FIRST_SUPERUSER_PASSWORD: str
+    FIRST_SUPERUSER: EmailStr | None = None
+    FIRST_SUPERUSER_PASSWORD: str = ""
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
@@ -247,9 +247,11 @@ class Settings(BaseSettings):
         # Check SUPABASE_DB_PASSWORD if using Supabase but not full URL
         if self.SUPABASE_URL and self.SUPABASE_DB_PASSWORD and not self.SUPABASE_DB_URL:
             self._check_default_secret("SUPABASE_DB_PASSWORD", self.SUPABASE_DB_PASSWORD)
-        self._check_default_secret(
-            "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
-        )
+        # Only check FIRST_SUPERUSER_PASSWORD if FIRST_SUPERUSER is set
+        if self.FIRST_SUPERUSER:
+            self._check_default_secret(
+                "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
+            )
 
         return self
 

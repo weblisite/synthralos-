@@ -99,12 +99,19 @@ function WorkflowsPage() {
         entry_node_id: nodes.find((n) => n.type === "trigger")?.id || null,
       }
 
+      interface TriggerConfig {
+        trigger_type?: string
+        cron_expression?: string
+        [key: string]: any
+      }
+
       const triggerConfig: Record<string, any> = {}
       const triggerNode = nodes.find((n) => n.type === "trigger")
       if (triggerNode?.data.config) {
-        triggerConfig.type = triggerNode.data.config.trigger_type || "manual"
-        if (triggerNode.data.config.cron_expression) {
-          triggerConfig.cron = triggerNode.data.config.cron_expression
+        const config = triggerNode.data.config as TriggerConfig
+        triggerConfig.type = config.trigger_type || "manual"
+        if (config.cron_expression) {
+          triggerConfig.cron = config.cron_expression
         }
       }
 

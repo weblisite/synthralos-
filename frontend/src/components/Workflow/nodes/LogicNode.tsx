@@ -7,7 +7,14 @@
 import { Handle, type NodeProps, Position } from "@xyflow/react"
 import { GitBranch } from "lucide-react"
 
-export function LogicNode({ data, selected }: NodeProps) {
+interface LogicNodeData extends Record<string, unknown> {
+  label?: string
+  config?: Record<string, any>
+}
+
+export function LogicNode(props: NodeProps) {
+  const { data, selected } = props
+  const nodeData = data as LogicNodeData
   return (
     <div
       className={`px-4 py-2 shadow-lg rounded-lg bg-gradient-to-br from-indigo-50 to-violet-50 border-2 min-w-[150px] ${
@@ -16,7 +23,7 @@ export function LogicNode({ data, selected }: NodeProps) {
     >
       <div className="flex items-center gap-2">
         <GitBranch className="h-4 w-4 text-indigo-600" />
-        <div className="font-semibold text-sm">{data.label || "Logic"}</div>
+        <div className="font-semibold text-sm">{nodeData.label || "Logic"}</div>
       </div>
       <Handle type="target" position={Position.Left} className="w-3 h-3" />
       <Handle

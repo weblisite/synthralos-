@@ -137,10 +137,12 @@ EMAILS_FROM_NAME=SynthralOS
 EMAIL_RESET_TOKEN_EXPIRE_HOURS=48
 ```
 
-### Initial User Configuration
+### Initial User Configuration (Optional)
 ```bash
-FIRST_SUPERUSER=admin@synthralos.ai
-FIRST_SUPERUSER_PASSWORD=changethis  # Change this in production
+# Optional: Create first superuser on database initialization
+# If not set, you can create admins via the promotion script or admin panel
+# FIRST_SUPERUSER=admin@synthralos.ai
+# FIRST_SUPERUSER_PASSWORD=changethis  # Change this in production
 ```
 
 ### WebSocket Configuration

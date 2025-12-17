@@ -20,6 +20,31 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { MonacoEditor } from "@/components/Common/MonacoEditor"
 
+interface NodeConfig {
+  trigger_type?: string
+  cron_expression?: string
+  prompt?: string
+  model?: string
+  connector_slug?: string
+  action?: string
+  language?: string
+  code?: string
+  runtime?: string
+  expression?: string
+  method?: string
+  url?: string
+  headers?: Record<string, string>
+  body?: string
+  index_id?: string
+  query_requirements?: Record<string, any>
+  document_url?: string
+  engine?: string
+  selectors?: string[]
+  action_type?: string
+  action_data?: Record<string, any>
+  [key: string]: any
+}
+
 interface NodeConfigPanelProps {
   node: Node | null
   onClose: () => void
@@ -31,7 +56,7 @@ export function NodeConfigPanel({
   onClose,
   onUpdate,
 }: NodeConfigPanelProps) {
-  const config = useMemo(() => node?.data?.config || {}, [node])
+  const config: NodeConfig = useMemo(() => (node?.data?.config || {}) as NodeConfig, [node])
 
   if (!node) {
     return null
@@ -70,7 +95,7 @@ export function NodeConfigPanel({
           <Label htmlFor="node-label">Label</Label>
           <Input
             id="node-label"
-            value={node.data.label || ""}
+            value={(node.data.label as string) || ""}
             onChange={(e) => handleLabelUpdate(e.target.value)}
             placeholder="Node label"
           />

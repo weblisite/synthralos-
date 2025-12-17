@@ -10,11 +10,9 @@ import {
   Bot,
   Code,
   Database,
-  Eye,
   FileText,
   Globe,
   Plug,
-  Search,
   Workflow,
   Zap,
 } from "lucide-react"
@@ -115,7 +113,6 @@ const StatCard = ({
   value,
   subtitle,
   icon: Icon,
-  trend,
 }: {
   title: string
   value: string | number

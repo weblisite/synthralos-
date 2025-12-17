@@ -33,6 +33,11 @@ interface ExecutionStatus {
   current_node_id: string | null
   retry_count: number
   next_retry_at: string | null
+  execution_state?: {
+    completed_node_ids?: string[]
+    node_results?: Record<string, any>
+    [key: string]: any
+  }
 }
 
 interface ExecutionPanelProps {
@@ -46,10 +51,8 @@ interface ExecutionPanelProps {
 }
 
 export function ExecutionPanel({
-  workflowId,
   executionId,
   nodes,
-  edges,
   onExecutionStatusChange,
   onNodeStatusChange,
   onClose,
@@ -547,7 +550,7 @@ export function ExecutionPanel({
                 </p>
               ) : (
                 executionStatus.execution_state?.completed_node_ids?.map(
-                  (nodeId) => {
+                  (nodeId: string) => {
                     const nodeResult =
                       executionStatus.execution_state?.node_results?.[nodeId]
                     return (

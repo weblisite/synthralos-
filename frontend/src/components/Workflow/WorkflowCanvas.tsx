@@ -17,7 +17,6 @@ import {
   type NodeChange,
   type NodeMouseHandler,
   type NodeTypes,
-  type PaneMouseHandler,
   ReactFlow,
 } from "@xyflow/react"
 import { useCallback } from "react"
@@ -55,7 +54,7 @@ interface WorkflowCanvasProps {
   onEdgesChange: (edges: Edge[]) => void
   onConnect: (connection: Connection) => void
   onNodeClick?: NodeMouseHandler
-  onPaneClick?: PaneMouseHandler
+  onPaneClick?: (event: React.MouseEvent) => void
   readonly?: boolean
 }
 
@@ -132,7 +131,6 @@ export function WorkflowCanvas({
             type: "smoothstep",
             animated: true,
           }}
-          connectionLineType="smoothstep"
           nodesDraggable={!readonly}
           nodesConnectable={!readonly}
           elementsSelectable={!readonly}

@@ -5,7 +5,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Database, FileText, Plus, Search, Trash2, Loader2 } from "lucide-react"
+import { Database, FileText, Plus, Search, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
@@ -36,7 +36,6 @@ import {
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
 import { supabase } from "@/lib/supabase"
-import { FileUpload } from "@/components/Storage/FileUpload"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface RAGIndex {
@@ -168,6 +167,38 @@ const addDocumentToIndex = async (
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.detail || "Failed to add document")
+  }
+}
+
+const uploadDocumentToIndex = async (
+  indexId: string,
+  file: File,
+  metadata: Record<string, any>,
+): Promise<void> => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) {
+    throw new Error("You must be logged in to upload documents")
+  }
+
+  const formData = new FormData()
+  formData.append("index_id", indexId)
+  formData.append("file", file)
+  formData.append("metadata", JSON.stringify(metadata))
+
+  const response = await fetch("/api/v1/rag/document/upload", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || "Failed to upload document")
   }
 }
 
