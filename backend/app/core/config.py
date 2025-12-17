@@ -1,6 +1,7 @@
 import secrets
 import warnings
 from typing import Annotated, Any, Literal
+from urllib.parse import urlparse
 
 from pydantic import (
     AnyUrl,
@@ -50,14 +51,23 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
-    POSTGRES_SERVER: str
+    # Legacy PostgreSQL Configuration (optional - for backward compatibility)
+    # If SUPABASE_DB_URL is set, these will be ignored
+    POSTGRES_SERVER: str = ""
     POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str
+    POSTGRES_USER: str = ""
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
     # Supabase Configuration
     SUPABASE_URL: str = ""
     SUPABASE_ANON_KEY: str = ""
+    # Supabase Database Configuration (preferred)
+    # Option 1: Full connection string (recommended)
+    # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+    SUPABASE_DB_URL: str = ""
+    # Option 2: Database password (will build connection from SUPABASE_URL)
+    # If SUPABASE_DB_URL is not set, will use this to construct connection string
+    SUPABASE_DB_PASSWORD: str = ""
     
     # Workflow Engine Configuration
     WORKFLOW_WORKER_CONCURRENCY: int = 10
@@ -126,6 +136,62 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
+        """
+        Build database URI from Supabase or legacy PostgreSQL config.
+        
+        Priority:
+        1. SUPABASE_DB_URL (full connection string) - preferred
+        2. Build from SUPABASE_URL + SUPABASE_DB_PASSWORD - if Supabase configured
+        3. Legacy POSTGRES_* variables - for backward compatibility
+        """
+        # Option 1: Use Supabase full connection string if provided
+        if self.SUPABASE_DB_URL:
+            # Parse the connection string and convert to PostgresDsn
+            # Supabase connection strings are typically:
+            # postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+            # or: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
+            try:
+                return PostgresDsn(str(self.SUPABASE_DB_URL))
+            except Exception:
+                # If parsing fails, try to convert postgresql:// to postgresql+psycopg://
+                db_url = str(self.SUPABASE_DB_URL)
+                if db_url.startswith("postgresql://"):
+                    db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+                return PostgresDsn(db_url)
+        
+        # Option 2: Build from Supabase URL and password
+        if self.SUPABASE_URL and self.SUPABASE_DB_PASSWORD:
+            # Extract project reference from SUPABASE_URL
+            # Format: https://[PROJECT_REF].supabase.co
+            try:
+                parsed = urlparse(self.SUPABASE_URL)
+                project_ref = parsed.netloc.split(".")[0] if parsed.netloc else ""
+                
+                if project_ref:
+                    # Use Supabase connection pooler (recommended for serverless)
+                    # Port 6543 is the pooler, 5432 is direct connection
+                    # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+                    # For simplicity, we'll use the direct connection format
+                    # You can get the exact connection string from Supabase dashboard
+                    host = f"db.{project_ref}.supabase.co"
+                    return PostgresDsn.build(
+                        scheme="postgresql+psycopg",
+                        username="postgres",
+                        password=self.SUPABASE_DB_PASSWORD,
+                        host=host,
+                        port=5432,
+                        path="postgres",
+                    )
+            except Exception as e:
+                warnings.warn(f"Failed to build Supabase connection string: {e}. Falling back to legacy config.")
+        
+        # Option 3: Legacy PostgreSQL configuration (backward compatibility)
+        if not self.POSTGRES_SERVER:
+            raise ValueError(
+                "Database configuration required. Set either SUPABASE_DB_URL, "
+                "or SUPABASE_URL + SUPABASE_DB_PASSWORD, or legacy POSTGRES_* variables."
+            )
+        
         return PostgresDsn.build(
             scheme="postgresql+psycopg",
             username=self.POSTGRES_USER,
@@ -175,7 +241,12 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
-        self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
+        # Only check POSTGRES_PASSWORD if using legacy config
+        if self.POSTGRES_SERVER and not self.SUPABASE_DB_URL:
+            self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
+        # Check SUPABASE_DB_PASSWORD if using Supabase but not full URL
+        if self.SUPABASE_URL and self.SUPABASE_DB_PASSWORD and not self.SUPABASE_DB_URL:
+            self._check_default_secret("SUPABASE_DB_PASSWORD", self.SUPABASE_DB_PASSWORD)
         self._check_default_secret(
             "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
         )

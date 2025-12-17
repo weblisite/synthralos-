@@ -19,30 +19,17 @@ services:
         generateValue: true
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "11520"  # 8 days
-      - key: POSTGRES_SERVER
-        fromDatabase:
-          name: synthralos-db
-          property: host
-      - key: POSTGRES_PORT
-        fromDatabase:
-          name: synthralos-db
-          property: port
-      - key: POSTGRES_USER
-        fromDatabase:
-          name: synthralos-db
-          property: user
-      - key: POSTGRES_PASSWORD
-        fromDatabase:
-          name: synthralos-db
-          property: password
-      - key: POSTGRES_DB
-        fromDatabase:
-          name: synthralos-db
-          property: database
+      # Supabase Configuration (Database, Auth, Storage)
       - key: SUPABASE_URL
-        sync: false  # Set manually in Render dashboard
+        sync: false  # Set manually in Render dashboard: https://[PROJECT_REF].supabase.co
       - key: SUPABASE_ANON_KEY
-        sync: false  # Set manually in Render dashboard
+        sync: false  # Set manually in Render dashboard: Get from Supabase Settings > API
+      - key: SUPABASE_DB_URL
+        sync: false  # Set manually: Get from Supabase Settings > Database > Connection string (use pooler for serverless)
+        # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+      # Alternative: Use SUPABASE_DB_PASSWORD instead of SUPABASE_DB_URL
+      # - key: SUPABASE_DB_PASSWORD
+      #   sync: false  # Set manually: Get from Supabase Settings > Database > Database password
       - key: FRONTEND_HOST
         sync: false  # Will be set to frontend URL after deployment
       - key: BACKEND_CORS_ORIGINS
@@ -67,10 +54,5 @@ services:
       - key: VITE_API_URL
         sync: false  # IMPORTANT: Set this to your backend URL after backend deploys (e.g., https://synthralos-backend.onrender.com/api/v1)
 
-databases:
-  # PostgreSQL Database
-  - name: synthralos-db
-    plan: free  # Free tier (512MB storage), can be upgraded to standard/pro later
-    databaseName: synthralos
-    user: synthralos_user
+# No database needed - using Supabase for database, auth, and storage
 

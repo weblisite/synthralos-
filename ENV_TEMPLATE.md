@@ -39,19 +39,30 @@ SECRET_KEY=changethis  # Generate a secure random key for production
 ACCESS_TOKEN_EXPIRE_MINUTES=11520  # 8 days
 ```
 
-### Database Configuration (PostgreSQL)
+### Supabase Configuration (Database, Auth, Storage)
 ```bash
-POSTGRES_SERVER=db
-POSTGRES_PORT=5432
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=changethis  # Change this in production
-POSTGRES_DB=app
-```
-
-### Supabase Configuration
-```bash
-SUPABASE_URL=https://your-project.supabase.co
+# Supabase Project URL (for Auth API)
+SUPABASE_URL=https://your-project-ref.supabase.co
+# Supabase Anon Key (for Auth API)
 SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# Supabase Database Connection (choose one option)
+# Option 1: Full connection string (recommended for production)
+# Get from: Supabase Dashboard > Settings > Database > Connection string
+# Use the "Connection pooling" option for serverless environments (port 6543)
+SUPABASE_DB_URL=postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+
+# Option 2: Database password only (will build connection from SUPABASE_URL)
+# Get from: Supabase Dashboard > Settings > Database > Database password
+# SUPABASE_DB_PASSWORD=your-database-password
+
+# Legacy PostgreSQL Configuration (optional - only if not using Supabase)
+# These are ignored if SUPABASE_DB_URL or SUPABASE_DB_PASSWORD is set
+# POSTGRES_SERVER=db
+# POSTGRES_PORT=5432
+# POSTGRES_USER=postgres
+# POSTGRES_PASSWORD=changethis
+# POSTGRES_DB=app
 ```
 
 ### Redis Configuration
