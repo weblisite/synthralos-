@@ -153,22 +153,20 @@ export function WorkflowBuilder({
       >
         {/* Canvas Header with Execution Details Button */}
         <div className="absolute top-2 right-2 z-10 flex gap-2">
-          {(executionId || showExecutionPanel) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setShowExecutionPanel(!showExecutionPanel)
-                if (showExecutionPanel) {
-                  onNodeSelect(null) // Close node config if open
-                }
-              }}
-              className="bg-background/80 backdrop-blur-sm"
-            >
-              <Activity className="h-4 w-4 mr-2" />
-              {showExecutionPanel ? "Hide" : "Show"} Execution Details
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setShowExecutionPanel(!showExecutionPanel)
+              if (showExecutionPanel) {
+                onNodeSelect(null) // Close node config if open
+              }
+            }}
+            className="bg-background/80 backdrop-blur-sm"
+          >
+            <Activity className="h-4 w-4 mr-2" />
+            {showExecutionPanel ? "Hide" : "Show"} Execution Details
+          </Button>
         </div>
         <WorkflowCanvas
           initialNodes={nodesWithStatus}
@@ -202,6 +200,7 @@ export function WorkflowBuilder({
             edges={edges}
             onExecutionStatusChange={handleExecutionStatusChange}
             onNodeStatusChange={handleNodeStatusChange}
+            onClose={() => setShowExecutionPanel(false)}
           />
         </div>
       )}

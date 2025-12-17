@@ -51,6 +51,7 @@ export function ExecutionPanel({
   edges,
   onExecutionStatusChange,
   onNodeStatusChange,
+  onClose,
 }: ExecutionPanelProps) {
   const [executionStatus, setExecutionStatus] =
     useState<ExecutionStatus | null>(null)
@@ -396,7 +397,18 @@ export function ExecutionPanel({
       <div className="p-4 border-b space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Execution</h2>
-          <Button
+          <div className="flex gap-2">
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
             variant="ghost"
             size="icon"
             onClick={() => setExecutionStatus(null)}
