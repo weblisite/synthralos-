@@ -21,7 +21,6 @@ import { Route as LayoutScrapingRouteImport } from './routes/_layout/scraping'
 import { Route as LayoutRagRouteImport } from './routes/_layout/rag'
 import { Route as LayoutOsintRouteImport } from './routes/_layout/osint'
 import { Route as LayoutOcrRouteImport } from './routes/_layout/ocr'
-import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutConnectorsRouteImport } from './routes/_layout/connectors'
 import { Route as LayoutCodeRouteImport } from './routes/_layout/code'
 import { Route as LayoutChatRouteImport } from './routes/_layout/chat'
@@ -88,11 +87,6 @@ const LayoutOcrRoute = LayoutOcrRouteImport.update({
   path: '/ocr',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutItemsRoute = LayoutItemsRouteImport.update({
-  id: '/items',
-  path: '/items',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutConnectorsRoute = LayoutConnectorsRouteImport.update({
   id: '/connectors',
   path: '/connectors',
@@ -135,7 +129,6 @@ export interface FileRoutesByFullPath {
   '/chat': typeof LayoutChatRoute
   '/code': typeof LayoutCodeRoute
   '/connectors': typeof LayoutConnectorsRoute
-  '/items': typeof LayoutItemsRoute
   '/ocr': typeof LayoutOcrRoute
   '/osint': typeof LayoutOsintRoute
   '/rag': typeof LayoutRagRoute
@@ -155,7 +148,6 @@ export interface FileRoutesByTo {
   '/chat': typeof LayoutChatRoute
   '/code': typeof LayoutCodeRoute
   '/connectors': typeof LayoutConnectorsRoute
-  '/items': typeof LayoutItemsRoute
   '/ocr': typeof LayoutOcrRoute
   '/osint': typeof LayoutOsintRoute
   '/rag': typeof LayoutRagRoute
@@ -177,7 +169,6 @@ export interface FileRoutesById {
   '/_layout/chat': typeof LayoutChatRoute
   '/_layout/code': typeof LayoutCodeRoute
   '/_layout/connectors': typeof LayoutConnectorsRoute
-  '/_layout/items': typeof LayoutItemsRoute
   '/_layout/ocr': typeof LayoutOcrRoute
   '/_layout/osint': typeof LayoutOsintRoute
   '/_layout/rag': typeof LayoutRagRoute
@@ -199,7 +190,6 @@ export interface FileRouteTypes {
     | '/chat'
     | '/code'
     | '/connectors'
-    | '/items'
     | '/ocr'
     | '/osint'
     | '/rag'
@@ -219,7 +209,6 @@ export interface FileRouteTypes {
     | '/chat'
     | '/code'
     | '/connectors'
-    | '/items'
     | '/ocr'
     | '/osint'
     | '/rag'
@@ -240,7 +229,6 @@ export interface FileRouteTypes {
     | '/_layout/chat'
     | '/_layout/code'
     | '/_layout/connectors'
-    | '/_layout/items'
     | '/_layout/ocr'
     | '/_layout/osint'
     | '/_layout/rag'
@@ -344,13 +332,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutOcrRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/items': {
-      id: '/_layout/items'
-      path: '/items'
-      fullPath: '/items'
-      preLoaderRoute: typeof LayoutItemsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/connectors': {
       id: '/_layout/connectors'
       path: '/connectors'
@@ -403,7 +384,6 @@ interface LayoutRouteChildren {
   LayoutChatRoute: typeof LayoutChatRoute
   LayoutCodeRoute: typeof LayoutCodeRoute
   LayoutConnectorsRoute: typeof LayoutConnectorsRoute
-  LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutOcrRoute: typeof LayoutOcrRoute
   LayoutOsintRoute: typeof LayoutOsintRoute
   LayoutRagRoute: typeof LayoutRagRoute
@@ -420,7 +400,6 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutChatRoute: LayoutChatRoute,
   LayoutCodeRoute: LayoutCodeRoute,
   LayoutConnectorsRoute: LayoutConnectorsRoute,
-  LayoutItemsRoute: LayoutItemsRoute,
   LayoutOcrRoute: LayoutOcrRoute,
   LayoutOsintRoute: LayoutOsintRoute,
   LayoutRagRoute: LayoutRagRoute,

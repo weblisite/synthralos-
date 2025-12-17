@@ -1,4 +1,4 @@
-import { Bot, Briefcase, Code, Database, Globe, Home, MessageSquare, Monitor, Plug, ScrollText, Search, Users, Workflow } from "lucide-react"
+import { Bot, Code, Database, Globe, Home, MessageSquare, Monitor, Plug, ScrollText, Search, Users, Workflow } from "lucide-react"
 import * as React from "react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
@@ -15,7 +15,6 @@ import { User } from "./User"
 
 const baseItems: Item[] = [
   { icon: Home, title: "Dashboard", path: "/" },
-  { icon: Briefcase, title: "Items", path: "/items" },
   { icon: Workflow, title: "Workflows", path: "/workflows" },
   { icon: Plug, title: "Connectors", path: "/connectors" },
   { icon: Bot, title: "Agents", path: "/agents" },
