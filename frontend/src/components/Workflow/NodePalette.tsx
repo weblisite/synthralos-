@@ -152,10 +152,12 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
           setConnectors(activeConnectors)
           console.log(`[NodePalette] Loaded ${activeConnectors.length} connectors`, activeConnectors.slice(0, 5))
         } else {
-          console.error("[NodePalette] Failed to fetch connectors:", response.status, response.statusText)
+          const errorText = await response.text()
+          console.error("[NodePalette] Failed to fetch connectors:", response.status, response.statusText, errorText)
         }
       } catch (error) {
         console.error("[NodePalette] Failed to fetch connectors:", error)
+      } finally {
         setIsConnectorsLoading(false)
       }
     }
