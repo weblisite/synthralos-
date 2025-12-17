@@ -162,7 +162,7 @@ function WorkflowsPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
-      <div className="p-4 border-b space-y-4 flex-shrink-0">
+      <div className="p-4 space-y-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Workflow Builder</h1>

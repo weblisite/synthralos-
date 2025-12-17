@@ -130,11 +130,17 @@ export function WorkflowCanvas({
         nodesDraggable={!readonly}
         nodesConnectable={!readonly}
         elementsSelectable={!readonly}
+        proOptions={{ hideAttribution: true }}
       >
         <Background />
         <Controls />
         <MiniMap />
       </ReactFlow>
+      <style>{`
+        .react-flow__attribution {
+          display: none !important;
+        }
+      `}</style>
     </div>
   )
 }
