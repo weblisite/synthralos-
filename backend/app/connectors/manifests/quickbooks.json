@@ -1,0 +1,27 @@
+{
+  "name": "QuickBooks",
+  "slug": "quickbooks",
+  "version": "1.0.0",
+  "description": "Accounting software",
+  "category": "E-commerce & Payments",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "quickbooks"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/quickbooks",
+    "token_url": "https://api.nango.dev/oauth/quickbooks/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

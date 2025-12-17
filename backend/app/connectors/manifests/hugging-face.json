@@ -1,0 +1,27 @@
+{
+  "name": "Hugging Face",
+  "slug": "hugging-face",
+  "version": "1.0.0",
+  "description": "ML model hosting",
+  "category": "AI & Machine Learning",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "huggingface"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/huggingface",
+    "token_url": "https://api.nango.dev/oauth/huggingface/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

@@ -1,0 +1,27 @@
+{
+  "name": "Discord",
+  "slug": "discord",
+  "version": "1.0.0",
+  "description": "Send messages and manage Discord servers",
+  "category": "Communication & Collaboration",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "discord"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/discord",
+    "token_url": "https://api.nango.dev/oauth/discord/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

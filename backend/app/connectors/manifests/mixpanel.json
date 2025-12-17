@@ -1,0 +1,27 @@
+{
+  "name": "Mixpanel",
+  "slug": "mixpanel",
+  "version": "1.0.0",
+  "description": "Product analytics",
+  "category": "Analytics & Data",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "mixpanel"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/mixpanel",
+    "token_url": "https://api.nango.dev/oauth/mixpanel/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

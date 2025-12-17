@@ -1,0 +1,27 @@
+{
+  "name": "Telegram",
+  "slug": "telegram",
+  "version": "1.0.0",
+  "description": "Send Telegram messages",
+  "category": "Communication & Collaboration",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "telegram"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/telegram",
+    "token_url": "https://api.nango.dev/oauth/telegram/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

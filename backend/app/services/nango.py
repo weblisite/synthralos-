@@ -1,0 +1,335 @@
+"""
+Nango Integration Service
+
+Handles OAuth flows via Nango for connector authentication.
+Nango provides unified OAuth management for 100+ SaaS integrations.
+"""
+
+import uuid
+from typing import Any
+
+import httpx
+from sqlmodel import Session
+
+from app.core.config import settings
+
+
+class NangoError(Exception):
+    """Base exception for Nango errors."""
+    pass
+
+
+class NangoService:
+    """
+    Nango service for unified OAuth management.
+    
+    Handles:
+    - OAuth authorization URL generation via Nango
+    - OAuth callback processing via Nango
+    - Token retrieval from Nango
+    - Token refresh via Nango
+    """
+    
+    def __init__(self):
+        """Initialize Nango service."""
+        self.base_url = settings.NANGO_URL.rstrip("/")
+        self.secret_key = settings.NANGO_SECRET_KEY
+        self.enabled = settings.NANGO_ENABLED and bool(self.secret_key)
+        self._registry = None  # Lazy load to avoid circular import
+    
+    def _get_registry(self):
+        """Get connector registry (lazy import to avoid circular dependency)."""
+        if self._registry is None:
+            from app.connectors.registry import default_connector_registry
+            self._registry = default_connector_registry
+        return self._registry
+    
+    def _get_headers(self) -> dict[str, str]:
+        """Get Nango API headers."""
+        return {
+            "Authorization": f"Bearer {self.secret_key}",
+            "Content-Type": "application/json",
+        }
+    
+    def generate_authorization_url(
+        self,
+        session: Session,
+        connector_slug: str,
+        user_id: uuid.UUID,
+        redirect_uri: str,
+        scopes: list[str] | None = None,
+    ) -> dict[str, str]:
+        """
+        Generate OAuth authorization URL via Nango.
+        
+        Args:
+            session: Database session
+            connector_slug: Connector slug (must match Nango provider key)
+            user_id: User ID requesting authorization
+            redirect_uri: Callback redirect URI
+            scopes: Optional list of OAuth scopes
+            
+        Returns:
+            Dictionary with 'authorization_url', 'state', and 'connection_id'
+            
+        Raises:
+            NangoError: If Nango request fails
+        """
+        if not self.enabled:
+            raise NangoError("Nango integration is not enabled or configured")
+        
+        # Get connector to verify it exists
+        try:
+            from app.connectors.registry import ConnectorNotFoundError
+            connector_version = self._get_registry().get_connector(session, connector_slug)
+        except ConnectorNotFoundError:
+            raise NangoError(f"Connector '{connector_slug}' not found")
+        
+        # Get Nango provider key from manifest (defaults to slug)
+        manifest = connector_version.manifest
+        nango_config = manifest.get("nango", {})
+        provider_key = nango_config.get("provider_key", connector_slug)
+        
+        # Prepare Nango authorization request
+        # Nango uses connection_id to identify unique user connections
+        connection_id = f"{user_id}_{connector_slug}"
+        
+        # Map scopes if provided in manifest
+        requested_scopes = scopes or []
+        if not requested_scopes:
+            # Get default scopes from manifest
+            oauth_config = manifest.get("oauth", {})
+            requested_scopes = oauth_config.get("default_scopes", [])
+        
+        # Build Nango authorization URL
+        # Format: {NANGO_URL}/oauth/{provider_key}?connection_id={connection_id}&redirect_uri={redirect_uri}
+        params = {
+            "connection_id": connection_id,
+            "redirect_uri": redirect_uri,
+        }
+        
+        if requested_scopes:
+            params["scopes"] = ",".join(requested_scopes)
+        
+        from urllib.parse import urlencode
+        auth_url = f"{self.base_url}/oauth/{provider_key}?{urlencode(params)}"
+        
+        # Generate state token for CSRF protection
+        import secrets
+        state_token = secrets.token_urlsafe(32)
+        
+        return {
+            "authorization_url": auth_url,
+            "state": state_token,
+            "connection_id": connection_id,
+        }
+    
+    def handle_callback(
+        self,
+        session: Session,
+        connector_slug: str,
+        user_id: uuid.UUID,
+        connection_id: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Handle OAuth callback and retrieve tokens from Nango.
+        
+        Args:
+            session: Database session
+            connector_slug: Connector slug
+            user_id: User ID
+            connection_id: Nango connection ID (if not provided, constructs from user_id and slug)
+            
+        Returns:
+            Dictionary with authorization result including tokens
+            
+        Raises:
+            NangoError: If token retrieval fails
+        """
+        if not self.enabled:
+            raise NangoError("Nango integration is not enabled or configured")
+        
+        # Get connector
+        try:
+            from app.connectors.registry import ConnectorNotFoundError
+            connector_version = self._get_registry().get_connector(session, connector_slug)
+        except ConnectorNotFoundError:
+            raise NangoError(f"Connector '{connector_slug}' not found")
+        
+        # Get Nango provider key
+        manifest = connector_version.manifest
+        nango_config = manifest.get("nango", {})
+        provider_key = nango_config.get("provider_key", connector_slug)
+        
+        # Construct connection_id if not provided
+        if not connection_id:
+            connection_id = f"{user_id}_{connector_slug}"
+        
+        # Retrieve connection/tokens from Nango
+        try:
+            with httpx.Client(timeout=30.0) as client:
+                response = client.get(
+                    f"{self.base_url}/connection/{connection_id}",
+                    headers=self._get_headers(),
+                )
+                response.raise_for_status()
+                connection_data = response.json()
+                
+                # Extract tokens from Nango response
+                # Nango returns connection data with credentials
+                credentials = connection_data.get("credentials", {})
+                
+                tokens = {
+                    "access_token": credentials.get("access_token"),
+                    "refresh_token": credentials.get("refresh_token"),
+                    "expires_at": credentials.get("expires_at"),
+                    "token_type": credentials.get("token_type", "Bearer"),
+                }
+                
+                # Calculate expires_in if expires_at is provided
+                if tokens.get("expires_at"):
+                    from datetime import datetime
+                    try:
+                        expires_at = datetime.fromisoformat(
+                            tokens["expires_at"].replace("Z", "+00:00")
+                        )
+                        expires_in = int(
+                            (expires_at - datetime.utcnow().replace(tzinfo=None)).total_seconds()
+                        )
+                        tokens["expires_in"] = max(0, expires_in)
+                    except (ValueError, AttributeError):
+                        # If parsing fails, set a default or skip
+                        tokens["expires_in"] = None
+                
+                return {
+                    "success": True,
+                    "connector_slug": connector_slug,
+                    "user_id": str(user_id),
+                    "connection_id": connection_id,
+                    "tokens": tokens,
+                }
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise NangoError(f"Connection '{connection_id}' not found in Nango")
+            raise NangoError(f"Failed to retrieve connection from Nango: {e.response.text}")
+        except httpx.HTTPError as e:
+            raise NangoError(f"Failed to retrieve connection from Nango: {e}")
+    
+    def get_tokens(
+        self,
+        connector_slug: str,
+        user_id: uuid.UUID,
+        connection_id: str | None = None,
+    ) -> dict[str, Any] | None:
+        """
+        Retrieve OAuth tokens from Nango.
+        
+        Args:
+            connector_slug: Connector slug
+            user_id: User ID
+            connection_id: Nango connection ID (optional)
+            
+        Returns:
+            Token dictionary or None if not found
+        """
+        if not self.enabled:
+            return None
+        
+        try:
+            # Get connector to find provider key
+            connector_version = self._get_registry().get_connector(
+                session=None,  # We don't need DB for this
+                slug=connector_slug,
+            )
+            manifest = connector_version.manifest
+            nango_config = manifest.get("nango", {})
+            
+            if not nango_config.get("enabled", False):
+                return None
+            
+            if not connection_id:
+                connection_id = f"{user_id}_{connector_slug}"
+            
+            with httpx.Client(timeout=30.0) as client:
+                response = client.get(
+                    f"{self.base_url}/connection/{connection_id}",
+                    headers=self._get_headers(),
+                )
+                response.raise_for_status()
+                connection_data = response.json()
+                
+                credentials = connection_data.get("credentials", {})
+                if not credentials.get("access_token"):
+                    return None
+                
+                return {
+                    "access_token": credentials.get("access_token"),
+                    "refresh_token": credentials.get("refresh_token"),
+                    "expires_at": credentials.get("expires_at"),
+                    "token_type": credentials.get("token_type", "Bearer"),
+                }
+        except Exception:
+            return None
+    
+    def refresh_tokens(
+        self,
+        connector_slug: str,
+        user_id: uuid.UUID,
+        connection_id: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Refresh OAuth tokens via Nango.
+        
+        Args:
+            connector_slug: Connector slug
+            user_id: User ID
+            connection_id: Nango connection ID (optional)
+            
+        Returns:
+            New token dictionary
+            
+        Raises:
+            NangoError: If refresh fails
+        """
+        if not self.enabled:
+            raise NangoError("Nango integration is not enabled or configured")
+        
+        try:
+            connector_version = self._get_registry().get_connector(
+                session=None,
+                slug=connector_slug,
+            )
+            manifest = connector_version.manifest
+            nango_config = manifest.get("nango", {})
+            provider_key = nango_config.get("provider_key", connector_slug)
+            
+            if not connection_id:
+                connection_id = f"{user_id}_{connector_slug}"
+            
+            # Nango automatically refreshes tokens, but we can trigger a refresh
+            with httpx.Client(timeout=30.0) as client:
+                response = client.post(
+                    f"{self.base_url}/connection/{connection_id}/refresh",
+                    headers=self._get_headers(),
+                )
+                response.raise_for_status()
+                connection_data = response.json()
+                
+                credentials = connection_data.get("credentials", {})
+                return {
+                    "access_token": credentials.get("access_token"),
+                    "refresh_token": credentials.get("refresh_token"),
+                    "expires_at": credentials.get("expires_at"),
+                    "token_type": credentials.get("token_type", "Bearer"),
+                }
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise NangoError(f"Connection '{connection_id}' not found in Nango")
+            raise NangoError(f"Failed to refresh tokens via Nango: {e.response.text}")
+        except httpx.HTTPError as e:
+            raise NangoError(f"Failed to refresh tokens via Nango: {e}")
+
+
+# Default Nango service instance
+default_nango_service = NangoService()
+

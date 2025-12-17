@@ -1,0 +1,27 @@
+{
+  "name": "HubSpot",
+  "slug": "hubspot",
+  "version": "1.0.0",
+  "description": "Marketing, sales, and service platform",
+  "category": "CRM & Sales",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "hubspot"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/hubspot",
+    "token_url": "https://api.nango.dev/oauth/hubspot/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

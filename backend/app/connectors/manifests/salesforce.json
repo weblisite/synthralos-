@@ -1,0 +1,27 @@
+{
+  "name": "Salesforce",
+  "slug": "salesforce",
+  "version": "1.0.0",
+  "description": "CRM platform for sales and customer management",
+  "category": "CRM & Sales",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "salesforce"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/salesforce",
+    "token_url": "https://api.nango.dev/oauth/salesforce/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

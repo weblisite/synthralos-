@@ -1,0 +1,27 @@
+{
+  "name": "Google Analytics",
+  "slug": "google-analytics",
+  "version": "1.0.0",
+  "description": "Web analytics platform",
+  "category": "Analytics & Data",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "google-analytics"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/google-analytics",
+    "token_url": "https://api.nango.dev/oauth/google-analytics/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

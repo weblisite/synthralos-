@@ -1,0 +1,78 @@
+services:
+  # Backend API Service
+  - type: web
+    name: synthralos-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter  # Can be upgraded to standard, pro, etc.
+    buildCommand: ""
+    startCommand: "/app/render-start.sh"
+    healthCheckPath: /api/v1/utils/health-check
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PROJECT_NAME
+        value: SynthralOS
+      - key: API_V1_STR
+        value: /api/v1
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "11520"  # 8 days
+      - key: POSTGRES_SERVER
+        fromDatabase:
+          name: synthralos-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: synthralos-db
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: synthralos-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: synthralos-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: synthralos-db
+          property: database
+      - key: SUPABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: SUPABASE_ANON_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: FRONTEND_HOST
+        sync: false  # Will be set to frontend URL after deployment
+      - key: BACKEND_CORS_ORIGINS
+        sync: false  # Will be set to frontend URL after deployment
+      # Optional: Add other environment variables as needed
+      # - key: REDIS_URL
+      #   sync: false
+      # - key: OPENAI_API_KEY
+      #   sync: false
+      # - key: ANTHROPIC_API_KEY
+      #   sync: false
+
+  # Frontend Web Service
+  - type: web
+    name: synthralos-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: starter
+    buildCommand: ""
+    startCommand: "nginx -g 'daemon off;'"
+    envVars:
+      - key: VITE_API_URL
+        sync: false  # Set to backend URL after deployment (e.g., https://synthralos-backend.onrender.com)
+
+  # PostgreSQL Database
+  - type: pspg
+    name: synthralos-db
+    plan: starter  # 1GB storage, can be upgraded
+    databaseName: synthralos
+    user: synthralos_user
+

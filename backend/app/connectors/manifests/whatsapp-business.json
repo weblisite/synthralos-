@@ -1,0 +1,27 @@
+{
+  "name": "WhatsApp Business",
+  "slug": "whatsapp-business",
+  "version": "1.0.0",
+  "description": "Send WhatsApp messages",
+  "category": "Communication & Collaboration",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "whatsapp"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/whatsapp",
+    "token_url": "https://api.nango.dev/oauth/whatsapp/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

@@ -1,0 +1,27 @@
+{
+  "name": "Copper",
+  "slug": "copper",
+  "version": "1.0.0",
+  "description": "CRM built for Google Workspace",
+  "category": "CRM & Sales",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "copper"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/copper",
+    "token_url": "https://api.nango.dev/oauth/copper/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

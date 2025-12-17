@@ -1,0 +1,27 @@
+{
+  "name": "Box",
+  "slug": "box",
+  "version": "1.0.0",
+  "description": "Cloud content management",
+  "category": "File Storage & Cloud",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "box"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/box",
+    "token_url": "https://api.nango.dev/oauth/box/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

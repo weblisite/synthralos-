@@ -1,0 +1,27 @@
+{
+  "name": "ClickUp",
+  "slug": "clickup",
+  "version": "1.0.0",
+  "description": "All-in-one productivity platform",
+  "category": "Project Management",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "clickup"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/clickup",
+    "token_url": "https://api.nango.dev/oauth/clickup/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

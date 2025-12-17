@@ -1,0 +1,27 @@
+{
+  "name": "SendGrid",
+  "slug": "sendgrid",
+  "version": "1.0.0",
+  "description": "Send transactional emails",
+  "category": "Communication & Collaboration",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "sendgrid"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/sendgrid",
+    "token_url": "https://api.nango.dev/oauth/sendgrid/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

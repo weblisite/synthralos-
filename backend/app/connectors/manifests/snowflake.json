@@ -1,0 +1,27 @@
+{
+  "name": "Snowflake",
+  "slug": "snowflake",
+  "version": "1.0.0",
+  "description": "Cloud data warehouse",
+  "category": "Analytics & Data",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "snowflake"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/snowflake",
+    "token_url": "https://api.nango.dev/oauth/snowflake/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

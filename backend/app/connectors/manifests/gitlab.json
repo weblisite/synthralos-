@@ -1,0 +1,27 @@
+{
+  "name": "GitLab",
+  "slug": "gitlab",
+  "version": "1.0.0",
+  "description": "DevOps platform",
+  "category": "Development & Code",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "gitlab"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/gitlab",
+    "token_url": "https://api.nango.dev/oauth/gitlab/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

@@ -1,0 +1,27 @@
+{
+  "name": "Dropbox",
+  "slug": "dropbox",
+  "version": "1.0.0",
+  "description": "Cloud file storage",
+  "category": "File Storage & Cloud",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "dropbox"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/dropbox",
+    "token_url": "https://api.nango.dev/oauth/dropbox/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

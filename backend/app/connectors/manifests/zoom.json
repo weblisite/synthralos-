@@ -1,0 +1,27 @@
+{
+  "name": "Zoom",
+  "slug": "zoom",
+  "version": "1.0.0",
+  "description": "Create and manage Zoom meetings",
+  "category": "Communication & Collaboration",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "zoom"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/zoom",
+    "token_url": "https://api.nango.dev/oauth/zoom/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

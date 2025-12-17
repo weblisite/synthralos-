@@ -1,0 +1,27 @@
+{
+  "name": "Freshdesk",
+  "slug": "freshdesk",
+  "version": "1.0.0",
+  "description": "Customer support platform",
+  "category": "Communication & Collaboration",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "freshdesk"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/freshdesk",
+    "token_url": "https://api.nango.dev/oauth/freshdesk/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

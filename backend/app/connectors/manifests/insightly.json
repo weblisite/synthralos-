@@ -1,0 +1,27 @@
+{
+  "name": "Insightly",
+  "slug": "insightly",
+  "version": "1.0.0",
+  "description": "CRM and project management",
+  "category": "CRM & Sales",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "insightly"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/insightly",
+    "token_url": "https://api.nango.dev/oauth/insightly/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

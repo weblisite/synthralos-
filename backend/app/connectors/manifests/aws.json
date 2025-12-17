@@ -1,0 +1,27 @@
+{
+  "name": "AWS",
+  "slug": "aws",
+  "version": "1.0.0",
+  "description": "Amazon Web Services cloud platform",
+  "category": "Development & Code",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "aws"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/aws",
+    "token_url": "https://api.nango.dev/oauth/aws/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

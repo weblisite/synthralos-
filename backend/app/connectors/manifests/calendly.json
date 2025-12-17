@@ -1,0 +1,27 @@
+{
+  "name": "Calendly",
+  "slug": "calendly",
+  "version": "1.0.0",
+  "description": "Schedule meetings and appointments",
+  "category": "Communication & Collaboration",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "calendly"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/calendly",
+    "token_url": "https://api.nango.dev/oauth/calendly/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

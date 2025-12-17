@@ -1,0 +1,27 @@
+{
+  "name": "Todoist",
+  "slug": "todoist",
+  "version": "1.0.0",
+  "description": "Task management and to-do lists",
+  "category": "Project Management",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "todoist"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/todoist",
+    "token_url": "https://api.nango.dev/oauth/todoist/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

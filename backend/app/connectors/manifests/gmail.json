@@ -1,0 +1,27 @@
+{
+  "name": "Gmail",
+  "slug": "gmail",
+  "version": "1.0.0",
+  "description": "Send and receive emails via Gmail API",
+  "category": "Communication & Collaboration",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "gmail"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/gmail",
+    "token_url": "https://api.nango.dev/oauth/gmail/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

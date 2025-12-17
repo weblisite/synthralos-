@@ -1,0 +1,27 @@
+{
+  "name": "Asana",
+  "slug": "asana",
+  "version": "1.0.0",
+  "description": "Project and task management",
+  "category": "Project Management",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "asana"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/asana",
+    "token_url": "https://api.nango.dev/oauth/asana/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

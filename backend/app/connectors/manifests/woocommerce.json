@@ -1,0 +1,27 @@
+{
+  "name": "WooCommerce",
+  "slug": "woocommerce",
+  "version": "1.0.0",
+  "description": "WordPress e-commerce plugin",
+  "category": "E-commerce & Payments",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "woocommerce"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/woocommerce",
+    "token_url": "https://api.nango.dev/oauth/woocommerce/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

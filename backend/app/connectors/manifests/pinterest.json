@@ -1,0 +1,27 @@
+{
+  "name": "Pinterest",
+  "slug": "pinterest",
+  "version": "1.0.0",
+  "description": "Image sharing and discovery",
+  "category": "Social Media",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "pinterest"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/pinterest",
+    "token_url": "https://api.nango.dev/oauth/pinterest/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

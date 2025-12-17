@@ -1,0 +1,27 @@
+{
+  "name": "Pipedrive",
+  "slug": "pipedrive",
+  "version": "1.0.0",
+  "description": "Sales CRM and pipeline management",
+  "category": "CRM & Sales",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "pipedrive"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/pipedrive",
+    "token_url": "https://api.nango.dev/oauth/pipedrive/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

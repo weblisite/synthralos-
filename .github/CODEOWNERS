@@ -1,0 +1,29 @@
+# Default owners for everything in the repo
+* @synthralos-maintainers
+
+# Backend code
+/backend/ @synthralos-backend-team
+
+# Frontend code
+/frontend/ @synthralos-frontend-team
+
+# Infrastructure and CI/CD
+/.github/ @synthralos-devops-team
+/docker-compose.yml @synthralos-devops-team
+
+# Documentation
+/docs/ @synthralos-maintainers
+/README.md @synthralos-maintainers
+/PRD.md @synthralos-maintainers
+
+# Security-related files
+/.github/workflows/security.yml @synthralos-security-team
+/.github/dependabot.yml @synthralos-security-team
+
+# Database migrations
+/backend/alembic/ @synthralos-backend-team
+
+# Configuration files
+/.env.example @synthralos-devops-team
+/ENV_TEMPLATE.md @synthralos-devops-team
+

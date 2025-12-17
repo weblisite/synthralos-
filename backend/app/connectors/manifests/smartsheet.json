@@ -1,0 +1,27 @@
+{
+  "name": "Smartsheet",
+  "slug": "smartsheet",
+  "version": "1.0.0",
+  "description": "Work execution platform",
+  "category": "Project Management",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "smartsheet"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/smartsheet",
+    "token_url": "https://api.nango.dev/oauth/smartsheet/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

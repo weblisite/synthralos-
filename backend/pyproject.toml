@@ -1,0 +1,134 @@
+[project]
+name = "app"
+version = "0.1.0"
+description = ""
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "fastapi[standard]<1.0.0,>=0.114.2",
+    "python-multipart<1.0.0,>=0.0.7",
+    "email-validator<3.0.0.0,>=2.1.0.post1",
+    "passlib[bcrypt]<2.0.0,>=1.7.4",
+    "tenacity<9.0.0,>=8.2.3",
+    "pydantic>2.0",
+    "emails<1.0,>=0.6",
+    "jinja2<4.0.0,>=3.1.4",
+    "alembic<2.0.0,>=1.12.1",
+    "httpx<1.0.0,>=0.25.1",
+    "psycopg[binary]<4.0.0,>=3.1.13",
+    "sqlmodel<1.0.0,>=0.0.21",
+    # Pin bcrypt until passlib supports the latest
+    "bcrypt==4.3.0",
+    "pydantic-settings<3.0.0,>=2.2.1",
+    "sentry-sdk[fastapi]<2.0.0,>=1.40.6",
+    "pyjwt<3.0.0,>=2.8.0",
+    "supabase>=2.25.1",
+    "croniter>=2.0.0",
+    "langgraph>=0.0.20",
+    "langchain>=0.1.0",  # LangChain for LLM orchestration
+    "langchain-openai>=0.0.5",  # OpenAI integration for LangChain
+    "langchain-anthropic>=0.1.0",  # Anthropic integration for LangChain
+    "langchain-community>=0.0.20",  # Community integrations
+    # Agent frameworks (optional dependencies - frameworks check availability)
+    "crewai>=0.1.0",  # Multi-agent framework
+    # Guardrails (optional dependencies - services check availability)
+    "guardrails-ai>=0.4.0",  # GuardrailsAI for LLM validation
+    # Cache (optional dependencies - services check availability)
+    "redis>=5.0.0",  # Redis client for caching
+    # Vector Databases (optional dependencies - services check availability)
+    "chromadb>=0.4.0",  # ChromaDB client for vector storage
+    # OCR Libraries (optional dependencies - services check availability)
+    "easyocr>=1.7.0",  # EasyOCR engine
+    "paddleocr>=2.7.0",  # PaddleOCR engine
+    "pytesseract>=0.3.10",  # Tesseract OCR wrapper
+    "pillow>=10.0.0",  # Image processing for OCR
+    "pdf2image>=1.16.0",  # PDF to image conversion
+    # Scraping Libraries (optional dependencies - services check availability)
+    "beautifulsoup4>=4.12.0",  # BeautifulSoup HTML parsing
+    "lxml>=4.9.0",  # XML/HTML parser for BeautifulSoup
+    "playwright>=1.40.0",  # Playwright browser automation
+    "scrapy>=2.11.0",  # Scrapy web scraping framework
+    "selenium>=4.15.0",  # Selenium browser automation
+    "requests>=2.31.0",  # HTTP requests
+    "aiohttp>=3.9.0",  # Async HTTP client
+    # Browser Automation (optional dependencies - services check availability)
+    "undetected-chromedriver>=3.5.0",  # Undetected Chrome driver
+    # OSINT Libraries (optional dependencies - services check availability)
+    "tweepy>=4.14.0",  # Twitter API client
+    # Code Execution (optional dependencies - services check availability)
+    # Note: E2B, WasmEdge, Bacalhau may require custom SDKs or HTTP clients
+    # Observability (optional dependencies - services check availability)
+    "opentelemetry-api>=1.21.0",  # OpenTelemetry API
+    "opentelemetry-sdk>=1.21.0",  # OpenTelemetry SDK
+    "opentelemetry-exporter-otlp-proto-grpc>=1.21.0",  # OTLP gRPC exporter
+    "opentelemetry-instrumentation-fastapi>=0.42b0",  # FastAPI instrumentation
+    "opentelemetry-instrumentation-requests>=0.42b0",  # Requests instrumentation
+    "posthog>=3.0.0",  # PostHog analytics
+    "langfuse>=2.0.0",  # Langfuse LLM observability
+    # Note: Other frameworks (swarm, camel-ai, kush-ai, kyro, riona) 
+    # may not have stable PyPI packages yet - placeholder implementations provided
+    # Note: infisical SDK has pydantic<2.0 dependency conflict
+    # Will use HTTP client directly or wait for SDK update
+    # "infisical>=0.3.0",
+    # Note: DocTR, Crawl4AI, WaterCrawl, Twint, Social-Listener, NewsCatcher, Huginn
+    # may require custom installation or may not have stable PyPI packages
+    # Note: Google Vision API uses google-cloud-vision (requires service account)
+    # "google-cloud-vision>=3.4.0",
+    # Note: Browserbase uses HTTP API, no Python SDK needed
+    # Note: Puppeteer is Node.js only, use Playwright for Python
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest<8.0.0,>=7.4.3",
+    "mypy<2.0.0,>=1.8.0",
+    "ruff<1.0.0,>=0.2.2",
+    "pre-commit<4.0.0,>=3.6.2",
+    "types-passlib<2.0.0.0,>=1.7.7.20240106",
+    "coverage<8.0.0,>=7.4.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.mypy]
+strict = true
+exclude = ["venv", ".venv", "alembic"]
+
+[tool.ruff]
+target-version = "py310"
+exclude = ["alembic"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG001", # unused arguments in functions
+    "T201",   # print statements are not allowed
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "W191",  # indentation contains tabs
+    "B904",  # Allow raising exceptions without from e, for HTTPException
+]
+
+[tool.ruff.lint.pyupgrade]
+# Preserve types, even if a file imports `from __future__ import annotations`.
+keep-runtime-typing = true
+
+[tool.coverage.run]
+source = ["app"]
+dynamic_context = "test_function"
+
+[tool.coverage.report]
+show_missing = true
+sort = "-Cover"
+
+[tool.coverage.html]
+show_contexts = true

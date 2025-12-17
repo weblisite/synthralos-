@@ -1,0 +1,27 @@
+{
+  "name": "Buffer",
+  "slug": "buffer",
+  "version": "1.0.0",
+  "description": "Social media management",
+  "category": "Social Media",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "buffer"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/buffer",
+    "token_url": "https://api.nango.dev/oauth/buffer/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

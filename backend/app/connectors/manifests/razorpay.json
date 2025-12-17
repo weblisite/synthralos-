@@ -1,0 +1,27 @@
+{
+  "name": "Razorpay",
+  "slug": "razorpay",
+  "version": "1.0.0",
+  "description": "Payment gateway for India",
+  "category": "E-commerce & Payments",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "razorpay"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/razorpay",
+    "token_url": "https://api.nango.dev/oauth/razorpay/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

@@ -1,0 +1,27 @@
+{
+  "name": "Zoho CRM",
+  "slug": "zoho-crm",
+  "version": "1.0.0",
+  "description": "Cloud-based CRM platform",
+  "category": "CRM & Sales",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "zoho"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/zoho",
+    "token_url": "https://api.nango.dev/oauth/zoho/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

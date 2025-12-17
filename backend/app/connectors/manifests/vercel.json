@@ -1,0 +1,27 @@
+{
+  "name": "Vercel",
+  "slug": "vercel",
+  "version": "1.0.0",
+  "description": "Frontend deployment platform",
+  "category": "Development & Code",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "vercel"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/vercel",
+    "token_url": "https://api.nango.dev/oauth/vercel/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

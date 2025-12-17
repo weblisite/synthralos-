@@ -1,0 +1,27 @@
+{
+  "name": "Shopify",
+  "slug": "shopify",
+  "version": "1.0.0",
+  "description": "E-commerce platform",
+  "category": "E-commerce & Payments",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "shopify"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/shopify",
+    "token_url": "https://api.nango.dev/oauth/shopify/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

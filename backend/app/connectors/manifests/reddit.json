@@ -1,0 +1,27 @@
+{
+  "name": "Reddit",
+  "slug": "reddit",
+  "version": "1.0.0",
+  "description": "Social news and discussion",
+  "category": "Social Media",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "reddit"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/reddit",
+    "token_url": "https://api.nango.dev/oauth/reddit/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

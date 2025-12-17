@@ -1,0 +1,27 @@
+{
+  "name": "Braintree",
+  "slug": "braintree",
+  "version": "1.0.0",
+  "description": "Payment gateway",
+  "category": "E-commerce & Payments",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "braintree"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/braintree",
+    "token_url": "https://api.nango.dev/oauth/braintree/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

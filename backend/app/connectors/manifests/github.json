@@ -1,0 +1,27 @@
+{
+  "name": "GitHub",
+  "slug": "github",
+  "version": "1.0.0",
+  "description": "Code hosting and version control",
+  "category": "Development & Code",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "github"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/github",
+    "token_url": "https://api.nango.dev/oauth/github/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

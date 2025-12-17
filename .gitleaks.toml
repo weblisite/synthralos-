@@ -1,0 +1,46 @@
+# Gitleaks configuration for secret scanning
+title = "SynthralOS Secret Scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for false positives"
+paths = [
+    '''\.md$''',
+    '''\.example$''',
+    '''\.template$''',
+    '''test.*\.py$''',
+    '''test.*\.ts$''',
+    '''test.*\.tsx$''',
+    '''__pycache__''',
+    '''node_modules''',
+    '''\.git''',
+    '''\.venv''',
+    '''venv''',
+    '''\.env\.example''',
+    '''ENV_TEMPLATE\.md''',
+]
+
+[allowlist.regexes]
+description = "Regex patterns to allow"
+regexes = [
+    '''example.*key''',
+    '''test.*secret''',
+    '''dummy.*token''',
+    '''placeholder.*password''',
+]
+
+# Custom rules for common false positives
+[[rules]]
+id = "allow-example-env"
+description = "Allow example environment variables"
+regex = '''EXAMPLE_.*'''
+tags = ["allowlist"]
+
+[[rules]]
+id = "allow-test-credentials"
+description = "Allow test credentials"
+regex = '''TEST_.*'''
+tags = ["allowlist"]
+

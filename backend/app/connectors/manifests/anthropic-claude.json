@@ -1,0 +1,27 @@
+{
+  "name": "Anthropic Claude",
+  "slug": "anthropic-claude",
+  "version": "1.0.0",
+  "description": "AI assistant API",
+  "category": "AI & Machine Learning",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "anthropic"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/anthropic",
+    "token_url": "https://api.nango.dev/oauth/anthropic/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

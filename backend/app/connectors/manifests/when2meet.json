@@ -1,0 +1,27 @@
+{
+  "name": "When2Meet",
+  "slug": "when2meet",
+  "version": "1.0.0",
+  "description": "Meeting scheduling",
+  "category": "Productivity & Notes",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "when2meet"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/when2meet",
+    "token_url": "https://api.nango.dev/oauth/when2meet/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

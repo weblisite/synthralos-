@@ -1,0 +1,27 @@
+{
+  "name": "Metabase",
+  "slug": "metabase",
+  "version": "1.0.0",
+  "description": "Business intelligence tool",
+  "category": "Analytics & Data",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "metabase"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/metabase",
+    "token_url": "https://api.nango.dev/oauth/metabase/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

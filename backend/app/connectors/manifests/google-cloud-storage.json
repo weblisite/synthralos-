@@ -1,0 +1,27 @@
+{
+  "name": "Google Cloud Storage",
+  "slug": "google-cloud-storage",
+  "version": "1.0.0",
+  "description": "Google Cloud object storage",
+  "category": "File Storage & Cloud",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "gcs"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/gcs",
+    "token_url": "https://api.nango.dev/oauth/gcs/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

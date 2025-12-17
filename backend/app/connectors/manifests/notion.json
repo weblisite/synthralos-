@@ -1,0 +1,27 @@
+{
+  "name": "Notion",
+  "slug": "notion",
+  "version": "1.0.0",
+  "description": "All-in-one workspace",
+  "category": "Productivity & Notes",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "notion"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/notion",
+    "token_url": "https://api.nango.dev/oauth/notion/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

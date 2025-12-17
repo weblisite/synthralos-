@@ -1,0 +1,27 @@
+{
+  "name": "Segment",
+  "slug": "segment",
+  "version": "1.0.0",
+  "description": "Customer data platform",
+  "category": "Analytics & Data",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "segment"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/segment",
+    "token_url": "https://api.nango.dev/oauth/segment/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}

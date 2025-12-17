@@ -1,0 +1,27 @@
+{
+  "name": "CircleCI",
+  "slug": "circleci",
+  "version": "1.0.0",
+  "description": "CI/CD platform",
+  "category": "Development & Code",
+  "status": "beta",
+  "nango": {
+    "enabled": true,
+    "provider_key": "circleci"
+  },
+  "oauth": {
+    "authorization_url": "https://api.nango.dev/oauth/circleci",
+    "token_url": "https://api.nango.dev/oauth/circleci/token",
+    "default_scopes": [],
+    "authorization_params": {}
+  },
+  "actions": {
+    "test_connection": {
+      "name": "Test Connection",
+      "description": "Test the connection to the service",
+      "method": "GET",
+      "endpoint": "/test"
+    }
+  },
+  "triggers": {}
+}
