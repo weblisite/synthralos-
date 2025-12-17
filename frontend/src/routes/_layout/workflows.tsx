@@ -11,7 +11,6 @@ import { useCallback, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { WorkflowBuilder } from "@/components/Workflow/WorkflowBuilder"
 import useCustomToast from "@/hooks/useCustomToast"
 import { supabase } from "@/lib/supabase"
@@ -194,12 +193,11 @@ function WorkflowsPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="workflow-description">Description (Optional)</Label>
-            <Textarea
+            <Input
               id="workflow-description"
               value={workflowDescription}
               onChange={(e) => setWorkflowDescription(e.target.value)}
               placeholder="Describe what this workflow does..."
-              rows={1}
             />
           </div>
         </div>
