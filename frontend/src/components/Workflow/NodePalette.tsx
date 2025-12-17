@@ -7,6 +7,8 @@
 import type { Node } from "@xyflow/react"
 import {
   Brain,
+  ChevronDown,
+  ChevronRight,
   Code,
   Database,
   FileText,
@@ -17,7 +19,17 @@ import {
   Play,
   Plug,
 } from "lucide-react"
-import { useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { supabase } from "@/lib/supabase"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+
+interface Connector {
+  id: string
+  slug: string
+  name: string
+  description?: string
+  category?: string
+}
 
 interface NodeType {
   type: string
@@ -25,9 +37,10 @@ interface NodeType {
   icon: React.ComponentType<{ className?: string }>
   category: string
   description: string
+  connectorSlug?: string
 }
 
-const nodeTypes: NodeType[] = [
+const baseNodeTypes: NodeType[] = [
   {
     type: "trigger",
     label: "Trigger",
@@ -41,13 +54,6 @@ const nodeTypes: NodeType[] = [
     icon: Brain,
     category: "AI",
     description: "LLM prompt node",
-  },
-  {
-    type: "connector",
-    label: "Connector",
-    icon: Plug,
-    category: "Integrations",
-    description: "SaaS app integration",
   },
   {
     type: "code",
@@ -112,9 +118,66 @@ interface NodePaletteProps {
 }
 
 export function NodePalette({ onNodeAdd }: NodePaletteProps) {
+  const [connectors, setConnectors] = useState<Connector[]>([])
+  const [isConnectorsLoading, setIsConnectorsLoading] = useState(true)
+  const [isConnectorsExpanded, setIsConnectorsExpanded] = useState(false)
+
+  useEffect(() => {
+    const fetchConnectors = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session) {
+          setIsConnectorsLoading(false)
+          return
+        }
+
+        const response = await fetch(`/api/v1/connectors/list?include_custom=true`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const connectorsList = Array.isArray(data) ? data : (data.connectors || [])
+          // Filter to only stable/beta connectors for workflow builder
+          const activeConnectors = connectorsList.filter(
+            (c: Connector & { status?: string }) =>
+              c.status === "stable" || c.status === "beta"
+          )
+          setConnectors(activeConnectors)
+        }
+      } catch (error) {
+        console.error("Failed to fetch connectors:", error)
+      } finally {
+        setIsConnectorsLoading(false)
+      }
+    }
+
+    fetchConnectors()
+  }, [])
+
+  const connectorNodes = useMemo(() => {
+    return connectors.map((connector) => ({
+      type: `connector-${connector.slug}`,
+      label: connector.name,
+      icon: Plug,
+      category: "App Connectors",
+      description: connector.description || `${connector.name} integration`,
+      connectorSlug: connector.slug,
+    }))
+  }, [connectors])
+
   const handleDragStart = useCallback(
     (event: React.DragEvent, nodeType: NodeType) => {
       event.dataTransfer.setData("application/reactflow", nodeType.type)
+      if (nodeType.connectorSlug) {
+        event.dataTransfer.setData("connector-slug", nodeType.connectorSlug)
+      }
       event.dataTransfer.effectAllowed = "move"
     },
     [],
@@ -126,11 +189,13 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
 
       const newNode: Node = {
         id: `${nodeType.type}-${Date.now()}`,
-        type: nodeType.type,
+        type: nodeType.type.startsWith("connector-") ? "connector" : nodeType.type,
         position: { x: Math.random() * 400, y: Math.random() * 400 },
         data: {
           label: nodeType.label,
-          config: {},
+          config: nodeType.connectorSlug
+            ? { connector_slug: nodeType.connectorSlug }
+            : {},
         },
       }
 
@@ -141,7 +206,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
 
   const groupedNodes = useMemo(() => {
     const groups: Record<string, NodeType[]> = {}
-    nodeTypes.forEach((nodeType) => {
+    baseNodeTypes.forEach((nodeType) => {
       if (!groups[nodeType.category]) {
         groups[nodeType.category] = []
       }
@@ -193,6 +258,60 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
             </div>
           </div>
         ))}
+
+        {/* App Connectors Expandable Section */}
+        <div className="space-y-2">
+          <Collapsible open={isConnectorsExpanded} onOpenChange={setIsConnectorsExpanded}>
+            <CollapsibleTrigger className="flex items-center gap-2 w-full px-2 py-1 hover:bg-accent rounded-md transition-colors">
+              {isConnectorsExpanded ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                App Connectors ({connectors.length})
+              </h3>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-1 mt-2">
+                {isConnectorsLoading ? (
+                  <div className="px-2 py-4 text-xs text-muted-foreground text-center">
+                    Loading connectors...
+                  </div>
+                ) : connectorNodes.length === 0 ? (
+                  <div className="px-2 py-4 text-xs text-muted-foreground text-center">
+                    No connectors available
+                  </div>
+                ) : (
+                  connectorNodes.map((nodeType) => {
+                    const Icon = nodeType.icon
+                    return (
+                      <button
+                        key={nodeType.type}
+                        type="button"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, nodeType)}
+                        onClick={() => handleClick(nodeType)}
+                        className="flex items-center gap-2 p-2 rounded-md border cursor-move hover:bg-accent transition-colors w-full text-left ml-4"
+                        title={nodeType.description}
+                      >
+                        <Icon className="h-4 w-4 text-green-600" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">
+                            {nodeType.label}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {nodeType.description}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
       </div>
     </div>
   )

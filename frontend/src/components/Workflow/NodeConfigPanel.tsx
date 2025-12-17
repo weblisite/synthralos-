@@ -164,7 +164,13 @@ export function NodeConfigPanel({
                   handleConfigUpdate("connector_slug", e.target.value)
                 }
                 placeholder="slack, github, etc."
+                disabled={!!config.connector_slug}
               />
+              {config.connector_slug && (
+                <p className="text-xs text-muted-foreground">
+                  Connector is set from node selection. Edit the node to change.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="action">Action</Label>

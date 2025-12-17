@@ -56,14 +56,21 @@ export function WorkflowBuilder({
         y: event.clientY - reactFlowBounds.top,
       }
 
+      // Check if this is a connector node
+      const connectorSlug = event.dataTransfer.getData("connector-slug")
+      const isConnector = type.startsWith("connector-")
+      
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
-        type,
+        type: isConnector ? "connector" : type,
         position,
         data: {
-          label:
-            type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, " "),
-          config: {},
+          label: isConnector && connectorSlug
+            ? connectorSlug.charAt(0).toUpperCase() + connectorSlug.slice(1).replace(/-/g, " ")
+            : type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, " "),
+          config: isConnector && connectorSlug
+            ? { connector_slug: connectorSlug }
+            : {},
         },
       }
 
