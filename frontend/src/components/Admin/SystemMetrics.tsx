@@ -8,7 +8,6 @@ import { useQuery } from "@tanstack/react-query"
 import {
   Activity,
   Database,
-  FileText,
   Globe,
   Monitor,
   Search,
@@ -83,10 +82,11 @@ export function SystemMetrics() {
     queryKey: ["systemMetrics"],
     queryFn: fetchSystemMetrics,
     refetchInterval: 60000, // Refresh every minute
-    onError: (error: Error) => {
-      showErrorToast("Failed to load system metrics", error.message)
-    },
   })
+
+  if (error) {
+    showErrorToast("Failed to load system metrics", error instanceof Error ? error.message : "Unknown error")
+  }
 
   if (isLoading) {
     return (
@@ -243,22 +243,22 @@ export function SystemMetrics() {
           <CardContent className="space-y-2">
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">OCR Jobs</span>
-              <span className="font-medium">{metrics.resources.ocr_jobs}</span>
+              <span className="font-medium">{metrics?.resources?.ocr_jobs ?? 0}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Scrape Jobs</span>
-              <span className="font-medium">{metrics.resources.scrape_jobs}</span>
+              <span className="font-medium">{metrics?.resources?.scrape_jobs ?? 0}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Code Tools</span>
-              <span className="font-medium">{metrics.resources.code_tools}</span>
+              <span className="font-medium">{metrics?.resources?.code_tools ?? 0}</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="text-xs text-muted-foreground text-center">
-        Last updated: {new Date(metrics.timestamp).toLocaleString()}
+        Last updated: {metrics?.timestamp ? new Date(metrics.timestamp).toLocaleString() : "Never"}
       </div>
     </div>
   )

@@ -239,7 +239,7 @@ export function ConnectorCatalog() {
 
   // Get unique categories
   const categories = Array.from(
-    new Set(connectors.map((c) => c.category).filter(Boolean))
+    new Set(connectors.map((c) => c.category).filter((cat): cat is string => Boolean(cat)))
   ).sort()
 
   const filteredConnectors = connectors.filter((connector) => {

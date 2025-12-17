@@ -5,12 +5,12 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Code, Plus, Play, Eye, Trash2, Loader2, Box } from "lucide-react"
+import { Code, Plus, Play, Eye, Loader2, Box } from "lucide-react"
 import { useState } from "react"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { DataTable } from "@/components/Common/DataTable"
 import {
   Dialog,
@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
@@ -384,7 +383,6 @@ function SandboxActionsCell({ sandbox }: { sandbox: CodeSandbox }) {
   const [inputData, setInputData] = useState("")
   const [executionResult, setExecutionResult] = useState<CodeExecution | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
-  const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const handleExecute = async () => {

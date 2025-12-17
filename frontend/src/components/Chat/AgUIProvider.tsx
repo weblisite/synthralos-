@@ -137,7 +137,7 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
         }
       }
 
-      ws.onerror = (error) => {
+      ws.onerror = (_error) => {
         if (connectionTimeout) {
           clearTimeout(connectionTimeout)
           connectionTimeout = null

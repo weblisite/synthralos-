@@ -150,13 +150,15 @@ class Settings(BaseSettings):
             # Supabase connection strings are typically:
             # postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
             # or: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
+            # We need to ensure it uses postgresql+psycopg:// for psycopg3
+            db_url = str(self.SUPABASE_DB_URL)
+            # Convert postgresql:// to postgresql+psycopg:// if not already converted
+            if db_url.startswith("postgresql://") and not db_url.startswith("postgresql+psycopg://"):
+                db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
             try:
-                return PostgresDsn(str(self.SUPABASE_DB_URL))
+                return PostgresDsn(db_url)
             except Exception:
-                # If parsing fails, try to convert postgresql:// to postgresql+psycopg://
-                db_url = str(self.SUPABASE_DB_URL)
-                if db_url.startswith("postgresql://"):
-                    db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+                # If PostgresDsn parsing fails, try direct conversion
                 return PostgresDsn(db_url)
         
         # Option 2: Build from Supabase URL and password

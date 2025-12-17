@@ -5,7 +5,7 @@
  * Displays messages, handles input, and shows tool calls.
  */
 
-import { Send, X, Code, Bot, Zap, FileCode } from "lucide-react"
+import { Send, X, Code, Bot, Zap } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
