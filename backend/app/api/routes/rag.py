@@ -11,7 +11,7 @@ Endpoints for RAG (Retrieval-Augmented Generation) operations:
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, UploadFile, File, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -242,6 +242,97 @@ def evaluate_routing(
         )
 
 
+@router.post("/document/upload", response_model=RAGDocumentAddResponse, status_code=status.HTTP_201_CREATED)
+async def upload_document(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    index_id: uuid.UUID,
+    file: UploadFile = File(...),
+    metadata: dict[str, Any] | None = None,
+    embedding: list[float] | None = None,
+) -> Any:
+    """
+    Upload a file and add it to a RAG index.
+    
+    Uploads file to Supabase Storage, then adds it to the RAG index.
+    """
+    from app.services.storage import default_storage_service
+    
+    if not default_storage_service.is_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Storage service is not available. Check Supabase configuration.",
+        )
+    
+    # Verify index exists and user has access
+    index = default_rag_service.get_index(session=session, index_id=index_id)
+    
+    if index.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+        )
+    
+    try:
+        # Read file data
+        file_data = await file.read()
+        
+        # Generate storage path: rag-files/{user_id}/{index_id}/{filename}
+        storage_path = f"{current_user.id}/{index_id}/{file.filename}"
+        bucket = "rag-files"
+        
+        # Upload to Supabase Storage
+        upload_result = default_storage_service.upload_file(
+            bucket=bucket,
+            file_path=storage_path,
+            file_data=file_data,
+            content_type=file.content_type or "text/plain",
+            metadata={
+                "user_id": str(current_user.id),
+                "index_id": str(index_id),
+                "original_filename": file.filename,
+                "uploaded_by": current_user.email,
+            },
+        )
+        
+        # Add storage info to metadata
+        if not metadata:
+            metadata = {}
+        metadata["storage_bucket"] = bucket
+        metadata["storage_path"] = storage_path
+        
+        # Add document from storage
+        document = default_rag_service.add_document_from_storage(
+            session=session,
+            index_id=index_id,
+            storage_path=storage_path,
+            bucket=bucket,
+            metadata=metadata,
+            embedding=embedding,
+        )
+        
+        return {
+            "document_id": str(document.id),
+            "index_id": str(document.index_id),
+        }
+    except IndexNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="RAG index not found",
+        )
+    except RAGServiceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"File upload and document addition failed: {str(e)}",
+        )
+
+
 @router.post("/document", response_model=RAGDocumentAddResponse, status_code=status.HTTP_201_CREATED)
 def add_document(
     *,
@@ -250,7 +341,7 @@ def add_document(
     document_in: RAGDocumentAddRequest,
 ) -> Any:
     """
-    Add a document to a RAG index.
+    Add a document to a RAG index (from text content).
     """
     # Verify index exists and user has access
     index = default_rag_service.get_index(session=session, index_id=document_in.index_id)

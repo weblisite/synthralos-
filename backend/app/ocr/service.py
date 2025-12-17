@@ -189,6 +189,62 @@ class OCRService:
         # Default → Tesseract (fallback)
         return "tesseract"
     
+    def create_job_from_storage(
+        self,
+        session: Session,
+        storage_path: str,
+        bucket: str = "ocr-documents",
+        engine: str | None = None,
+        document_metadata: dict[str, Any] | None = None,
+        query_requirements: dict[str, Any] | None = None,
+    ) -> OCRJob:
+        """
+        Create an OCR job from a file in Supabase Storage.
+        
+        Args:
+            session: Database session
+            storage_path: Path to file in Supabase Storage
+            bucket: Storage bucket name (default: ocr-documents)
+            engine: Optional engine name (auto-selected if not provided)
+            document_metadata: Optional document metadata
+            query_requirements: Optional query requirements
+            
+        Returns:
+            OCRJob instance
+        """
+        from app.services.storage import default_storage_service
+        
+        # Get public URL or signed URL from storage
+        try:
+            # Try to get public URL first
+            document_url = default_storage_service.get_public_url(bucket=bucket, file_path=storage_path)
+        except Exception:
+            # If public URL fails, generate signed URL
+            try:
+                document_url = default_storage_service.create_signed_url(
+                    bucket=bucket,
+                    file_path=storage_path,
+                    expires_in=3600,  # 1 hour
+                )
+            except Exception as e:
+                logger.error(f"Failed to get URL for storage file {bucket}/{storage_path}: {e}")
+                raise OCRServiceError(f"Failed to access file in storage: {str(e)}")
+        
+        # Add storage info to metadata
+        if not document_metadata:
+            document_metadata = {}
+        document_metadata["storage_bucket"] = bucket
+        document_metadata["storage_path"] = storage_path
+        
+        # Create job using the URL
+        return self.create_job(
+            session=session,
+            document_url=document_url,
+            engine=engine,
+            document_metadata=document_metadata,
+            query_requirements=query_requirements,
+        )
+    
     def create_job(
         self,
         session: Session,

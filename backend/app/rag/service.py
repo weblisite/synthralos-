@@ -459,6 +459,66 @@ class RAGService:
         
         return index
     
+    def add_document_from_storage(
+        self,
+        session: Session,
+        index_id: uuid.UUID,
+        storage_path: str,
+        bucket: str = "rag-files",
+        metadata: dict[str, Any] | None = None,
+        embedding: list[float] | None = None,
+    ) -> RAGDocument:
+        """
+        Add a document to a RAG index from a file in Supabase Storage.
+        
+        Args:
+            session: Database session
+            index_id: Index ID
+            storage_path: Path to file in Supabase Storage
+            bucket: Storage bucket name (default: rag-files)
+            metadata: Optional document metadata
+            embedding: Optional pre-computed embedding
+            
+        Returns:
+            RAGDocument instance
+        """
+        from app.services.storage import default_storage_service
+        
+        # Download file from storage
+        try:
+            file_data = default_storage_service.download_file(bucket=bucket, file_path=storage_path)
+            
+            # Try to decode as text (for text files)
+            try:
+                content = file_data.decode('utf-8')
+            except UnicodeDecodeError:
+                # If not text, store as base64 or handle binary files differently
+                import base64
+                content = base64.b64encode(file_data).decode('utf-8')
+                if not metadata:
+                    metadata = {}
+                metadata["is_binary"] = True
+                metadata["encoding"] = "base64"
+            
+            # Add storage info to metadata
+            if not metadata:
+                metadata = {}
+            metadata["storage_bucket"] = bucket
+            metadata["storage_path"] = storage_path
+            
+            # Add document using content
+            return self.add_document(
+                session=session,
+                index_id=index_id,
+                content=content,
+                metadata=metadata,
+                embedding=embedding,
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to add document from storage {bucket}/{storage_path}: {e}", exc_info=True)
+            raise RAGServiceError(f"Failed to add document from storage: {str(e)}")
+    
     def add_document(
         self,
         session: Session,

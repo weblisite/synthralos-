@@ -26,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
 import { supabase } from "@/lib/supabase"
+import { FileUpload } from "@/components/Storage/FileUpload"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface RAGIndex {
@@ -267,6 +269,21 @@ export function RAGIndexManager() {
     },
   })
 
+  const uploadDocumentMutation = useMutation({
+    mutationFn: async ({ file, metadata }: { file: File; metadata: Record<string, any> }) => {
+      if (!selectedIndex) throw new Error("No index selected")
+      return uploadDocumentToIndex(selectedIndex.id, file, metadata)
+    },
+    onSuccess: () => {
+      showSuccessToast("Document uploaded", "Document uploaded and added to index successfully")
+      setIsAddDocDialogOpen(false)
+      setDocumentMetadata("")
+    },
+    onError: (error: Error) => {
+      showErrorToast("Failed to upload document", error.message)
+    },
+  })
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -415,39 +432,96 @@ export function RAGIndexManager() {
                         <DialogHeader>
                           <DialogTitle>Add Document to Index</DialogTitle>
                           <DialogDescription>
-                            Add a new document to this RAG index
+                            Upload a file or add text content to this RAG index
                           </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="doc-content">Document Content</Label>
-                            <Textarea
-                              id="doc-content"
-                              placeholder="Enter document content..."
-                              value={documentContent}
-                              onChange={(e) => setDocumentContent(e.target.value)}
-                              rows={8}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="doc-metadata">Metadata (JSON, optional)</Label>
-                            <Textarea
-                              id="doc-metadata"
-                              placeholder='{"source": "url", "author": "name", ...}'
-                              value={documentMetadata}
-                              onChange={(e) => setDocumentMetadata(e.target.value)}
-                              rows={4}
-                              className="font-mono text-sm"
-                            />
-                          </div>
-                          <Button
-                            onClick={() => addDocumentMutation.mutate()}
-                            disabled={!documentContent.trim() || addDocumentMutation.isPending}
-                            className="w-full"
-                          >
-                            {addDocumentMutation.isPending ? "Adding..." : "Add Document"}
-                          </Button>
-                        </div>
+                        <Tabs defaultValue="upload" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="upload">Upload File</TabsTrigger>
+                            <TabsTrigger value="text">Text Content</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="upload" className="space-y-4">
+                            <div>
+                              <Label htmlFor="file-upload-rag">Upload Document File</Label>
+                              <Input
+                                id="file-upload-rag"
+                                type="file"
+                                accept=".txt,.md,.pdf,.doc,.docx"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0]
+                                  if (!file) return
+                                  
+                                  if (file.size > 100 * 1024 * 1024) {
+                                    showErrorToast("File too large", "Maximum size is 100MB")
+                                    return
+                                  }
+                                  
+                                  let metadata = {}
+                                  if (documentMetadata.trim()) {
+                                    try {
+                                      metadata = JSON.parse(documentMetadata)
+                                    } catch {
+                                      metadata = { note: documentMetadata }
+                                    }
+                                  }
+                                  
+                                  uploadDocumentMutation.mutate({ file, metadata })
+                                }}
+                                className="cursor-pointer"
+                              />
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Supported formats: .txt, .md, .pdf, .doc, .docx (max 100MB)
+                              </p>
+                            </div>
+                            <div>
+                              <Label htmlFor="doc-metadata-upload">Metadata (JSON, optional)</Label>
+                              <Textarea
+                                id="doc-metadata-upload"
+                                placeholder='{"source": "url", "author": "name", ...}'
+                                value={documentMetadata}
+                                onChange={(e) => setDocumentMetadata(e.target.value)}
+                                rows={4}
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                            {uploadDocumentMutation.isPending && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Uploading and processing document...
+                              </div>
+                            )}
+                          </TabsContent>
+                          <TabsContent value="text" className="space-y-4">
+                            <div>
+                              <Label htmlFor="doc-content">Document Content</Label>
+                              <Textarea
+                                id="doc-content"
+                                placeholder="Enter document content..."
+                                value={documentContent}
+                                onChange={(e) => setDocumentContent(e.target.value)}
+                                rows={8}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="doc-metadata-text">Metadata (JSON, optional)</Label>
+                              <Textarea
+                                id="doc-metadata-text"
+                                placeholder='{"source": "url", "author": "name", ...}'
+                                value={documentMetadata}
+                                onChange={(e) => setDocumentMetadata(e.target.value)}
+                                rows={4}
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                            <Button
+                              onClick={() => addDocumentMutation.mutate()}
+                              disabled={!documentContent.trim() || addDocumentMutation.isPending}
+                              className="w-full"
+                            >
+                              {addDocumentMutation.isPending ? "Adding..." : "Add Document"}
+                            </Button>
+                          </TabsContent>
+                        </Tabs>
                       </DialogContent>
                     </Dialog>
                   </div>

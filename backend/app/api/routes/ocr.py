@@ -10,7 +10,7 @@ Endpoints for OCR (Optical Character Recognition) operations:
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, UploadFile, File, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -75,9 +75,97 @@ class OCRBatchResponse(BaseModel):
     total_count: int
 
 
+class OCRUploadRequest(BaseModel):
+    """Request model for OCR file upload."""
+    engine: str | None = Field(default=None, max_length=100)
+    document_metadata: dict[str, Any] = Field(default_factory=dict)
+    query_requirements: dict[str, Any] = Field(default_factory=dict)
+
+
 # ============================================================================
 # Endpoints
 # ============================================================================
+
+
+@router.post("/upload", response_model=OCRJobResponse, status_code=status.HTTP_201_CREATED)
+async def upload_and_extract(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+    engine: str | None = None,
+    document_metadata: dict[str, Any] | None = None,
+    query_requirements: dict[str, Any] | None = None,
+) -> Any:
+    """
+    Upload a file and extract text using OCR.
+    
+    Uploads file to Supabase Storage, then creates an OCR job.
+    The job will be processed asynchronously.
+    """
+    from app.services.storage import default_storage_service
+    
+    if not default_storage_service.is_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Storage service is not available. Check Supabase configuration.",
+        )
+    
+    try:
+        # Read file data
+        file_data = await file.read()
+        
+        # Generate storage path: ocr-documents/{user_id}/{filename}
+        storage_path = f"{current_user.id}/{file.filename}"
+        bucket = "ocr-documents"
+        
+        # Upload to Supabase Storage
+        upload_result = default_storage_service.upload_file(
+            bucket=bucket,
+            file_path=storage_path,
+            file_data=file_data,
+            content_type=file.content_type or "application/octet-stream",
+            metadata={
+                "user_id": str(current_user.id),
+                "original_filename": file.filename,
+                "uploaded_by": current_user.email,
+            },
+        )
+        
+        # Create OCR job from storage
+        if not document_metadata:
+            document_metadata = {}
+        document_metadata["storage_bucket"] = bucket
+        document_metadata["storage_path"] = storage_path
+        
+        job = default_ocr_service.create_job_from_storage(
+            session=session,
+            storage_path=storage_path,
+            bucket=bucket,
+            engine=engine,
+            document_metadata=document_metadata,
+            query_requirements=query_requirements or {},
+        )
+        
+        return {
+            "id": str(job.id),
+            "document_url": upload_result.get("url") or job.document_url,
+            "engine": job.engine,
+            "status": job.status,
+            "started_at": job.started_at.isoformat(),
+            "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+            "error_message": job.error_message,
+        }
+    except OCRServiceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"File upload and OCR job creation failed: {str(e)}",
+        )
 
 
 @router.post("/extract", response_model=OCRJobResponse, status_code=status.HTTP_201_CREATED)
@@ -88,7 +176,7 @@ def extract_text(
     extract_in: OCRExtractRequest,
 ) -> Any:
     """
-    Extract text from a document using OCR.
+    Extract text from a document using OCR (from URL).
     
     Creates an OCR job and returns the job ID.
     The job will be processed asynchronously.

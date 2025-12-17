@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
 import { supabase } from "@/lib/supabase"
+import { FileUpload } from "@/components/Storage/FileUpload"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface OCRJob {
@@ -97,6 +99,41 @@ const createOCRJob = async (
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.detail || "Failed to create OCR job")
+  }
+
+  return response.json()
+}
+
+const createOCRJobFromUpload = async (
+  file: File,
+  engine?: string,
+): Promise<OCRJob> => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) {
+    throw new Error("You must be logged in to create OCR jobs")
+  }
+
+  const formData = new FormData()
+  formData.append("file", file)
+  formData.append("bucket", "ocr-documents")
+  if (engine) {
+    formData.append("engine", engine)
+  }
+
+  const response = await fetch("/api/v1/ocr/upload", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || "Failed to create OCR job from upload")
   }
 
   return response.json()
@@ -243,16 +280,25 @@ export function OCRJobManager() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [documentUrl, setDocumentUrl] = useState("")
   const [selectedEngine, setSelectedEngine] = useState<string>("")
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null)
 
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const createJobMutation = useMutation({
-    mutationFn: () => createOCRJob(documentUrl, selectedEngine || undefined),
+    mutationFn: () => {
+      // Use uploaded file URL if available, otherwise use document URL
+      const urlToUse = uploadedFileUrl || documentUrl
+      if (!urlToUse) {
+        throw new Error("Please upload a file or provide a document URL")
+      }
+      return createOCRJob(urlToUse, selectedEngine || undefined)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ocrJobs"] })
       showSuccessToast("OCR Job Created", "Job started successfully")
       setIsCreateDialogOpen(false)
       setDocumentUrl("")
+      setUploadedFileUrl(null)
       setSelectedEngine("")
     },
     onError: (error: Error) => {
@@ -285,55 +331,103 @@ export function OCRJobManager() {
               New OCR Job
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create OCR Job</DialogTitle>
               <DialogDescription>
-                Extract text from a document URL using OCR
+                Extract text from a document using OCR. Upload a file or provide a URL.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="document-url">Document URL</Label>
-                <Input
-                  id="document-url"
-                  placeholder="https://synthralos.ai/document.pdf"
-                  value={documentUrl}
-                  onChange={(e) => setDocumentUrl(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="engine">OCR Engine (Optional)</Label>
-                <Select value={selectedEngine} onValueChange={setSelectedEngine}>
-                  <SelectTrigger id="engine">
-                    <SelectValue placeholder="Auto-select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Auto-select</SelectItem>
-                    <SelectItem value="doctr">DocTR (Tables)</SelectItem>
-                    <SelectItem value="easyocr">EasyOCR (Handwriting)</SelectItem>
-                    <SelectItem value="paddleocr">PaddleOCR (Low-latency)</SelectItem>
-                    <SelectItem value="tesseract">Tesseract (Fallback)</SelectItem>
-                    <SelectItem value="google_vision">Google Vision API</SelectItem>
-                    <SelectItem value="omniparser">Omniparser (Structured)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                onClick={() => createJobMutation.mutate()}
-                disabled={!documentUrl.trim() || createJobMutation.isPending}
-                className="w-full"
-              >
-                {createJobMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Job"
+            <Tabs defaultValue="upload" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upload">Upload File</TabsTrigger>
+                <TabsTrigger value="url">From URL</TabsTrigger>
+              </TabsList>
+              <TabsContent value="upload" className="space-y-4">
+                <div>
+                  <Label>Upload Document</Label>
+                  <FileUpload
+                    bucket="ocr-documents"
+                    accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp,.gif"
+                    maxSize={50 * 1024 * 1024} // 50MB
+                    onUploadComplete={(result) => {
+                      setUploadedFileUrl(result.url)
+                      // Automatically create OCR job after upload
+                      createJobMutation.mutate()
+                    }}
+                    onUploadError={(error) => {
+                      showErrorToast("Upload failed", error)
+                    }}
+                  />
+                </div>
+                {uploadedFileUrl && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      File uploaded successfully. Creating OCR job...
+                    </p>
+                  </div>
                 )}
-              </Button>
-            </div>
+                <div>
+                  <Label htmlFor="engine-upload">OCR Engine (Optional)</Label>
+                  <Select value={selectedEngine} onValueChange={setSelectedEngine}>
+                    <SelectTrigger id="engine-upload">
+                      <SelectValue placeholder="Auto-select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Auto-select</SelectItem>
+                      <SelectItem value="doctr">DocTR (Tables)</SelectItem>
+                      <SelectItem value="easyocr">EasyOCR (Handwriting)</SelectItem>
+                      <SelectItem value="paddleocr">PaddleOCR (Low-latency)</SelectItem>
+                      <SelectItem value="tesseract">Tesseract (Fallback)</SelectItem>
+                      <SelectItem value="google_vision">Google Vision API</SelectItem>
+                      <SelectItem value="omniparser">Omniparser (Structured)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+              <TabsContent value="url" className="space-y-4">
+                <div>
+                  <Label htmlFor="document-url">Document URL</Label>
+                  <Input
+                    id="document-url"
+                    placeholder="https://synthralos.ai/document.pdf"
+                    value={documentUrl}
+                    onChange={(e) => setDocumentUrl(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="engine-url">OCR Engine (Optional)</Label>
+                  <Select value={selectedEngine} onValueChange={setSelectedEngine}>
+                    <SelectTrigger id="engine-url">
+                      <SelectValue placeholder="Auto-select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Auto-select</SelectItem>
+                      <SelectItem value="doctr">DocTR (Tables)</SelectItem>
+                      <SelectItem value="easyocr">EasyOCR (Handwriting)</SelectItem>
+                      <SelectItem value="paddleocr">PaddleOCR (Low-latency)</SelectItem>
+                      <SelectItem value="tesseract">Tesseract (Fallback)</SelectItem>
+                      <SelectItem value="google_vision">Google Vision API</SelectItem>
+                      <SelectItem value="omniparser">Omniparser (Structured)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={() => createJobMutation.mutate()}
+                  disabled={!documentUrl.trim() || createJobMutation.isPending}
+                  className="w-full"
+                >
+                  {createJobMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Job"
+                  )}
+                </Button>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </div>

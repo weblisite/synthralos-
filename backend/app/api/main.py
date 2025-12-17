@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import admin_analytics, admin_connectors, admin_system, agents, browser, chat, code, connectors, dashboard_ws, items, login, ocr, osint, private, rag, scraping, stats, users, utils, workflows
+from app.api.routes import admin_analytics, admin_connectors, admin_system, agents, browser, chat, code, connectors, dashboard_ws, items, login, ocr, osint, private, rag, scraping, stats, storage, users, utils, workflows
 from app.core.config import settings
 
 api_router = APIRouter()
@@ -23,6 +23,7 @@ api_router.include_router(code.router)
 api_router.include_router(chat.router)
 api_router.include_router(chat.ws_router)
 api_router.include_router(stats.router)
+api_router.include_router(storage.router)
 api_router.include_router(dashboard_ws.router)
 
 
