@@ -88,7 +88,11 @@ This guide explains how to deploy SynthralOS to Render using the Blueprint confi
    Required:
    - `SUPABASE_URL` - Your Supabase project URL
    - `SUPABASE_ANON_KEY` - Your Supabase anon key
-   - `SUPABASE_DB_URL` - Your Supabase database connection string
+   - `SUPABASE_DB_URL` - Your Supabase database connection string (**MUST use pooler - port 6543**)
+     - ⚠️ **IMPORTANT**: Use "Connection pooling" option from Supabase dashboard (port 6543)
+     - ❌ **DO NOT** use direct connection (port 5432) - it may resolve to IPv6 which Render can't reach
+     - Format: `postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres`
+     - See `docs/RENDER_IPV6_CONNECTION_FIX.md` for troubleshooting
    - `FRONTEND_HOST` - Will be set after frontend deploys
    - `BACKEND_CORS_ORIGINS` - Will be set after frontend deploys
    
