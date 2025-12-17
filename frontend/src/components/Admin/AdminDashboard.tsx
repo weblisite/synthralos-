@@ -11,7 +11,6 @@ import { CostAnalytics } from "./CostAnalytics"
 import { SystemHealth } from "./SystemHealth"
 import { SystemMetrics } from "./SystemMetrics"
 import { ActivityLogs } from "./ActivityLogs"
-import { PlatformSettings } from "./PlatformSettings"
 
 export function AdminDashboard() {
   return (

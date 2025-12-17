@@ -5,7 +5,7 @@
  */
 
 import { type ColumnDef } from "@tanstack/react-table"
-import { Plus, Settings, Trash2, CheckCircle2, XCircle } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -176,7 +176,7 @@ export function AdminConnectorManagement() {
   }
 
   const categories = Array.from(
-    new Set(connectors.map((c) => c.category).filter(Boolean))
+    new Set(connectors.map((c) => c.category).filter((cat): cat is string => Boolean(cat)))
   ).sort()
 
   const filteredConnectors = connectors.filter((connector) => {

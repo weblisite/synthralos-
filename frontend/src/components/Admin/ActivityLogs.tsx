@@ -67,10 +67,11 @@ export function ActivityLogs() {
     queryKey: ["activityLogs"],
     queryFn: fetchActivityLogs,
     refetchInterval: 30000, // Refresh every 30 seconds
-    onError: (error: Error) => {
-      showErrorToast("Failed to load activity logs", error.message)
-    },
   })
+
+  if (error) {
+    showErrorToast("Failed to load activity logs", error instanceof Error ? error.message : "Unknown error")
+  }
 
   if (isLoading) {
     return (
@@ -123,7 +124,7 @@ export function ActivityLogs() {
                 Activity Log
               </CardTitle>
               <CardDescription>
-                {activityData.total} recent events
+                {activityData?.total ?? 0} recent events
               </CardDescription>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -133,7 +134,7 @@ export function ActivityLogs() {
           </div>
         </CardHeader>
         <CardContent>
-          {activityData.activity.length === 0 ? (
+          {!activityData?.activity || activityData.activity.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No recent activity
             </div>
@@ -149,7 +150,7 @@ export function ActivityLogs() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {activityData.activity.map((item, index) => (
+                {activityData.activity.map((item: ActivityItem, index: number) => (
                   <TableRow key={index}>
                     <TableCell className="font-mono text-xs">
                       {format(new Date(item.timestamp), "HH:mm:ss")}
@@ -175,7 +176,7 @@ export function ActivityLogs() {
       </Card>
 
       <div className="text-xs text-muted-foreground text-center">
-        Last updated: {new Date(activityData.timestamp).toLocaleString()}
+        Last updated: {activityData?.timestamp ? new Date(activityData.timestamp).toLocaleString() : "Never"}
       </div>
     </div>
   )
