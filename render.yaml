@@ -67,7 +67,7 @@ services:
     startCommand: "nginx -g 'daemon off;'"
     envVars:
       - key: VITE_API_URL
-        sync: false  # Set to backend URL after deployment (e.g., https://synthralos-backend.onrender.com)
+        sync: false  # IMPORTANT: Set this to your backend URL after backend deploys (e.g., https://synthralos-backend.onrender.com/api/v1)
 
   # PostgreSQL Database
   - type: pspg
