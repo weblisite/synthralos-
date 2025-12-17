@@ -109,38 +109,40 @@ export function WorkflowCanvas({
   )
 
   return (
-    <div className="w-full h-full" style={{ width: '100%', height: '100%' }}>
-      <ReactFlow
-        nodes={initialNodes}
-        edges={initialEdges}
-        onNodesChange={handleNodesChange}
-        onEdgesChange={handleEdgesChange}
-        onConnect={handleConnect}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        nodeTypes={nodeTypes}
-        fitView
-        minZoom={0.1}
-        maxZoom={2}
-        defaultEdgeOptions={{
-          type: "smoothstep",
-          animated: true,
-        }}
-        connectionLineType="smoothstep"
-        nodesDraggable={!readonly}
-        nodesConnectable={!readonly}
-        elementsSelectable={!readonly}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background />
-        <Controls />
-        <MiniMap />
-      </ReactFlow>
+    <>
       <style>{`
         .react-flow__attribution {
           display: none !important;
         }
       `}</style>
-    </div>
+      <div className="w-full h-full" style={{ width: '100%', height: '100%' }}>
+        <ReactFlow
+          nodes={initialNodes}
+          edges={initialEdges}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={handleEdgesChange}
+          onConnect={handleConnect}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
+          nodeTypes={nodeTypes}
+          fitView
+          minZoom={0.1}
+          maxZoom={2}
+          defaultEdgeOptions={{
+            type: "smoothstep",
+            animated: true,
+          }}
+          connectionLineType="smoothstep"
+          nodesDraggable={!readonly}
+          nodesConnectable={!readonly}
+          elementsSelectable={!readonly}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background />
+          <Controls />
+          <MiniMap />
+        </ReactFlow>
+      </div>
+    </>
   )
 }
