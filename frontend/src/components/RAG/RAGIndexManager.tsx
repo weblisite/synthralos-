@@ -5,7 +5,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Database, FileText, Plus, Search, Trash2 } from "lucide-react"
+import { Database, FileText, Plus, Search, Trash2, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
