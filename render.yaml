@@ -70,7 +70,7 @@ services:
 databases:
   # PostgreSQL Database
   - name: synthralos-db
-    plan: starter  # 1GB storage, can be upgraded
+    plan: free  # Free tier (512MB storage), can be upgraded to standard/pro later
     databaseName: synthralos
     user: synthralos_user
 
