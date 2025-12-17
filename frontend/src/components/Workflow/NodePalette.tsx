@@ -122,6 +122,8 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
   const [isConnectorsLoading, setIsConnectorsLoading] = useState(true)
   const [isConnectorsExpanded, setIsConnectorsExpanded] = useState(false)
 
+  const [hasFetchedConnectors, setHasFetchedConnectors] = useState(false)
+
   useEffect(() => {
     // Only fetch connectors when the section is expanded (lazy loading)
     if (!isConnectorsExpanded) {
@@ -129,7 +131,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
     }
 
     // If connectors are already loaded, don't fetch again
-    if (connectors.length > 0 && !isConnectorsLoading) {
+    if (hasFetchedConnectors) {
       return
     }
 
@@ -162,6 +164,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
           )
           // Update connectors immediately to show progress
           setConnectors(activeConnectors)
+          setHasFetchedConnectors(true)
           console.log(`[NodePalette] Loaded ${activeConnectors.length} connectors`)
         } else {
           const errorText = await response.text()
@@ -175,7 +178,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
     }
 
     fetchConnectors()
-  }, [isConnectorsExpanded])
+  }, [isConnectorsExpanded, hasFetchedConnectors])
 
   const connectorNodes = useMemo(() => {
     return connectors.map((connector) => ({
