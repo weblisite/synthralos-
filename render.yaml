@@ -83,6 +83,10 @@ services:
       # Optional: Additional Service Configuration
       # ========================================================================
       # Uncomment and configure as needed:
+      # - key: FIRST_SUPERUSER
+      #   value: admin@synthralos.ai  # Admin email (optional, for initial user creation)
+      # - key: FIRST_SUPERUSER_PASSWORD
+      #   sync: false  # Admin password (optional, change in production!)
       # - key: REDIS_URL
       #   sync: false
       # - key: OPENAI_API_KEY
