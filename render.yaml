@@ -70,7 +70,7 @@ services:
         sync: false  # IMPORTANT: Set this to your backend URL after backend deploys (e.g., https://synthralos-backend.onrender.com/api/v1)
 
   # PostgreSQL Database
-  - type: pspg
+  - type: postgres
     name: synthralos-db
     plan: starter  # 1GB storage, can be upgraded
     databaseName: synthralos
