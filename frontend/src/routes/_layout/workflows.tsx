@@ -33,6 +33,8 @@ function WorkflowsPage() {
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [workflowId, setWorkflowId] = useState<string | null>(null)
+  const [executionId, setExecutionId] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const handleNodesChange = useCallback((updatedNodes: Node[]) => {
@@ -68,10 +70,17 @@ function WorkflowsPage() {
   )
 
   const handleSave = useCallback(async () => {
+    // Prevent multiple simultaneous saves
+    if (isSaving) {
+      return
+    }
+    
     if (!workflowName.trim()) {
       showErrorToast("Workflow name is required")
       return
     }
+
+    setIsSaving(true)
 
     try {
       // Convert React Flow nodes/edges to backend format
@@ -104,6 +113,7 @@ function WorkflowsPage() {
       } = await supabase.auth.getSession()
 
       if (!session) {
+        setIsSaving(false)
         showErrorToast("You must be logged in to save workflows")
         return
       }
@@ -123,39 +133,107 @@ function WorkflowsPage() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await response.json().catch(() => ({ detail: "Unknown error" }))
         throw new Error(error.detail || "Failed to save workflow")
       }
 
       const workflow = await response.json()
+      
       setWorkflowId(workflow.id)
-      showSuccessToast(`Workflow "${workflowName}" saved successfully`)
+      
+      // Show prominent success notification
+      showSuccessToast(
+        `Workflow "${workflowName}" has been saved successfully!`,
+        "✅ Workflow Saved"
+      )
 
-      // Reset form
-      setWorkflowName("")
-      setWorkflowDescription("")
-      setNodes([])
-      setEdges([])
-      setSelectedNode(null)
+      // Reset form after a short delay to allow toast to show
+      setTimeout(() => {
+        setWorkflowName("")
+        setWorkflowDescription("")
+        setNodes([])
+        setEdges([])
+        setSelectedNode(null)
+        setExecutionId(null) // Reset execution when saving new workflow
+      }, 100)
     } catch (error) {
       showErrorToast(
         error instanceof Error ? error.message : "Failed to save workflow",
       )
+    } finally {
+      setIsSaving(false)
     }
   }, [
     workflowName,
     workflowDescription,
     nodes,
     edges,
+    isSaving,
     showErrorToast,
     showSuccessToast,
   ])
 
   const handleRun = useCallback(async () => {
-    // TODO: Implement workflow execution
-    showSuccessToast("Workflow execution will be implemented soon")
+    // Check if workflow has been saved
+    if (!workflowId) {
+      showErrorToast("Please save the workflow before running it")
+      return
+    }
+
+    // Validate workflow has nodes
+    if (nodes.length === 0) {
+      showErrorToast("Workflow must have at least one node to run")
+      return
+    }
+
+    // Check for trigger node
+    const triggerNode = nodes.find((n) => n.type === "trigger")
+    if (!triggerNode) {
+      showErrorToast("Workflow must have a trigger node to run")
+      return
+    }
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        showErrorToast("You must be logged in to run workflows")
+        return
+      }
+
+      // Call backend API to run workflow
+      // FastAPI expects trigger_data directly in the body (not wrapped)
+      const triggerData = triggerNode.data.config || {}
+      const response = await fetch(`/api/v1/workflows/${workflowId}/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(triggerData),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Failed to run workflow")
+      }
+
+      const execution = await response.json()
+      showSuccessToast(`Workflow execution started: ${execution.execution_id}`)
+
+      // Update executionId to show in ExecutionPanel
+      setExecutionId(execution.execution_id)
+    } catch (error) {
+      showErrorToast(
+        error instanceof Error ? error.message : "Failed to run workflow",
+      )
+    }
   }, [
-    // TODO: Implement workflow execution
+    workflowId,
+    nodes,
+    showErrorToast,
     showSuccessToast,
   ])
 
@@ -170,13 +248,13 @@ function WorkflowsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleRun}>
+            <Button type="button" variant="outline" onClick={handleRun}>
               <Play className="h-4 w-4 mr-2" />
               Run
             </Button>
-            <Button onClick={handleSave}>
+            <Button type="button" onClick={handleSave} disabled={isSaving}>
               <Save className="h-4 w-4 mr-2" />
-              Save Workflow
+              {isSaving ? "Saving..." : "Save Workflow"}
             </Button>
           </div>
         </div>
@@ -206,6 +284,7 @@ function WorkflowsPage() {
       <div className="flex-1 overflow-hidden min-h-0">
         <WorkflowBuilder
           workflowId={workflowId}
+          executionId={executionId}
           nodes={nodes}
           edges={edges}
           onNodesChange={handleNodesChange}

@@ -30,12 +30,17 @@ class KUSHAIFramework(BaseAgentFramework):
     def _check_availability(self) -> None:
         """Check if KUSH AI is available."""
         try:
-            import kush_ai
-            self.is_available = True
-            logger.info("KUSH AI framework is available")
+            from app.core.config import settings
+            if settings.OPENAI_API_KEY:
+                import openai
+                self.is_available = True
+                logger.info("KUSH AI framework is available (using OpenAI with memory)")
+            else:
+                self.is_available = False
+                logger.warning("KUSH AI requires OPENAI_API_KEY to be configured")
         except ImportError:
-            logger.warning("KUSH AI is not installed. Install with: pip install kush-ai")
             self.is_available = False
+            logger.warning("OpenAI library not installed. Install with: pip install openai")
     
     def execute_task(
         self,
@@ -44,12 +49,12 @@ class KUSHAIFramework(BaseAgentFramework):
         context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
-        Execute a task using KUSH AI.
+        Execute a task using KUSH AI (autonomous agent with memory and tools).
         
         Args:
             task_type: Type of task
             input_data: Task input data
-            context: Optional context data
+            context: Optional context data (used as memory)
             
         Returns:
             Task execution result
@@ -59,36 +64,122 @@ class KUSHAIFramework(BaseAgentFramework):
                 "status": "failed",
                 "result": None,
                 "context": context or {},
-                "logs": ["KUSH AI framework not available. Please install kush-ai package."],
+                "logs": ["KUSH AI framework not available. Please configure OPENAI_API_KEY."],
                 "error": "Framework not available",
             }
         
         try:
-            # KUSH AI framework integration
-            # Note: Actual implementation depends on KUSH AI API
-            task_description = input_data.get("task", "")
+            import openai
+            from app.core.config import settings
+            
+            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+            
+            task = input_data.get("task") or input_data.get("prompt") or f"Execute {task_type}"
             tools = input_data.get("tools", [])
             memory_config = input_data.get("memory", {})
             
-            # Placeholder implementation
-            # Replace with actual KUSH AI API calls when available
+            # Build memory context
+            memory_context = context or {}
+            if memory_config.get("enabled", True) and memory_context:
+                memory_summary = "\n".join([
+                    f"Memory: {k} = {str(v)[:200]}"
+                    for k, v in list(memory_context.items())[:10]
+                ])
+            else:
+                memory_summary = "No previous memory"
+            
+            # Build tool descriptions
+            tool_descriptions = ""
+            if tools:
+                tool_descriptions = "\nAvailable Tools:\n" + "\n".join([
+                    f"- {tool.get('name', 'unknown')}: {tool.get('description', '')}"
+                    for tool in tools[:10]
+                ])
+            
+            # Enhanced prompt with memory and tools
+            enhanced_prompt = f"""You are an autonomous AI agent with long-term memory and tool access.
+
+Task: {task}
+
+{memory_summary}
+
+{tool_descriptions}
+
+Execute the task using available tools and memory. Provide a comprehensive result."""
+            
+            # Define functions for tool calling if tools are provided
+            functions = []
+            if tools:
+                for tool in tools[:5]:  # Limit to 5 tools for efficiency
+                    tool_name = tool.get("name", "unknown_tool")
+                    functions.append({
+                        "type": "function",
+                        "function": {
+                            "name": tool_name,
+                            "description": tool.get("description", f"Tool: {tool_name}"),
+                            "parameters": {
+                                "type": "object",
+                                "properties": tool.get("parameters", {}),
+                                "required": tool.get("required", []),
+                            }
+                        }
+                    })
+            
+            response = client.chat.completions.create(
+                model=input_data.get("model", "gpt-4o-mini"),
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an autonomous AI agent with memory and tool access. Use tools when needed and remember important information."
+                    },
+                    {
+                        "role": "user",
+                        "content": enhanced_prompt
+                    }
+                ],
+                tools=functions if functions else None,
+                tool_choice="auto" if functions else None,
+                temperature=0.7,
+                max_tokens=1500,
+            )
+            
+            result = response.choices[0].message.content
+            tool_calls = []
+            if response.choices[0].message.tool_calls:
+                tool_calls = [
+                    {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    }
+                    for tc in response.choices[0].message.tool_calls
+                ]
+            
+            # Update memory
+            updated_context = memory_context.copy()
+            updated_context["last_task"] = task_type
+            updated_context["last_result"] = result[:300]
+            updated_context["tools_used"] = [tc["name"] for tc in tool_calls]
+            
             return {
                 "status": "completed",
                 "result": {
-                    "output": f"KUSH AI task executed: {task_description} with {len(tools)} tools",
-                    "tools_used": len(tools),
-                    "memory_enabled": bool(memory_config),
+                    "output": result,
+                    "tools_used": len(tool_calls),
+                    "tool_calls": tool_calls,
+                    "memory_enabled": bool(memory_config.get("enabled", True)),
                 },
-                "context": context or {},
+                "context": updated_context,
                 "logs": [
-                    f"KUSH AI execution started: {task_description}",
-                    f"Using {len(tools)} tools",
+                    f"KUSH AI execution started: {task}",
+                    f"Using {len(tools)} available tools",
+                    f"Memory: {'enabled' if memory_config.get('enabled', True) else 'disabled'}",
+                    f"Tools called: {len(tool_calls)}",
                     "Task completed successfully",
                 ],
             }
             
         except Exception as e:
-            logger.error(f"KUSH AI task execution failed: {e}")
+            logger.error(f"KUSH AI task execution failed: {e}", exc_info=True)
             return {
                 "status": "failed",
                 "result": None,

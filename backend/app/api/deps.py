@@ -174,7 +174,7 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
                 logger.warning(f"Error creating user, retrying: {str(create_error)}")
                 session.rollback()
                 user = session.exec(statement).first()
-                if not user:
+    if not user:
                     # Log the error and re-raise with better message
                     logger.error(f"Failed to create user after retry: {str(create_error)}", exc_info=True)
                     raise HTTPException(
@@ -182,10 +182,10 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
                         detail=f"Failed to create user account: {str(create_error)}",
                     )
         
-        if not user.is_active:
-            raise HTTPException(status_code=400, detail="Inactive user")
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
         
-        return user
+    return user
         
     except HTTPException:
         # Re-raise HTTP exceptions as-is

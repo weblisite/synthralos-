@@ -52,11 +52,13 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
       return
     }
 
-    // Close existing connection if it exists
+      // Close existing connection if it exists
     if (wsConnectionRef.current) {
       wsConnectionRef.current.close()
       wsConnectionRef.current = null
     }
+
+    let connectionTimeout: ReturnType<typeof setTimeout> | null = null
 
     try {
       const {
@@ -64,16 +66,35 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
       } = await supabase.auth.getSession()
 
       if (!session) {
-        console.error("No session available for WebSocket connection")
+        // Silently fail if no session - don't spam console
         return
       }
 
+      // Get API URL from environment, convert http/https to ws/wss
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000"
+      const wsProtocol = apiUrl.startsWith("https") ? "wss" : "ws"
+      const wsHost = apiUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
+      
       // WebSocket endpoint for ag-ui bridge
-      const wsUrl = `ws://localhost:8000/api/v1/agws?token=${session.access_token}`
+      const wsUrl = `${wsProtocol}://${wsHost}/api/v1/agws?token=${session.access_token}`
       const ws = new WebSocket(wsUrl)
       wsConnectionRef.current = ws
+      
+      // Set a timeout for connection
+      connectionTimeout = setTimeout(() => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          ws.close()
+          setIsConnected(false)
+          wsConnectionRef.current = null
+        }
+        connectionTimeout = null
+      }, 5000) // 5 second timeout
 
       ws.onopen = () => {
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout)
+          connectionTimeout = null
+        }
         setIsConnected(true)
         console.log("WebSocket connected")
       }
@@ -117,15 +138,26 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
       }
 
       ws.onerror = (error) => {
-        console.error("WebSocket error:", error)
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout)
+          connectionTimeout = null
+        }
+        // Only log errors if we're actively trying to use the connection
+        // Don't spam console with connection errors on page load
+        // Silently fail - WebSocket will fallback to HTTP POST
         setIsConnected(false)
         setIsLoading(false)
       }
 
       ws.onclose = () => {
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout)
+          connectionTimeout = null
+        }
         setIsConnected(false)
         wsConnectionRef.current = null
-        console.log("WebSocket disconnected")
+        // Only log disconnection if we were connected or actively using it
+        // Silently handle disconnections to reduce console noise
       }
     } catch (error) {
       console.error("Failed to connect WebSocket:", error)
@@ -231,16 +263,18 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
     setMessages([])
   }, [])
 
-  // Auto-connect on mount
+  // Only connect WebSocket when chat is actually being used (lazy connection)
+  // This prevents unnecessary connection attempts on page load
   useEffect(() => {
-    connectWebSocket()
+    // Don't auto-connect on mount - wait until user actually tries to use chat
+    // The connection will be established when sendMessage is called
     return () => {
       if (wsConnectionRef.current) {
         wsConnectionRef.current.close()
         wsConnectionRef.current = null
       }
     }
-  }, [connectWebSocket])
+  }, [])
 
   return (
     <ChatContext.Provider

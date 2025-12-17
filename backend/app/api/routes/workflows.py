@@ -4,14 +4,17 @@ Workflow API Routes
 Endpoints for managing workflows and executions.
 """
 
+import logging
 import uuid
 from typing import Any
 
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.core.db import check_db_connectivity
 from app.models import (
     ExecutionLog,
     ModelCostLog,
@@ -26,6 +29,8 @@ from app.models import (
 from app.workflows.engine import WorkflowEngine, WorkflowNotFoundError
 from app.workflows.history import ExecutionHistory
 from app.workflows.scheduler import WorkflowScheduler
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
@@ -43,15 +48,133 @@ def create_workflow(
 ) -> Any:
     """
     Create a new workflow.
+    
+    Includes proper error handling, logging, and transaction management.
     """
-    workflow = Workflow(
-        **workflow_in.model_dump(),
-        owner_id=current_user.id,
+    logger.info(
+        f"Creating workflow: name='{workflow_in.name}', "
+        f"user_id={current_user.id}, "
+        f"has_graph_config={bool(workflow_in.graph_config)}, "
+        f"has_trigger_config={bool(workflow_in.trigger_config)}"
     )
-    session.add(workflow)
-    session.commit()
-    session.refresh(workflow)
-    return workflow
+    
+    # Quick database connectivity check
+    if not check_db_connectivity():
+        logger.error("Database connectivity check failed before creating workflow")
+        raise HTTPException(
+            status_code=503,
+            detail="Database is currently unavailable. Please try again later."
+        )
+    
+    try:
+        # Validate workflow data
+        if not workflow_in.name or not workflow_in.name.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Workflow name is required and cannot be empty"
+            )
+        
+        # Create workflow object
+        workflow = Workflow(
+            **workflow_in.model_dump(),
+            owner_id=current_user.id,
+        )
+        
+        logger.debug(f"Workflow object created: {workflow.id}")
+        
+        # Add to session
+        session.add(workflow)
+        logger.debug("Workflow added to session")
+        
+        # Commit transaction with error handling
+        try:
+            session.commit()
+            logger.info(f"Workflow created successfully: id={workflow.id}, name='{workflow.name}'")
+        except IntegrityError as e:
+            session.rollback()
+            logger.error(
+                f"Database integrity error creating workflow: {str(e)}, "
+                f"user_id={current_user.id}, workflow_name='{workflow_in.name}'"
+            )
+            # Check for specific constraint violations
+            error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
+            if "foreign key" in error_msg.lower():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid user or reference. Please ensure you are properly authenticated."
+                )
+            elif "unique constraint" in error_msg.lower() or "duplicate" in error_msg.lower():
+                raise HTTPException(
+                    status_code=409,
+                    detail="A workflow with this name already exists"
+                )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Database constraint violation: {error_msg}"
+                )
+        except OperationalError as e:
+            session.rollback()
+            logger.error(
+                f"Database operational error creating workflow: {str(e)}, "
+                f"user_id={current_user.id}, workflow_name='{workflow_in.name}'"
+            )
+            # Check for connection/timeout issues
+            error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
+            if "timeout" in error_msg.lower() or "connection" in error_msg.lower():
+                raise HTTPException(
+                    status_code=503,
+                    detail="Database connection timeout. Please try again."
+                )
+            else:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Database operation failed. Please try again later."
+                )
+        except SQLAlchemyError as e:
+            session.rollback()
+            logger.error(
+                f"Database error creating workflow: {str(e)}, "
+                f"user_id={current_user.id}, workflow_name='{workflow_in.name}'",
+                exc_info=True
+            )
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to create workflow due to database error"
+            )
+        
+        # Refresh to get database-generated fields
+        try:
+            session.refresh(workflow)
+            logger.debug(f"Workflow refreshed: id={workflow.id}")
+        except SQLAlchemyError as e:
+            logger.warning(
+                f"Failed to refresh workflow after creation: {str(e)}, "
+                f"workflow_id={workflow.id}"
+            )
+            # Workflow was created, so we can still return it
+        
+        return workflow
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Rollback on any unexpected error
+        try:
+            session.rollback()
+        except Exception:
+            pass  # Ignore rollback errors if session is already closed
+        
+        logger.error(
+            f"Unexpected error creating workflow: {str(e)}, "
+            f"user_id={current_user.id}, workflow_name='{workflow_in.name}'",
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred while creating the workflow"
+        )
 
 
 @router.get("/", response_model=list[WorkflowPublic])
@@ -386,6 +509,34 @@ def resume_execution(
         return {"status": "running", "execution_id": execution.execution_id}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Resume failed: {str(e)}")
+
+
+@router.post("/executions/{execution_id}/terminate", status_code=200)
+def terminate_execution(
+    execution_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    reason: str | None = Body(default=None, embed=True),
+) -> Any:
+    """
+    Terminate a running or paused execution.
+    """
+    execution = session.get(WorkflowExecution, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    
+    # Check ownership via workflow
+    workflow = session.get(Workflow, execution.workflow_id)
+    if not workflow or workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    try:
+        workflow_engine.terminate_execution(session, execution_id, reason=reason)
+        session.commit()
+        return {"status": "terminated", "execution_id": execution.execution_id}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=400, detail=f"Terminate failed: {str(e)}")
 
 
 @router.get("/{workflow_id}", response_model=WorkflowPublic)

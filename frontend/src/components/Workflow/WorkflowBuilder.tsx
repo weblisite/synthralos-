@@ -5,7 +5,7 @@
  */
 
 import type { Connection, Edge, Node } from "@xyflow/react"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import { Activity } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ExecutionPanel } from "./ExecutionPanel"
@@ -15,6 +15,7 @@ import { WorkflowCanvas } from "./WorkflowCanvas"
 
 interface WorkflowBuilderProps {
   workflowId: string | null
+  executionId?: string | null
   nodes: Node[]
   edges: Edge[]
   onNodesChange: (nodes: Node[]) => void
@@ -28,6 +29,7 @@ interface WorkflowBuilderProps {
 
 export function WorkflowBuilder({
   workflowId,
+  executionId: externalExecutionId,
   nodes,
   edges,
   onNodesChange,
@@ -39,9 +41,38 @@ export function WorkflowBuilder({
   onNodeUpdate,
 }: WorkflowBuilderProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
-  const [executionId, setExecutionId] = useState<string | null>(null)
+  const [internalExecutionId, setInternalExecutionId] = useState<string | null>(null)
+  // Use external executionId if provided, otherwise use internal state
+  const executionId = externalExecutionId ?? internalExecutionId
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, string>>({})
   const [showExecutionPanel, setShowExecutionPanel] = useState(false)
+  // Track the last added node position for stacking
+  const lastNodePositionRef = useRef<{ x: number; y: number } | null>(null)
+
+  // Calculate center position for new nodes
+  const getCenterPosition = useCallback(() => {
+    // React Flow coordinates are relative to the flow, not the viewport
+    // We'll use a fixed center point that works well for most screen sizes
+    const centerX = 500 // Fixed center X coordinate
+    const centerY = 300 // Fixed center Y coordinate
+    
+    // If we have a last node position, stack below it
+    if (lastNodePositionRef.current) {
+      return {
+        x: lastNodePositionRef.current.x,
+        y: lastNodePositionRef.current.y + 120, // Stack 120px below (node height + spacing)
+      }
+    }
+    
+    return { x: centerX, y: centerY }
+  }, [])
+
+  // Reset last node position when nodes are cleared
+  useEffect(() => {
+    if (nodes.length === 0) {
+      lastNodePositionRef.current = null
+    }
+  }, [nodes.length])
 
   const handleDrop = useCallback(
     (event: React.DragEvent) => {
@@ -53,11 +84,8 @@ export function WorkflowBuilder({
         return
       }
 
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect()
-      const position = {
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      }
+      // Use center position for consistent placement (always stack from center)
+      const position = getCenterPosition()
 
       // Check if this is a connector node
       const connectorSlug = event.dataTransfer.getData("connector-slug")
@@ -77,9 +105,12 @@ export function WorkflowBuilder({
         },
       }
 
+      // Update last node position for next node
+      lastNodePositionRef.current = position
+      
       onNodeAdd(newNode)
     },
-    [onNodeAdd],
+    [onNodeAdd, getCenterPosition],
   )
 
   const handleDragOver = useCallback((event: React.DragEvent) => {
@@ -102,13 +133,31 @@ export function WorkflowBuilder({
     }
   }, [onNodeSelect, executionId])
 
+  // Intercept node addition to set center position
+  const handleNodeAddWithPosition = useCallback(
+    (node: Node) => {
+      // If node position is (0,0), it means it was clicked (not dragged), so calculate center
+      if (node.position.x === 0 && node.position.y === 0) {
+        const centerPos = getCenterPosition()
+        node.position = centerPos
+        lastNodePositionRef.current = centerPos
+      }
+      
+      onNodeAdd(node)
+    },
+    [onNodeAdd, getCenterPosition],
+  )
+
   const handleExecutionStatusChange = useCallback((status: any) => {
-    setExecutionId(status.execution_id)
+    // Only update internal state if external executionId is not provided
+    if (externalExecutionId === undefined) {
+      setInternalExecutionId(status.execution_id)
+    }
     // Auto-open execution panel when execution starts
     if (status.execution_id) {
       setShowExecutionPanel(true)
     }
-  }, [])
+  }, [externalExecutionId])
 
   const handleNodeStatusChange = useCallback(
     (nodeId: string, status: string) => {
@@ -140,7 +189,7 @@ export function WorkflowBuilder({
 
   return (
     <div className="flex h-full relative">
-      <NodePalette onNodeAdd={onNodeAdd} />
+      <NodePalette onNodeAdd={handleNodeAddWithPosition} />
       <div
         ref={reactFlowWrapper}
         className={`flex-1 min-h-0 transition-all duration-300 ${

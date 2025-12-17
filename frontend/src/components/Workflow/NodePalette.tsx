@@ -206,10 +206,12 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
     (nodeType: NodeType) => {
       if (!onNodeAdd) return
 
+      // Calculate center position - will be handled by WorkflowBuilder
+      // For now, use a placeholder that will be updated
       const newNode: Node = {
         id: `${nodeType.type}-${Date.now()}`,
         type: nodeType.type.startsWith("connector-") ? "connector" : nodeType.type,
-        position: { x: Math.random() * 400, y: Math.random() * 400 },
+        position: { x: 0, y: 0 }, // Will be calculated by WorkflowBuilder
         data: {
           label: nodeType.label,
           config: nodeType.connectorSlug

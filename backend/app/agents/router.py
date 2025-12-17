@@ -267,12 +267,27 @@ class AgentRouter:
                 "framework_config": framework_config.config,
             }
             
-            # Execute task (placeholder - will be implemented per framework)
+            # Execute task using framework handler
             result = self._execute_with_framework(handler, execution_context)
             
             # Update task with result
-            task.status = "completed"
-            task.output_data = result
+            # Framework returns dict with status, result, context, logs
+            if isinstance(result, dict):
+                # Extract status from framework result
+                framework_status = result.get("status", "completed")
+                if framework_status == "failed":
+                    task.status = "failed"
+                    task.error_message = result.get("error", "Task execution failed")
+                else:
+                    task.status = "completed"
+                
+                # Store full result in output_data
+                task.output_data = result.get("result", result)
+            else:
+                # Fallback for unexpected result format
+                task.status = "completed"
+                task.output_data = result
+            
             task.completed_at = datetime.utcnow()
             
             # Cache context if agent_id provided
@@ -326,6 +341,12 @@ class AgentRouter:
             "metagpt": MetaGPTFramework,
             "autogen": AutoGenFramework,
             "archon": ArchonFramework,
+            "crewai": CrewAIFramework,
+            "riona": RionaFramework,
+            "kyro": KyroFramework,
+            "kush": KUSHAIFramework,
+            "camel": CamelAIFramework,
+            "swarm": SwarmFramework,
         }
         
         for framework_name, framework_class in framework_classes.items():
@@ -333,9 +354,10 @@ class AgentRouter:
                 handler = framework_class()
                 if handler.is_available:
                     self._framework_handlers[framework_name] = handler
+                    logger.info(f"Initialized {framework_name} framework")
             except Exception as e:
                 # Framework initialization failed, skip it
-                print(f"Warning: Failed to initialize {framework_name}: {e}")
+                logger.warning(f"Failed to initialize {framework_name}: {e}")
                 pass
     
     def _get_framework_handler(self, framework: str) -> BaseAgentFramework:

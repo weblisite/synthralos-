@@ -450,6 +450,42 @@ class WorkflowEngine:
             "Execution resumed",
         )
     
+    def terminate_execution(
+        self,
+        session: Session,
+        execution_id: uuid.UUID,
+        reason: str | None = None,
+    ) -> None:
+        """Terminate a running or paused execution."""
+        state = self.get_execution_state(session, execution_id)
+        if state.status not in ("running", "paused", "waiting_for_signal"):
+            raise WorkflowEngineError(f"Execution {execution_id} cannot be terminated (status: {state.status})")
+        
+        # Mark as failed with termination reason
+        state.status = "failed"
+        if reason:
+            state.error_message = reason
+        else:
+            state.error_message = "Execution terminated by user"
+        
+        self.save_execution_state(session, execution_id, state)
+        
+        # Update execution record
+        execution = session.get(WorkflowExecution, execution_id)
+        if execution:
+            execution.status = "failed"
+            execution.completed_at = datetime.utcnow()
+            execution.error_message = state.error_message
+            session.add(execution)
+        
+        self._log_execution(
+            session,
+            execution_id,
+            state.current_node_id or "system",
+            "warning",
+            f"Execution terminated: {state.error_message}",
+        )
+    
     def wait_for_signal(
         self,
         session: Session,

@@ -75,18 +75,128 @@ class HTTPRequestActivityHandler(ActivityHandler):
         input_data: dict[str, Any],
     ) -> NodeExecutionResult:
         """Execute HTTP request node."""
-        # TODO: Implement HTTP request logic
-        # For now, return placeholder
         from datetime import datetime
+        import urllib.request
+        import urllib.parse
+        import json
+        import time
         
-        return NodeExecutionResult(
-            node_id=node_id,
-            status="success",
-            output={"message": "HTTP request placeholder"},
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
-            duration_ms=0,
-        )
+        start_time = time.time()
+        
+        try:
+            # Get request configuration from node_config or input_data
+            url = node_config.get("url") or input_data.get("url")
+            method = node_config.get("method", "GET").upper()
+            headers = node_config.get("headers", {}) or input_data.get("headers", {})
+            body = node_config.get("body") or input_data.get("body")
+            timeout = node_config.get("timeout", 30) or input_data.get("timeout", 30)
+            
+            if not url:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error="URL is required for HTTP request",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+            
+            # Prepare request
+            if body and isinstance(body, dict):
+                body = json.dumps(body).encode("utf-8")
+            elif body and isinstance(body, str):
+                body = body.encode("utf-8")
+            
+            # Create request
+            req = urllib.request.Request(url, data=body, method=method)
+            
+            # Add headers
+            for key, value in headers.items():
+                req.add_header(key, value)
+            
+            # Default Content-Type for POST/PUT/PATCH
+            if method in ["POST", "PUT", "PATCH"] and "Content-Type" not in headers:
+                req.add_header("Content-Type", "application/json")
+            
+            # Execute request
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as response:
+                    status_code = response.getcode()
+                    response_headers = dict(response.headers)
+                    response_body = response.read().decode("utf-8")
+                    
+                    # Try to parse JSON response
+                    try:
+                        response_json = json.loads(response_body)
+                    except json.JSONDecodeError:
+                        response_json = None
+                    
+                    duration_ms = int((time.time() - start_time) * 1000)
+                    
+                    return NodeExecutionResult(
+                        node_id=node_id,
+                        status="success",
+                        output={
+                            "status_code": status_code,
+                            "headers": response_headers,
+                            "body": response_body,
+                            "json": response_json,
+                            "url": url,
+                            "method": method,
+                        },
+                        started_at=datetime.utcnow(),
+                        completed_at=datetime.utcnow(),
+                        duration_ms=duration_ms,
+                    )
+            except urllib.error.HTTPError as e:
+                # HTTP error (4xx, 5xx)
+                response_body = e.read().decode("utf-8") if e.fp else ""
+                duration_ms = int((time.time() - start_time) * 1000)
+                
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={
+                        "status_code": e.code,
+                        "headers": dict(e.headers) if e.headers else {},
+                        "body": response_body,
+                        "url": url,
+                        "method": method,
+                    },
+                    error=f"HTTP {e.code}: {e.reason}",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=duration_ms,
+                )
+            except urllib.error.URLError as e:
+                # Network error
+                duration_ms = int((time.time() - start_time) * 1000)
+                
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={
+                        "url": url,
+                        "method": method,
+                    },
+                    error=f"Network error: {str(e)}",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=duration_ms,
+                )
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="failed",
+                output={},
+                error=f"HTTP request failed: {str(e)}",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=duration_ms,
+            )
 
 
 class CodeActivityHandler(ActivityHandler):
@@ -99,18 +209,88 @@ class CodeActivityHandler(ActivityHandler):
         input_data: dict[str, Any],
     ) -> NodeExecutionResult:
         """Execute code node."""
-        # TODO: Implement code execution logic
-        # For now, return placeholder
         from datetime import datetime
+        from app.code.service import default_code_execution_service
+        from app.core.db import engine
+        from sqlmodel import Session
         
-        return NodeExecutionResult(
-            node_id=node_id,
-            status="success",
-            output={"message": "Code execution placeholder"},
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
-            duration_ms=0,
-        )
+        try:
+            # Get code and language from node_config or input_data
+            code = node_config.get("code") or input_data.get("code")
+            language = node_config.get("language", "python") or input_data.get("language", "python")
+            runtime = node_config.get("runtime") or input_data.get("runtime", "subprocess")
+            code_input_data = node_config.get("input_data", {}) or input_data.get("input_data", {})
+            requirements = node_config.get("requirements", {}) or input_data.get("requirements", {})
+            timeout_seconds = node_config.get("timeout_seconds", 30) or input_data.get("timeout_seconds", 30)
+            
+            if not code:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error="Code is required for code execution",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+            
+            # Use code execution service
+            with Session(engine) as session:
+                result = default_code_execution_service.execute_code(
+                    session=session,
+                    code=code,
+                    language=language,
+                    runtime=runtime,
+                    input_data={
+                        "input": code_input_data,
+                        "timeout": timeout_seconds,
+                    },
+                    requirements=requirements,
+                    timeout_seconds=timeout_seconds,
+                )
+            
+            # Parse result
+            if result.get("exit_code") == 0:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="success",
+                    output={
+                        "stdout": result.get("stdout", ""),
+                        "result": result.get("result"),
+                        "output_data": result.get("output_data"),
+                        "memory_mb": result.get("memory_mb"),
+                        "duration_ms": result.get("duration_ms", 0),
+                    },
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=result.get("duration_ms", 0),
+                )
+            else:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={
+                        "stdout": result.get("stdout", ""),
+                        "stderr": result.get("stderr", ""),
+                        "exit_code": result.get("exit_code"),
+                        "memory_mb": result.get("memory_mb"),
+                        "duration_ms": result.get("duration_ms", 0),
+                    },
+                    error=result.get("stderr", "Code execution failed"),
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=result.get("duration_ms", 0),
+                )
+        except Exception as e:
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="failed",
+                output={},
+                error=f"Code execution error: {str(e)}",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
 
 
 class RAGSwitchActivityHandler(ActivityHandler):
