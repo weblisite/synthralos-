@@ -190,7 +190,7 @@ export function CostAnalytics() {
                 />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip
-                  formatter={(value: number) => `$${value.toFixed(2)}`}
+                  formatter={(value: number | undefined) => value !== undefined ? `$${value.toFixed(2)}` : "$0.00"}
                   labelStyle={{ color: "#000" }}
                 />
                 <Legend />

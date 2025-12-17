@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react"
-import { Play, RefreshCw, X } from "lucide-react"
+import { Play, RefreshCw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

@@ -6,7 +6,7 @@
 
 import { type ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
-import { Play, RefreshCw, Trash2 } from "lucide-react"
+import { Play, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -43,7 +43,6 @@ interface ExecutionHistoryProps {
 export function ExecutionHistory({ workflowId, limit = 100 }: ExecutionHistoryProps) {
   const [executions, setExecutions] = useState<Execution[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [selectedExecution, setSelectedExecution] = useState<Execution | null>(null)
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { user, isAuthenticated, isLoading: isUserLoading } = useAuth()
 
@@ -282,7 +281,10 @@ export function ExecutionHistory({ workflowId, limit = 100 }: ExecutionHistoryPr
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setSelectedExecution(execution)}
+                  onClick={() => {
+                    // View execution details
+                    console.log("View execution:", execution)
+                  }}
                 >
                   <RefreshCw className="h-4 w-4" />
                 </Button>

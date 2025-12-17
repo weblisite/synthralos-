@@ -61,10 +61,11 @@ export function SystemHealth() {
     queryKey: ["systemHealth"],
     queryFn: fetchSystemHealth,
     refetchInterval: 30000, // Refresh every 30 seconds
-    onError: (error: Error) => {
-      showErrorToast("Failed to load system health", error.message)
-    },
   })
+
+  if (error) {
+    showErrorToast("Failed to load system health", error instanceof Error ? error.message : "Unknown error")
+  }
 
   if (isLoading) {
     return (
@@ -125,16 +126,16 @@ export function SystemHealth() {
                 Overall platform health and availability
               </CardDescription>
             </div>
-            {getStatusBadge(health.status)}
+            {getStatusBadge(health?.status || "unhealthy")}
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
             <div
-              className={`h-3 w-3 rounded-full ${getStatusColor(health.status)}`}
+              className={`h-3 w-3 rounded-full ${getStatusColor(health?.status || "unhealthy")}`}
             />
             <span className="text-sm text-muted-foreground">
-              Last checked: {new Date(health.timestamp).toLocaleString()}
+              Last checked: {health?.timestamp ? new Date(health.timestamp).toLocaleString() : "Never"}
             </span>
           </div>
         </CardContent>
@@ -150,7 +151,7 @@ export function SystemHealth() {
           <CardDescription>PostgreSQL database connectivity</CardDescription>
         </CardHeader>
         <CardContent>
-          {health.database.status === "connected" ? (
+          {health?.database?.status === "connected" ? (
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               <div>
@@ -167,7 +168,7 @@ export function SystemHealth() {
               <XCircle className="h-5 w-5 text-red-500" />
               <div>
                 <p className="font-medium text-red-500">Connection Error</p>
-                {health.database.error && (
+                {health?.database?.error && (
                   <p className="text-sm text-muted-foreground">
                     {health.database.error}
                   </p>
@@ -189,30 +190,34 @@ export function SystemHealth() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(health.services).map(([service, available]) => (
-              <div
-                key={service}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <div className="flex items-center gap-2">
-                  {available ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-gray-400" />
-                  )}
-                  <span className="font-medium capitalize">{service}</span>
+            {health?.services ? (
+              Object.entries(health.services).map(([service, available]) => (
+                <div
+                  key={service}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    {available ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-gray-400" />
+                    )}
+                    <span className="font-medium capitalize">{service}</span>
+                  </div>
+                  <Badge variant={available ? "default" : "secondary"}>
+                    {available ? "Configured" : "Not Configured"}
+                  </Badge>
                 </div>
-                <Badge variant={available ? "default" : "secondary"}>
-                  {available ? "Configured" : "Not Configured"}
-                </Badge>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">No services configured</p>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Health Checks */}
-      {health.checks.length > 0 && (
+      {health?.checks && health.checks.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Health Checks</CardTitle>
@@ -220,14 +225,13 @@ export function SystemHealth() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {health.checks.map((check, index) => (
+              {health.checks.map((check: ServiceStatus, index: number) => (
                 <div
                   key={index}
                   className="flex items-center justify-between p-2 border rounded"
                 >
                   <div className="flex items-center gap-2">
-                    {check.status === "available" ||
-                    check.status === "connected" ? (
+                    {check.status === "available" ? (
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
                     ) : (
                       <XCircle className="h-4 w-4 text-red-500" />
