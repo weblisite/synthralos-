@@ -34,13 +34,7 @@ export function NodeConfigPanel({
   const config = useMemo(() => node?.data?.config || {}, [node])
 
   if (!node) {
-    return (
-      <div className="w-80 h-full bg-background border-l p-4">
-        <p className="text-sm text-muted-foreground">
-          Select a node to configure
-        </p>
-      </div>
-    )
+    return null
   }
 
   const handleConfigUpdate = (key: string, value: any) => {
@@ -63,7 +57,7 @@ export function NodeConfigPanel({
   }
 
   return (
-    <div className="w-80 h-full bg-background border-l flex flex-col">
+    <div className="h-full bg-background flex flex-col">
       <div className="p-4 border-b flex items-center justify-between">
         <h2 className="text-lg font-semibold">Node Configuration</h2>
         <Button variant="ghost" size="icon" onClick={onClose}>

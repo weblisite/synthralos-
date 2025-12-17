@@ -381,7 +381,7 @@ export function ExecutionPanel({
 
   if (!executionId || !executionStatus) {
     return (
-      <div className="w-96 h-full bg-background border-l p-4 flex items-center justify-center">
+      <div className="h-full bg-background p-4 flex items-center justify-center">
         <p className="text-sm text-muted-foreground text-center">
           No execution selected
           <br />
@@ -392,7 +392,7 @@ export function ExecutionPanel({
   }
 
   return (
-    <div className="w-96 h-full bg-background border-l flex flex-col">
+    <div className="h-full bg-background flex flex-col">
       <div className="p-4 border-b space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Execution</h2>

@@ -6,6 +6,8 @@
 
 import type { Connection, Edge, Node } from "@xyflow/react"
 import { useCallback, useMemo, useRef, useState } from "react"
+import { Activity } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { ExecutionPanel } from "./ExecutionPanel"
 import { NodeConfigPanel } from "./NodeConfigPanel"
 import { NodePalette } from "./NodePalette"
@@ -39,6 +41,7 @@ export function WorkflowBuilder({
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [executionId, setExecutionId] = useState<string | null>(null)
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, string>>({})
+  const [showExecutionPanel, setShowExecutionPanel] = useState(false)
 
   const handleDrop = useCallback(
     (event: React.DragEvent) => {
@@ -93,10 +96,18 @@ export function WorkflowBuilder({
 
   const handlePaneClick = useCallback(() => {
     onNodeSelect(null)
-  }, [onNodeSelect])
+    // Close execution panel when clicking canvas if no execution is running
+    if (!executionId) {
+      setShowExecutionPanel(false)
+    }
+  }, [onNodeSelect, executionId])
 
   const handleExecutionStatusChange = useCallback((status: any) => {
     setExecutionId(status.execution_id)
+    // Auto-open execution panel when execution starts
+    if (status.execution_id) {
+      setShowExecutionPanel(true)
+    }
   }, [])
 
   const handleNodeStatusChange = useCallback(
@@ -123,17 +134,42 @@ export function WorkflowBuilder({
     [nodes, nodeStatuses],
   )
 
+  // Determine which panel to show (node config takes priority)
+  const showNodeConfig = selectedNode !== null
+  const showExecutionDetails = showExecutionPanel && !showNodeConfig
+
   return (
-    <div className="flex h-full">
+    <div className="flex h-full relative">
       <NodePalette onNodeAdd={onNodeAdd} />
       <div
         ref={reactFlowWrapper}
-        className="flex-1 min-h-0"
+        className={`flex-1 min-h-0 transition-all duration-300 ${
+          showNodeConfig || showExecutionDetails ? "mr-80" : ""
+        }`}
         style={{ height: '100%' }}
         role="application"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
+        {/* Canvas Header with Execution Details Button */}
+        <div className="absolute top-2 right-2 z-10 flex gap-2">
+          {(executionId || showExecutionPanel) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowExecutionPanel(!showExecutionPanel)
+                if (showExecutionPanel) {
+                  onNodeSelect(null) // Close node config if open
+                }
+              }}
+              className="bg-background/80 backdrop-blur-sm"
+            >
+              <Activity className="h-4 w-4 mr-2" />
+              {showExecutionPanel ? "Hide" : "Show"} Execution Details
+            </Button>
+          )}
+        </div>
         <WorkflowCanvas
           initialNodes={nodesWithStatus}
           initialEdges={edges}
@@ -144,19 +180,31 @@ export function WorkflowBuilder({
           onPaneClick={handlePaneClick}
         />
       </div>
-      <NodeConfigPanel
-        node={selectedNode}
-        onClose={() => onNodeSelect(null)}
-        onUpdate={onNodeUpdate}
-      />
-      <ExecutionPanel
-        workflowId={workflowId}
-        executionId={executionId}
-        nodes={nodes}
-        edges={edges}
-        onExecutionStatusChange={handleExecutionStatusChange}
-        onNodeStatusChange={handleNodeStatusChange}
-      />
+      
+      {/* Node Configuration Panel - Slides in from right */}
+      {showNodeConfig && (
+        <div className="absolute right-0 top-0 bottom-0 w-80 bg-background border-l shadow-lg z-20 animate-in slide-in-from-right duration-300">
+          <NodeConfigPanel
+            node={selectedNode}
+            onClose={() => onNodeSelect(null)}
+            onUpdate={onNodeUpdate}
+          />
+        </div>
+      )}
+      
+      {/* Execution Panel - Slides in from right */}
+      {showExecutionDetails && (
+        <div className="absolute right-0 top-0 bottom-0 w-80 bg-background border-l shadow-lg z-20 animate-in slide-in-from-right duration-300">
+          <ExecutionPanel
+            workflowId={workflowId}
+            executionId={executionId}
+            nodes={nodes}
+            edges={edges}
+            onExecutionStatusChange={handleExecutionStatusChange}
+            onNodeStatusChange={handleNodeStatusChange}
+          />
+        </div>
+      )}
     </div>
   )
 }
