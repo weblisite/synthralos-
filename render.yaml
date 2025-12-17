@@ -1,3 +1,20 @@
+# ============================================================================
+# SynthralOS Render Blueprint Configuration
+# ============================================================================
+# 
+# Architecture:
+# - Database: Supabase PostgreSQL (external service, not managed by Render)
+# - Authentication: Supabase Auth (external service, not managed by Render)
+# - Storage: Supabase Storage (external service, not managed by Render)
+# - Backend: FastAPI service (deployed on Render)
+# - Frontend: React/Vite service (deployed on Render)
+#
+# IMPORTANT: This blueprint does NOT include a Render database service.
+# All database, authentication, and storage operations use Supabase.
+# See docs/SUPABASE_DATABASE_MIGRATION.md for setup instructions.
+#
+# ============================================================================
+
 services:
   # Backend API Service
   - type: web
@@ -19,27 +36,60 @@ services:
         generateValue: true
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "11520"  # 8 days
-      # Supabase Configuration (Database, Auth, Storage)
+      
+      # ========================================================================
+      # Supabase Configuration (REQUIRED)
+      # ========================================================================
+      # Supabase is used for:
+      # - Database: PostgreSQL database (replaces Render database)
+      # - Authentication: User authentication and JWT tokens
+      # - Storage: File storage for OCR, RAG, and user uploads
+      #
+      # Setup Instructions:
+      # 1. Create a Supabase project at https://supabase.com
+      # 2. Get your project URL and anon key from Settings > API
+      # 3. Get database connection string from Settings > Database
+      # 4. Set these values in Render dashboard after creating the service
+      # ========================================================================
       - key: SUPABASE_URL
-        sync: false  # Set manually in Render dashboard: https://[PROJECT_REF].supabase.co
+        sync: false  # REQUIRED: Set manually in Render dashboard
+        # Format: https://[PROJECT_REF].supabase.co
+        # Get from: Supabase Dashboard > Settings > API > Project URL
+      
       - key: SUPABASE_ANON_KEY
-        sync: false  # Set manually in Render dashboard: Get from Supabase Settings > API
+        sync: false  # REQUIRED: Set manually in Render dashboard
+        # Get from: Supabase Dashboard > Settings > API > Project API keys > anon/public key
+      
       - key: SUPABASE_DB_URL
-        sync: false  # Set manually: Get from Supabase Settings > Database > Connection string (use pooler for serverless)
+        sync: false  # REQUIRED: Set manually in Render dashboard
+        # Get from: Supabase Dashboard > Settings > Database > Connection string
+        # Use "Connection pooling" option (port 6543) for serverless/Render
         # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-      # Alternative: Use SUPABASE_DB_PASSWORD instead of SUPABASE_DB_URL
-      # - key: SUPABASE_DB_PASSWORD
-      #   sync: false  # Set manually: Get from Supabase Settings > Database > Database password
+        # 
+        # Alternative: If you prefer to use SUPABASE_DB_PASSWORD instead:
+        # - key: SUPABASE_DB_PASSWORD
+        #   sync: false  # Get from: Supabase Dashboard > Settings > Database > Database password
+      
+      # ========================================================================
+      # Frontend Configuration
+      # ========================================================================
       - key: FRONTEND_HOST
-        sync: false  # Will be set to frontend URL after deployment
+        sync: false  # Set to frontend URL after deployment (e.g., https://synthralos-frontend.onrender.com)
+      
       - key: BACKEND_CORS_ORIGINS
-        sync: false  # Will be set to frontend URL after deployment
-      # Optional: Add other environment variables as needed
+        sync: false  # Set to frontend URL after deployment (e.g., https://synthralos-frontend.onrender.com)
+      
+      # ========================================================================
+      # Optional: Additional Service Configuration
+      # ========================================================================
+      # Uncomment and configure as needed:
       # - key: REDIS_URL
       #   sync: false
       # - key: OPENAI_API_KEY
       #   sync: false
       # - key: ANTHROPIC_API_KEY
+      #   sync: false
+      # - key: NANGO_SECRET_KEY
       #   sync: false
 
   # Frontend Web Service
@@ -52,7 +102,35 @@ services:
     buildCommand: ""
     envVars:
       - key: VITE_API_URL
-        sync: false  # IMPORTANT: Set this to your backend URL after backend deploys (e.g., https://synthralos-backend.onrender.com/api/v1)
+        sync: false  # REQUIRED: Set to backend URL after backend deploys
+        # Format: https://synthralos-backend.onrender.com/api/v1
+        # IMPORTANT: Backend must be deployed first to get the URL
+      
+      - key: VITE_SUPABASE_URL
+        sync: false  # REQUIRED: Set to your Supabase project URL
+        # Format: https://[PROJECT_REF].supabase.co
+        # Get from: Supabase Dashboard > Settings > API > Project URL
+      
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false  # REQUIRED: Set to your Supabase anon key
+        # Get from: Supabase Dashboard > Settings > API > Project API keys > anon/public key
 
-# No database needed - using Supabase for database, auth, and storage
+# ============================================================================
+# Database Service: NOT INCLUDED
+# ============================================================================
+# 
+# This blueprint does NOT include a Render database service because:
+# - Database: Supabase PostgreSQL (external service)
+# - Authentication: Supabase Auth (external service)
+# - Storage: Supabase Storage (external service)
+#
+# All database operations connect to Supabase PostgreSQL via SUPABASE_DB_URL.
+# See backend/app/core/config.py for database connection logic.
+#
+# Migration Notes:
+# - All database migrations are managed via Supabase migrations or Alembic
+# - See docs/SUPABASE_DATABASE_MIGRATION.md for migration instructions
+# - See docs/MIGRATION_STATUS_REPORT.md for current migration status
+#
+# ============================================================================
 
