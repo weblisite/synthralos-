@@ -383,12 +383,27 @@ export function ExecutionPanel({
 
   if (!executionId || !executionStatus) {
     return (
-      <div className="h-full bg-background p-4 flex items-center justify-center">
-        <p className="text-sm text-muted-foreground text-center">
-          No execution selected
-          <br />
-          Run a workflow to see execution details
-        </p>
+      <div className="h-full bg-background flex flex-col">
+        <div className="p-4 border-b flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Execution</h2>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <p className="text-sm text-muted-foreground text-center">
+            No execution selected
+            <br />
+            Run a workflow to see execution details
+          </p>
+        </div>
       </div>
     )
   }
