@@ -246,8 +246,8 @@ async def list_files(
     folder_path: str = "",
     limit: int = 100,
     offset: int = 0,
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """
     List files in a Supabase Storage bucket.
@@ -319,8 +319,8 @@ async def create_signed_url(
 
 @router.get("/buckets")
 async def list_buckets(
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """
     List available storage buckets.

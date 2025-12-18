@@ -4,6 +4,14 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app/
 
+# Install system dependencies including Tesseract OCR
+RUN apt-get update && \
+    apt-get install -y \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 # Ref: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
 COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
