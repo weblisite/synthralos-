@@ -21,6 +21,23 @@ echo "Pre-start checks completed. Starting server..."
 # Use 0.0.0.0 to bind to all interfaces (required for Render)
 PORT=${PORT:-8000}
 echo "Starting server on port $PORT..."
+echo "Host: 0.0.0.0"
+echo "App: app.main:app"
+echo "Python path: $PYTHONPATH"
+echo "Working directory: $(pwd)"
 
-exec uvicorn app.main:app --host 0.0.0.0 --port $PORT
+# Verify uvicorn is available
+if ! command -v uvicorn &> /dev/null; then
+    echo "⚠️  uvicorn not found in PATH, using python -m uvicorn"
+    UVICORN_CMD="python -m uvicorn"
+else
+    echo "✅ uvicorn found in PATH"
+    UVICORN_CMD="uvicorn"
+fi
+
+# Use python -m uvicorn for better reliability
+# Add --log-level info for better debugging
+# Use --timeout-keep-alive to prevent connection issues
+echo "Executing: $UVICORN_CMD app.main:app --host 0.0.0.0 --port $PORT --log-level info"
+exec $UVICORN_CMD app.main:app --host 0.0.0.0 --port $PORT --log-level info --timeout-keep-alive 30
 
