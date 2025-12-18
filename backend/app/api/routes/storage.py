@@ -243,11 +243,11 @@ async def delete_file(
 @router.get("/list/{bucket}", response_model=FileListResponse)
 async def list_files(
     bucket: str,
+    session: SessionDep,
+    current_user: CurrentUser,
     folder_path: str = "",
     limit: int = 100,
     offset: int = 0,
-    session: SessionDep,
-    current_user: CurrentUser,
 ) -> Any:
     """
     List files in a Supabase Storage bucket.
