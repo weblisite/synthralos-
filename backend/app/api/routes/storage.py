@@ -12,6 +12,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
@@ -211,9 +212,11 @@ async def delete_file(
     file_path: str,
     session: SessionDep,
     current_user: CurrentUser,
-) -> Any:
+) -> Response:
     """
     Delete a file from Supabase Storage.
+    
+    Returns 204 No Content on successful deletion.
     """
     if not default_storage_service.is_available:
         raise HTTPException(
@@ -223,7 +226,7 @@ async def delete_file(
     
     try:
         default_storage_service.delete_file(bucket=bucket, file_path=file_path)
-        return None
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
         
     except FileNotFoundError:
         raise HTTPException(
