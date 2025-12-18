@@ -16,7 +16,11 @@ python -m alembic upgrade head
 
 echo "Pre-start checks completed. Starting server..."
 
-# Start the backend server
-# Use PORT environment variable from Render, default to 8000
-exec fastapi run --host 0.0.0.0 --port ${PORT:-8000} app/main.py
+# Start the backend server using uvicorn
+# Render provides PORT environment variable automatically
+# Use 0.0.0.0 to bind to all interfaces (required for Render)
+PORT=${PORT:-8000}
+echo "Starting server on port $PORT..."
+
+exec uvicorn app.main:app --host 0.0.0.0 --port $PORT
 

@@ -22,9 +22,10 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: starter  # Can be upgraded to standard, pro, etc.
+    plan: starter  # Can be upgraded to standard, pro, etc. for more memory
     buildCommand: ""
     healthCheckPath: /api/v1/utils/health-check
+    # PORT is automatically set by Render - no need to specify
     envVars:
       - key: ENVIRONMENT
         value: production
