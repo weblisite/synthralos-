@@ -25,8 +25,11 @@ services:
     plan: starter  # Can be upgraded to standard, pro, etc. for more memory
     buildCommand: ""
     healthCheckPath: /api/v1/utils/health-check
-    # PORT is automatically set by Render - no need to specify
     envVars:
+      # Render automatically provides PORT (defaults to 10000)
+      # Explicitly set for clarity and to match Render's default
+      - key: PORT
+        value: "10000"
       - key: ENVIRONMENT
         value: production
       - key: PROJECT_NAME

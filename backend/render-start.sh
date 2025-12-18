@@ -17,9 +17,16 @@ python -m alembic upgrade head
 echo "Pre-start checks completed. Starting server..."
 
 # Start the backend server using uvicorn
-# Render provides PORT environment variable automatically
+# Render provides PORT environment variable automatically (defaults to 10000)
 # Use 0.0.0.0 to bind to all interfaces (required for Render)
-PORT=${PORT:-8000}
+# Don't hardcode a fallback - use Render's default if somehow not set
+if [ -z "$PORT" ]; then
+    echo "⚠️  PORT environment variable not set. Render should provide this automatically."
+    echo "Using Render's default port 10000"
+    PORT=10000
+else
+    echo "✅ Using PORT from Render: $PORT"
+fi
 echo "Starting server on port $PORT..."
 echo "Host: 0.0.0.0"
 echo "App: app.main:app"
@@ -35,12 +42,11 @@ else
     UVICORN_CMD="uvicorn"
 fi
 
-# Test if we can import the app before starting uvicorn
-echo "Testing app import..."
-if ! python -c "from app.main import app; print('✅ App imported successfully')" 2>&1; then
-    echo "❌ Failed to import app. Check for import errors above."
-    exit 1
-fi
+# Skip import test - it can hang due to heavy imports/memory issues
+# Uvicorn will handle imports and show errors if any
+# This prevents the startup script from hanging indefinitely
+echo "Skipping import test (uvicorn will handle imports and show errors if any)"
+echo "Starting uvicorn directly..."
 
 # Use python -m uvicorn for better reliability
 # Add --log-level info for better debugging
