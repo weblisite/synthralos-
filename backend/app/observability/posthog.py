@@ -36,7 +36,8 @@ class PostHogClient:
         self.is_available = POSTHOG_AVAILABLE and bool(settings.POSTHOG_KEY)
         
         if not self.is_available:
-            logger.warning("PostHog not configured. Analytics will be disabled.")
+            logger.warning("PostHog not configured (POSTHOG_KEY not set). Analytics will be disabled.")
+            logger.info("To enable PostHog: Set POSTHOG_KEY environment variable. See docs/OBSERVABILITY_SETUP.md")
             self.client = None
             return
         

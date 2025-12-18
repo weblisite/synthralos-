@@ -37,7 +37,8 @@ class WazuhClient:
         self.is_available = WAZUH_AVAILABLE and bool(settings.WAZUH_URL)
         
         if not self.is_available:
-            logger.warning("Wazuh not configured. Security monitoring will be disabled.")
+            logger.warning("Wazuh not configured (WAZUH_URL not set). Security monitoring will be disabled.")
+            logger.info("To enable Wazuh: Set WAZUH_URL environment variable. See docs/OBSERVABILITY_SETUP.md")
             self.wazuh_url = None
             self.wazuh_auth = None
             return

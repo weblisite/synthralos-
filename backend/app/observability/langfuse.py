@@ -36,7 +36,8 @@ class LangfuseClient:
         self.is_available = LANGFUSE_AVAILABLE and bool(settings.LANGFUSE_KEY)
         
         if not self.is_available:
-            logger.warning("Langfuse not configured. LLM observability will be disabled.")
+            logger.warning("Langfuse not configured (LANGFUSE_KEY not set). LLM observability will be disabled.")
+            logger.info("To enable Langfuse: Set LANGFUSE_KEY environment variable. See docs/OBSERVABILITY_SETUP.md")
             self.client = None
             return
         

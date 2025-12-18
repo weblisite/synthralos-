@@ -54,7 +54,8 @@ class RAGService:
     def _initialize_chromadb(self) -> None:
         """Initialize ChromaDB client if configured."""
         if not settings.CHROMA_SERVER_HOST:
-            logger.info("ChromaDB not configured. Using placeholder client.")
+            logger.info("ChromaDB not configured (CHROMA_SERVER_HOST not set). Using placeholder client.")
+            logger.info("To enable ChromaDB: Set CHROMA_SERVER_HOST environment variable. See docs/OBSERVABILITY_SETUP.md")
             return
         
         try:

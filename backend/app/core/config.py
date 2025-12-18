@@ -82,24 +82,32 @@ class Settings(BaseSettings):
     INFISICAL_CLIENT_SECRET: str = ""
     
     # Observability Configuration
-    SIGNOZ_ENDPOINT: str = ""  # e.g., "http://localhost:4317"
-    POSTHOG_KEY: str = ""
-    LANGFUSE_KEY: str = ""
-    LANGFUSE_SECRET_KEY: str = ""  # Optional, defaults to LANGFUSE_KEY if not set
-    LANGFUSE_HOST: str = "https://cloud.langfuse.com"  # Optional custom host
+    # Note: All observability services are optional and fail gracefully if not configured
+    # See docs/OBSERVABILITY_SETUP.md for setup instructions
+    
+    # Signoz (OpenTelemetry - Distributed Tracing)
+    SIGNOZ_ENDPOINT: str = ""  # e.g., "http://localhost:4317" or "http://signoz:4317"
+    
+    # PostHog (Product Analytics & Feature Flags)
+    POSTHOG_KEY: str = ""  # Get from: https://posthog.com > Project Settings > Project API Key
+    
+    # Langfuse (LLM Observability & Tracing)
+    LANGFUSE_KEY: str = ""  # Public key - Get from: https://cloud.langfuse.com > Settings > API Keys
+    LANGFUSE_SECRET_KEY: str = ""  # Secret key (optional, defaults to LANGFUSE_KEY if not set)
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"  # Optional custom host for self-hosted Langfuse
     
     # Cache Configuration
     REDIS_URL: str = ""  # e.g., "redis://localhost:6379/0"
     CACHE_TTL_DEFAULT: int = 300  # Default cache TTL in seconds (5 minutes)
     CACHE_ENABLED: bool = True  # Enable/disable caching
     
-    # ChromaDB Configuration
-    CHROMA_SERVER_HOST: str = "localhost"  # ChromaDB server host
+    # ChromaDB Configuration (Vector Database for RAG)
+    CHROMA_SERVER_HOST: str = ""  # ChromaDB server host (empty = disabled)
     CHROMA_SERVER_HTTP_PORT: int = 8000  # ChromaDB HTTP port
-    CHROMA_SERVER_AUTH_TOKEN: str = ""  # Optional ChromaDB auth token
+    CHROMA_SERVER_AUTH_TOKEN: str = ""  # Optional ChromaDB auth token (for ChromaDB Cloud)
     
-    # Wazuh Configuration
-    WAZUH_URL: str = ""  # e.g., "http://localhost:55000"
+    # Wazuh Configuration (Security Monitoring & Audit Logging)
+    WAZUH_URL: str = ""  # e.g., "http://localhost:55000" or "http://wazuh:55000"
     WAZUH_USER: str = ""  # Optional Wazuh API user
     WAZUH_PASSWORD: str = ""  # Optional Wazuh API password
     

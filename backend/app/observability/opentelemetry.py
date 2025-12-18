@@ -40,7 +40,8 @@ def setup_opentelemetry(app: Any | None = None) -> None:
         return
     
     if not settings.SIGNOZ_ENDPOINT:
-        logger.warning("Signoz endpoint not configured. Skipping OpenTelemetry setup.")
+        logger.warning("Signoz endpoint not configured (SIGNOZ_ENDPOINT not set). Skipping OpenTelemetry setup.")
+        logger.info("To enable Signoz: Set SIGNOZ_ENDPOINT environment variable. See docs/OBSERVABILITY_SETUP.md")
         return
     
     try:

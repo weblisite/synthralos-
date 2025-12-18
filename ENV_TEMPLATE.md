@@ -111,17 +111,35 @@ NANGO_ENABLED=true  # Enable/disable Nango integration
 
 ### Observability & Monitoring
 ```bash
-# Signoz (OpenTelemetry)
-SIGNOZ_ENDPOINT=  # e.g., http://localhost:4317
+# Signoz (OpenTelemetry - Distributed Tracing)
+# Get from: Signoz dashboard or self-hosted instance
+SIGNOZ_ENDPOINT=  # e.g., http://localhost:4317 (OTLP gRPC endpoint)
 
-# PostHog (Product Analytics)
-POSTHOG_KEY=
+# PostHog (Product Analytics & Feature Flags)
+# Get from: https://posthog.com > Project Settings > Project API Key
+POSTHOG_KEY=  # e.g., phc_xxxxxxxxxxxxxxxxxxxxx
 
-# Langfuse (LLM Observability)
-LANGFUSE_KEY=
+# Langfuse (LLM Observability & Tracing)
+# Get from: https://cloud.langfuse.com > Settings > API Keys
+LANGFUSE_KEY=  # Public key (starts with pk_lf_)
+LANGFUSE_SECRET_KEY=  # Secret key (optional, defaults to LANGFUSE_KEY)
+LANGFUSE_HOST=https://cloud.langfuse.com  # Optional, defaults to cloud.langfuse.com
+
+# Wazuh (Security Monitoring & Audit Logging)
+# Get from: Self-hosted Wazuh instance or managed service
+WAZUH_URL=  # e.g., http://localhost:55000
+WAZUH_USER=  # Optional: Wazuh API username
+WAZUH_PASSWORD=  # Optional: Wazuh API password
+
+# ChromaDB (Vector Database for RAG)
+# Get from: Self-hosted ChromaDB or ChromaDB Cloud
+CHROMA_SERVER_HOST=localhost  # ChromaDB server hostname
+CHROMA_SERVER_HTTP_PORT=8000  # ChromaDB HTTP port (usually 8000)
+CHROMA_SERVER_AUTH_TOKEN=  # Optional: Auth token for ChromaDB Cloud
 
 # Sentry (Error Tracking)
-SENTRY_DSN=
+# Get from: https://sentry.io > Project Settings > DSN
+SENTRY_DSN=  # e.g., https://xxx@xxx.ingest.sentry.io/xxx
 ```
 
 ### Email Configuration (SMTP)

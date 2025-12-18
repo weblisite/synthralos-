@@ -84,9 +84,44 @@ services:
         sync: false  # Set to frontend URL after deployment (e.g., https://synthralos-frontend.onrender.com)
       
       # ========================================================================
-      # Optional: Additional Service Configuration
+      # Optional: Observability & Monitoring Services
       # ========================================================================
       # Uncomment and configure as needed:
+      # See docs/OBSERVABILITY_SETUP.md for detailed setup instructions
+      #
+      # - key: LANGFUSE_KEY
+      #   sync: false  # LLM observability - Get from https://cloud.langfuse.com
+      # - key: LANGFUSE_SECRET_KEY
+      #   sync: false  # Optional - defaults to LANGFUSE_KEY if not set
+      # - key: LANGFUSE_HOST
+      #   value: https://cloud.langfuse.com  # Optional - custom host for self-hosted
+      #
+      # - key: POSTHOG_KEY
+      #   sync: false  # Product analytics - Get from https://posthog.com
+      #
+      # - key: WAZUH_URL
+      #   sync: false  # Security monitoring - e.g., http://wazuh:55000
+      # - key: WAZUH_USER
+      #   sync: false  # Optional - Wazuh API username
+      # - key: WAZUH_PASSWORD
+      #   sync: false  # Optional - Wazuh API password
+      #
+      # - key: SIGNOZ_ENDPOINT
+      #   sync: false  # Distributed tracing - e.g., http://signoz:4317
+      #
+      # - key: CHROMA_SERVER_HOST
+      #   sync: false  # Vector database for RAG - e.g., chromadb.example.com
+      # - key: CHROMA_SERVER_HTTP_PORT
+      #   value: "8000"  # ChromaDB HTTP port
+      # - key: CHROMA_SERVER_AUTH_TOKEN
+      #   sync: false  # Optional - Auth token for ChromaDB Cloud
+      #
+      # - key: SENTRY_DSN
+      #   sync: false  # Error tracking - Get from https://sentry.io
+      
+      # ========================================================================
+      # Optional: Additional Service Configuration
+      # ========================================================================
       # - key: FIRST_SUPERUSER
       #   value: admin@synthralos.ai  # Admin email (optional, for initial user creation)
       # - key: FIRST_SUPERUSER_PASSWORD
