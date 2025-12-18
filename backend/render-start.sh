@@ -35,6 +35,13 @@ else
     UVICORN_CMD="uvicorn"
 fi
 
+# Test if we can import the app before starting uvicorn
+echo "Testing app import..."
+if ! python -c "from app.main import app; print('✅ App imported successfully')" 2>&1; then
+    echo "❌ Failed to import app. Check for import errors above."
+    exit 1
+fi
+
 # Use python -m uvicorn for better reliability
 # Add --log-level info for better debugging
 # Use --timeout-keep-alive to prevent connection issues
@@ -44,5 +51,9 @@ echo "Server should be accessible at http://0.0.0.0:$PORT"
 echo "Health check: http://0.0.0.0:$PORT/api/v1/utils/health-check"
 
 # Use python -m uvicorn explicitly (more reliable than direct uvicorn command)
-exec python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level info --timeout-keep-alive 30 --access-log
+# Don't use exec so we can catch errors
+python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level info --timeout-keep-alive 30 --access-log || {
+    echo "❌ Uvicorn failed to start. Exit code: $?"
+    exit 1
+}
 
