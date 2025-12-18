@@ -46,23 +46,40 @@ if settings.ENVIRONMENT != "local":
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-# Setup OpenTelemetry instrumentation
-setup_opentelemetry(app)
+# Setup OpenTelemetry instrumentation (can be memory-intensive)
+# Only setup if not in low-memory environment
+try:
+    setup_opentelemetry(app)
+    print("✅ OpenTelemetry instrumentation setup complete")
+except Exception as e:
+    print(f"⚠️  OpenTelemetry setup failed (non-critical): {e}")
 
 # Initialize observability clients (they initialize themselves on import)
 # PostHog, Langfuse, and Wazuh clients are already initialized as singletons
-# Log initialization status
-if default_posthog_client.is_available:
-    print("✅ PostHog initialized")
-else:
-    print("⚠️  PostHog not configured (set POSTHOG_KEY)")
+# Log initialization status (non-blocking)
+try:
+    if default_posthog_client.is_available:
+        print("✅ PostHog initialized")
+    else:
+        print("⚠️  PostHog not configured (set POSTHOG_KEY)")
+except Exception as e:
+    print(f"⚠️  PostHog check failed: {e}")
 
-if default_langfuse_client.is_available:
-    print("✅ Langfuse initialized")
-else:
-    print("⚠️  Langfuse not configured (set LANGFUSE_KEY)")
+try:
+    if default_langfuse_client.is_available:
+        print("✅ Langfuse initialized")
+    else:
+        print("⚠️  Langfuse not configured (set LANGFUSE_KEY)")
+except Exception as e:
+    print(f"⚠️  Langfuse check failed: {e}")
 
-if default_wazuh_client.is_available:
-    print("✅ Wazuh initialized")
-else:
-    print("⚠️  Wazuh not configured (set WAZUH_URL)")
+try:
+    if default_wazuh_client.is_available:
+        print("✅ Wazuh initialized")
+    else:
+        print("⚠️  Wazuh not configured (set WAZUH_URL)")
+except Exception as e:
+    print(f"⚠️  Wazuh check failed: {e}")
+
+print("✅ FastAPI app initialization complete")
+print("🚀 Server ready to accept connections")

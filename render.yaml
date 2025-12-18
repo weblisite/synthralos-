@@ -22,7 +22,7 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: starter  # Can be upgraded to standard, pro, etc. for more memory
+    plan: standard  # Upgraded from starter (512MB) to standard (2GB) to fix memory issues
     buildCommand: ""
     healthCheckPath: /api/v1/utils/health-check
     envVars:
