@@ -110,9 +110,10 @@ services:
     buildCommand: ""
     envVars:
       - key: VITE_API_URL
-        sync: false  # REQUIRED: Set to backend URL after backend deploys
-        # Format: https://synthralos-backend.onrender.com/api/v1
-        # IMPORTANT: Backend must be deployed first to get the URL
+        sync: false  # REQUIRED: Set to backend base URL after backend deploys
+        # Format: https://synthralos-backend.onrender.com
+        # IMPORTANT: Do NOT include /api/v1 - OpenAPI SDK adds it automatically
+        # Backend must be deployed first to get the URL
       
       - key: VITE_SUPABASE_URL
         sync: false  # REQUIRED: Set to your Supabase project URL
