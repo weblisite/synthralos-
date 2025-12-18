@@ -38,6 +38,11 @@ fi
 # Use python -m uvicorn for better reliability
 # Add --log-level info for better debugging
 # Use --timeout-keep-alive to prevent connection issues
-echo "Executing: $UVICORN_CMD app.main:app --host 0.0.0.0 --port $PORT --log-level info"
-exec $UVICORN_CMD app.main:app --host 0.0.0.0 --port $PORT --log-level info --timeout-keep-alive 30
+# Use --access-log to see all requests
+echo "Executing: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level info --timeout-keep-alive 30 --access-log"
+echo "Server should be accessible at http://0.0.0.0:$PORT"
+echo "Health check: http://0.0.0.0:$PORT/api/v1/utils/health-check"
+
+# Use python -m uvicorn explicitly (more reliable than direct uvicorn command)
+exec python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level info --timeout-keep-alive 30 --access-log
 
