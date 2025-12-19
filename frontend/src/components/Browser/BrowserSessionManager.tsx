@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface BrowserSession {
@@ -44,13 +44,13 @@ interface BrowserSession {
 }
 
 const fetchBrowserSessions = async (): Promise<BrowserSession[]> => {
-  return apiRequest<BrowserSession[]>("/api/v1/browser/sessions")
+  return apiClient.request<BrowserSession[]>("/api/v1/browser/sessions")
 }
 
 const createBrowserSession = async (
   browserTool: string,
 ): Promise<BrowserSession> => {
-  return apiRequest<BrowserSession>("/api/v1/browser/session", {
+  return apiClient.request<BrowserSession>("/api/v1/browser/session", {
     method: "POST",
     body: JSON.stringify({
       browser_tool: browserTool,
@@ -59,7 +59,7 @@ const createBrowserSession = async (
 }
 
 const closeBrowserSession = async (sessionId: string): Promise<void> => {
-  await apiRequest(`/api/v1/browser/session/${sessionId}/close`, {
+  await apiClient.request(`/api/v1/browser/session/${sessionId}/close`, {
     method: "POST",
   })
 }

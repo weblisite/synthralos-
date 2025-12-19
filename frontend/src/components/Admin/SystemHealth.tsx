@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 
 interface ServiceStatus {
   name: string
@@ -32,7 +32,7 @@ interface HealthData {
 }
 
 async function fetchSystemHealth(): Promise<HealthData> {
-  return apiRequest<HealthData>("/api/v1/admin/system/health")
+  return apiClient.request<HealthData>("/api/v1/admin/system/health")
 }
 
 export function SystemHealth() {

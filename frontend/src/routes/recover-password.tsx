@@ -8,7 +8,7 @@ import {
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { LoginService } from "@/client"
+import { apiClient } from "@/lib/apiClient"
 import { AuthLayout } from "@/components/Common/AuthLayout"
 import {
   Form,
@@ -58,9 +58,7 @@ function RecoverPassword() {
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const recoverPassword = async (data: FormData) => {
-    await LoginService.recoverPassword({
-      email: data.email,
-    })
+    await apiClient.auth.recoverPassword(data.email)
   }
 
   const mutation = useMutation({

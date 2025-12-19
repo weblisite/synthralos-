@@ -5,7 +5,8 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type UserPublic, UsersService } from "@/client"
+import type { UserPublic } from "@/client"
+import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -75,7 +76,7 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
 
   const mutation = useMutation({
     mutationFn: (data: FormData) =>
-      UsersService.updateUser({ userId: user.id, requestBody: data }),
+      apiClient.users.update(user.id, data),
     onSuccess: () => {
       showSuccessToast("User updated successfully")
       setIsOpen(false)

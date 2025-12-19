@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useRef, useState, useMemo } from "react"
 import * as React from "react"
 import type { UserPublic } from "@/client"
-import { UsersService } from "@/client"
+import { apiClient } from "@/lib/apiClient"
 import { supabase } from "@/lib/supabase"
 import useCustomToast from "./useCustomToast"
 
@@ -147,7 +147,7 @@ export const useAuth = () => {
       
       try {
         console.log('[useAuth] Fetching user data...')
-        const userData = await UsersService.readUserMe()
+        const userData = await apiClient.users.getMe()
         console.log('[useAuth] User data fetched successfully:', userData)
         // Store successful user data in ref for persistence
         if (userData) {

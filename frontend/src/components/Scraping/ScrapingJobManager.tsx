@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface ScrapeJob {
@@ -49,7 +49,7 @@ interface ScrapeJob {
 }
 
 const fetchScrapeJobs = async (): Promise<ScrapeJob[]> => {
-  return apiRequest<ScrapeJob[]>("/api/v1/scraping/jobs")
+  return apiClient.request<ScrapeJob[]>("/api/v1/scraping/jobs")
 }
 
 const createScrapeJob = async (
@@ -57,7 +57,7 @@ const createScrapeJob = async (
   engine?: string,
   autoSelectProxy: boolean = true,
 ): Promise<ScrapeJob> => {
-  return apiRequest<ScrapeJob>("/api/v1/scraping/scrape", {
+  return apiClient.request<ScrapeJob>("/api/v1/scraping/scrape", {
     method: "POST",
     body: JSON.stringify({
       url,
@@ -68,13 +68,12 @@ const createScrapeJob = async (
 }
 
 const processScrapeJob = async (jobId: string): Promise<void> => {
-  await apiRequest(`/api/v1/scraping/process/${jobId}`, {
-    method: "POST",
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to process scraping job")
+  try {
+    await apiClient.request(`/api/v1/scraping/process/${jobId}`, {
+      method: "POST",
+    })
+  } catch (error: any) {
+    throw new Error(error.message || error.detail || "Failed to process scraping job")
   }
 }
 

@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 import { ConnectorWizard } from "./ConnectorWizard"
 import { OAuthModal } from "./OAuthModal"
 import { ConnectorTestRunner } from "./ConnectorTestRunner"
@@ -74,7 +74,7 @@ export function ConnectorCatalog() {
       }
       params.append("include_custom", "true")
 
-      const data = await apiRequest<{ connectors?: Connector[] } | Connector[]>(
+      const data = await apiClient.request<{ connectors?: Connector[] } | Connector[]>(
         `/api/v1/connectors/list?${params}`
       )
       // Handle both old array format and new object format
@@ -96,7 +96,7 @@ export function ConnectorCatalog() {
     try {
       const statusPromises = connectorsList.map(async (connector) => {
         try {
-          const status = await apiRequest(`/api/v1/connectors/${connector.slug}/auth-status`)
+          const status = await apiClient.request(`/api/v1/connectors/${connector.slug}/auth-status`)
           return { slug: connector.slug, status }
         } catch (error) {
           // Ignore errors for individual status checks
@@ -117,7 +117,7 @@ export function ConnectorCatalog() {
 
   const fetchConnectorDetails = useCallback(async (slug: string) => {
     try {
-      const details = await apiRequest(`/api/v1/connectors/${slug}`)
+      const details = await apiClient.request(`/api/v1/connectors/${slug}`)
       setConnectorDetails(details)
     } catch (error) {
       showErrorToast("Failed to fetch connector details")
@@ -126,7 +126,7 @@ export function ConnectorCatalog() {
 
   const handleDisconnect = useCallback(async (slug: string) => {
     try {
-      await apiRequest(`/api/v1/connectors/${slug}/authorization`, {
+      await apiClient.request(`/api/v1/connectors/${slug}/authorization`, {
         method: "DELETE",
       })
       showSuccessToast("Authorization revoked successfully")

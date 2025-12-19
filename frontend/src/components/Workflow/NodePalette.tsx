@@ -20,7 +20,7 @@ import {
   Plug,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface Connector {
@@ -138,7 +138,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
     const fetchConnectors = async () => {
       setIsConnectorsLoading(true)
       try {
-        const data = await apiRequest<{ connectors?: any[] } | any[]>(
+        const data = await apiClient.request<{ connectors?: any[] } | any[]>(
           `/api/v1/connectors/list?include_custom=true`
         )
         const connectorsList = Array.isArray(data) ? data : (data.connectors || [])

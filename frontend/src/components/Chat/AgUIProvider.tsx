@@ -6,7 +6,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react"
-import { apiRequest, getApiPath } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 import { supabase } from "@/lib/supabase"
 
 interface ChatMessage {
@@ -209,7 +209,11 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
           )
         } else {
           // Fallback to HTTP POST
-          const data = await apiRequest("/api/v1/chat", {
+          const data = await apiClient.request<{
+            id?: string
+            message?: string
+            tool_calls?: any[]
+          }>("/api/v1/chat", {
             method: "POST",
             body: JSON.stringify({
               message: content,
@@ -223,10 +227,10 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
               ...prev,
               {
                 id: data.id || `assistant-${Date.now()}`,
-                role: "assistant",
-                content: data.message,
+                role: "assistant" as const,
+                content: data.message || "",
                 timestamp: new Date(),
-                tool_calls: data.tool_calls,
+                tool_calls: data.tool_calls || [],
               },
             ])
           }

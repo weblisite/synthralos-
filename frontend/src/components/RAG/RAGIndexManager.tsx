@@ -35,7 +35,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
+import { supabase } from "@/lib/supabase"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface RAGIndex {
@@ -55,11 +56,11 @@ interface RAGQuery {
 }
 
 const fetchRAGIndexes = async (): Promise<RAGIndex[]> => {
-  return apiRequest<RAGIndex[]>("/api/v1/rag/indexes")
+  return apiClient.request<RAGIndex[]>("/api/v1/rag/indexes")
 }
 
 const createRAGIndex = async (name: string, vectorDbType: string): Promise<RAGIndex> => {
-  return apiRequest<RAGIndex>("/api/v1/rag/index", {
+  return apiClient.request<RAGIndex>("/api/v1/rag/index", {
     method: "POST",
     body: JSON.stringify({
       name,
@@ -72,7 +73,7 @@ const queryRAGIndex = async (
   indexId: string,
   queryText: string,
 ): Promise<RAGQuery> => {
-  return apiRequest<RAGQuery>("/api/v1/rag/query", {
+  return apiClient.request<RAGQuery>("/api/v1/rag/query", {
     method: "POST",
     body: JSON.stringify({
       index_id: indexId,
@@ -86,7 +87,7 @@ const addDocumentToIndex = async (
   content: string,
   metadata: Record<string, any>,
 ): Promise<void> => {
-  await apiRequest("/api/v1/rag/document", {
+  await apiClient.request("/api/v1/rag/document", {
     method: "POST",
     body: JSON.stringify({
       index_id: indexId,

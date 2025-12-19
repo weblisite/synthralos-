@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { WorkflowBuilder } from "@/components/Workflow/WorkflowBuilder"
+import { apiClient } from "@/lib/apiClient"
 import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/workflows")({
@@ -114,7 +115,7 @@ function WorkflowsPage() {
         }
       }
 
-      const workflow = await apiRequest<{ id: string }>("/api/v1/workflows", {
+      const workflow = await apiClient.request<{ id: string }>("/api/v1/workflows", {
         method: "POST",
         body: JSON.stringify({
           name: workflowName,
@@ -182,7 +183,7 @@ function WorkflowsPage() {
       // Call backend API to run workflow
       // FastAPI expects trigger_data directly in the body (not wrapped)
       const triggerData = triggerNode.data.config || {}
-      const execution = await apiRequest<{ execution_id: string }>(
+      const execution = await apiClient.request<{ execution_id: string }>(
         `/api/v1/workflows/${workflowId}/run`,
         {
           method: "POST",

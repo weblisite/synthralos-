@@ -3,6 +3,7 @@ import { Upload, X, FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { apiClient } from "@/lib/apiClient"
 import { supabase } from "@/lib/supabase"
 import useCustomToast from "@/hooks/useCustomToast"
 
@@ -118,7 +119,7 @@ export function FileUpload({
           throw new Error("You must be logged in to upload files")
         }
         
-        const url = getApiPath("/api/v1/storage/upload")
+        const url = apiClient.getApiUrl("/api/v1/storage/upload")
         return fetch(url, {
           method: "POST",
           headers: {

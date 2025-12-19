@@ -18,7 +18,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 
 interface SystemMetrics {
   users: {
@@ -53,7 +53,7 @@ interface SystemMetrics {
 }
 
 async function fetchSystemMetrics(): Promise<SystemMetrics> {
-  return apiRequest<SystemMetrics>("/api/v1/admin/system/metrics")
+  return apiClient.request<SystemMetrics>("/api/v1/admin/system/metrics")
 }
 
 export function SystemMetrics() {

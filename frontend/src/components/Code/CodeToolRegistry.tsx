@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface CodeTool {
@@ -72,12 +72,12 @@ interface CodeExecution {
 }
 
 const fetchCodeTools = async (): Promise<CodeTool[]> => {
-  const data = await apiRequest<{ tools: CodeTool[] }>("/api/v1/code/tools?limit=100")
+  const data = await apiClient.request<{ tools: CodeTool[] }>("/api/v1/code/tools?limit=100")
   return data.tools || []
 }
 
 const fetchSandboxes = async (): Promise<CodeSandbox[]> => {
-  return apiRequest<CodeSandbox[]>("/api/v1/code/sandboxes")
+  return apiClient.request<CodeSandbox[]>("/api/v1/code/sandboxes")
 }
 
 const createSandbox = async (
@@ -85,7 +85,7 @@ const createSandbox = async (
   runtime: string,
   config?: Record<string, any>,
 ): Promise<CodeSandbox> => {
-  return apiRequest<CodeSandbox>("/api/v1/code/sandbox", {
+  return apiClient.request<CodeSandbox>("/api/v1/code/sandbox", {
     method: "POST",
     body: JSON.stringify({
       name,
@@ -101,7 +101,7 @@ const executeCode = async (
   runtime?: string,
   inputData?: Record<string, any>,
 ): Promise<CodeExecution> => {
-  return apiRequest<CodeExecution>("/api/v1/code/execute", {
+  return apiClient.request<CodeExecution>("/api/v1/code/execute", {
     method: "POST",
     body: JSON.stringify({
       code,
@@ -118,7 +118,7 @@ const executeInSandbox = async (
   language: string,
   inputData?: Record<string, any>,
 ): Promise<CodeExecution> => {
-  return apiRequest<CodeExecution>(`/api/v1/code/sandbox/${sandboxId}/execute`, {
+  return apiClient.request<CodeExecution>(`/api/v1/code/sandbox/${sandboxId}/execute`, {
     method: "POST",
     body: JSON.stringify({
       code,

@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 
 interface DashboardStats {
   workflows: {
@@ -86,7 +86,7 @@ interface DashboardStats {
 }
 
 const fetchDashboardStats = async (): Promise<DashboardStats> => {
-  return apiRequest<DashboardStats>("/api/v1/stats/dashboard")
+  return apiClient.request<DashboardStats>("/api/v1/stats/dashboard")
 }
 
 const StatCard = ({

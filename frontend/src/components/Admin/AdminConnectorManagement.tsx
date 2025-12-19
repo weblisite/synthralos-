@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 import { ConnectorWizard } from "@/components/Connectors/ConnectorWizard"
 
 interface Connector {
@@ -63,7 +63,7 @@ export function AdminConnectorManagement() {
         params.append("category", selectedCategory)
       }
 
-      const data = await apiRequest<{ connectors: Connector[] }>(
+      const data = await apiClient.request<{ connectors: Connector[] }>(
         `/api/v1/admin/connectors/list?${params}`
       )
       setConnectors(data.connectors || [])
@@ -82,7 +82,7 @@ export function AdminConnectorManagement() {
 
   const handleUpdateStatus = useCallback(async (slug: string, newStatus: string) => {
     try {
-      await apiRequest(`/api/v1/admin/connectors/${slug}/status?new_status=${newStatus}`, {
+      await apiClient.request(`/api/v1/admin/connectors/${slug}/status?new_status=${newStatus}`, {
         method: "PATCH",
       })
       showSuccessToast(`Connector status updated to ${newStatus}`)
@@ -98,7 +98,7 @@ export function AdminConnectorManagement() {
     }
 
     try {
-      await apiRequest(`/api/v1/admin/connectors/${slug}`, {
+      await apiClient.request(`/api/v1/admin/connectors/${slug}`, {
         method: "DELETE",
       })
       showSuccessToast("Connector deleted successfully")

@@ -18,7 +18,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 
 interface CostMetrics {
   total_cost: number
@@ -53,7 +53,7 @@ export function CostAnalytics() {
   const fetchCostMetrics = useCallback(async () => {
     setIsLoading(true)
     try {
-      const data = await apiRequest<CostMetrics>("/api/v1/admin/analytics/costs")
+      const data = await apiClient.request<CostMetrics>("/api/v1/admin/analytics/costs")
       setMetrics({
         total_cost: data.total_cost || 0,
         total_executions: data.total_executions || 0,

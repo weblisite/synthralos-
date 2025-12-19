@@ -23,8 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest, getApiPath } from "@/lib/api"
-import { supabase } from "@/lib/supabase"
+import { apiClient } from "@/lib/apiClient"
 
 interface AgentFramework {
   framework: string
@@ -37,7 +36,7 @@ interface AgentCatalogProps {
 }
 
 const fetchAgentCatalog = async (): Promise<AgentFramework[]> => {
-  const data = await apiRequest<{ frameworks?: AgentFramework[] } | AgentFramework[]>(
+  const data = await apiClient.request<{ frameworks?: AgentFramework[] } | AgentFramework[]>(
     "/api/v1/agents/catalog"
   )
   // API returns { frameworks: [...], total: ... } or array directly
@@ -49,7 +48,7 @@ const executeAgentTask = async (
   inputData: Record<string, any>,
   framework?: string,
 ): Promise<{ task_id: string }> => {
-  return await apiRequest<{ task_id: string }>("/api/v1/agents/run", {
+  return await apiClient.request<{ task_id: string }>("/api/v1/agents/run", {
     method: "POST",
     body: JSON.stringify({
       task_type: taskType,

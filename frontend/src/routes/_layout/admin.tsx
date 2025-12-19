@@ -2,7 +2,8 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { Suspense } from "react"
 
-import { type UserPublic, UsersService } from "@/client"
+import type { UserPublic } from "@/client"
+import { apiClient } from "@/lib/apiClient"
 import { AdminConnectorManagement } from "@/components/Admin/AdminConnectorManagement"
 import { AdminDashboard } from "@/components/Admin/AdminDashboard"
 import { PlatformSettings } from "@/components/Admin/PlatformSettings"
@@ -15,7 +16,7 @@ import useAuth from "@/hooks/useAuth"
 
 function getUsersQueryOptions() {
   return {
-    queryFn: () => UsersService.readUsers({ skip: 0, limit: 100 }),
+    queryFn: () => apiClient.users.getAll(0, 100),
     queryKey: ["users"],
   }
 }

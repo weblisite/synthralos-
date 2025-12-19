@@ -13,7 +13,7 @@ import { DataTable } from "@/components/Common/DataTable"
 import { type ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 
 interface FailedExecution {
   id: string
@@ -35,7 +35,7 @@ export function RetryManagement() {
   const fetchFailedExecutions = useCallback(async () => {
     setIsLoading(true)
     try {
-      const data = await apiRequest<FailedExecution[]>(
+      const data = await apiClient.request<FailedExecution[]>(
         `/api/v1/workflows/executions/failed?limit=1000`
       )
       setFailedExecutions(Array.isArray(data) ? data : [])
@@ -55,7 +55,7 @@ export function RetryManagement() {
   const handleRetry = useCallback(
     async (execution: FailedExecution) => {
       try {
-        await apiRequest(`/api/v1/workflows/executions/${execution.id}/replay`, {
+        await apiClient.request(`/api/v1/workflows/executions/${execution.id}/replay`, {
           method: "POST",
         })
         showSuccessToast("Execution retried successfully")

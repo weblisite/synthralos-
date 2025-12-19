@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface OSINTStream {
@@ -67,7 +67,7 @@ interface OSINTAlert {
 }
 
 const fetchOSINTStreams = async (): Promise<OSINTStream[]> => {
-  const data = await apiRequest<{ streams: OSINTStream[] }>("/api/v1/osint/streams")
+  const data = await apiClient.request<{ streams: OSINTStream[] }>("/api/v1/osint/streams")
   return data.streams || []
 }
 
@@ -76,7 +76,7 @@ const createOSINTStream = async (
   keywords: string[],
   engine?: string,
 ): Promise<OSINTStream> => {
-  return apiRequest<OSINTStream>("/api/v1/osint/stream", {
+  return apiClient.request<OSINTStream>("/api/v1/osint/stream", {
     method: "POST",
     body: JSON.stringify({
       platform,
@@ -90,7 +90,7 @@ const updateStreamStatus = async (
   streamId: string,
   isActive: boolean,
 ): Promise<void> => {
-  await apiRequest(`/api/v1/osint/streams/${streamId}/status`, {
+  await apiClient.request(`/api/v1/osint/streams/${streamId}/status`, {
     method: "PATCH",
     body: JSON.stringify({
       is_active: isActive,
@@ -99,7 +99,7 @@ const updateStreamStatus = async (
 }
 
 const executeStream = async (streamId: string): Promise<OSINTSignal[]> => {
-  const data = await apiRequest<{ signals: OSINTSignal[] }>(
+  const data = await apiClient.request<{ signals: OSINTSignal[] }>(
     `/api/v1/osint/streams/${streamId}/execute`,
     {
       method: "POST",
@@ -109,19 +109,19 @@ const executeStream = async (streamId: string): Promise<OSINTSignal[]> => {
 }
 
 const fetchStreamSignals = async (streamId: string): Promise<OSINTSignal[]> => {
-  const data = await apiRequest<{ signals: OSINTSignal[] }>(
+  const data = await apiClient.request<{ signals: OSINTSignal[] }>(
     `/api/v1/osint/streams/${streamId}/signals?limit=100`
   )
   return data.signals || []
 }
 
 const fetchAlerts = async (): Promise<OSINTAlert[]> => {
-  const data = await apiRequest<{ alerts: OSINTAlert[] }>("/api/v1/osint/alerts?limit=100")
+  const data = await apiClient.request<{ alerts: OSINTAlert[] }>("/api/v1/osint/alerts?limit=100")
   return data.alerts || []
 }
 
 const markAlertRead = async (alertId: string): Promise<void> => {
-  await apiRequest(`/api/v1/osint/alerts/${alertId}/read`, {
+  await apiClient.request(`/api/v1/osint/alerts/${alertId}/read`, {
     method: "POST",
   })
 }

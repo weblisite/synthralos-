@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
-import { apiRequest } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 
 interface ActivityItem {
   type: string
@@ -38,7 +38,7 @@ interface ActivityData {
 }
 
 async function fetchActivityLogs(): Promise<ActivityData> {
-  return apiRequest<ActivityData>("/api/v1/admin/system/activity?limit=50")
+  return apiClient.request<ActivityData>("/api/v1/admin/system/activity?limit=50")
 }
 
 export function ActivityLogs() {

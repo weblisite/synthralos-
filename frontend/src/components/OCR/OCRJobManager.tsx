@@ -32,8 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { apiClient } from "@/lib/apiClient"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
 import { FileUpload } from "@/components/Storage/FileUpload"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -49,14 +49,14 @@ interface OCRJob {
 }
 
 const fetchOCRJobs = async (): Promise<OCRJob[]> => {
-  return apiRequest<OCRJob[]>("/api/v1/ocr/jobs")
+  return apiClient.request<OCRJob[]>("/api/v1/ocr/jobs")
 }
 
 const createOCRJob = async (
   documentUrl: string,
   engine?: string,
 ): Promise<OCRJob> => {
-  return apiRequest<OCRJob>("/api/v1/ocr/extract", {
+  return apiClient.request<OCRJob>("/api/v1/ocr/extract", {
     method: "POST",
     body: JSON.stringify({
       document_url: documentUrl,
