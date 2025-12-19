@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface BrowserSession {
@@ -44,79 +44,24 @@ interface BrowserSession {
 }
 
 const fetchBrowserSessions = async (): Promise<BrowserSession[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view browser sessions")
-  }
-
-  const response = await fetch("/api/v1/browser/sessions", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch browser sessions")
-  }
-
-  return response.json()
+  return apiRequest<BrowserSession[]>("/api/v1/browser/sessions")
 }
 
 const createBrowserSession = async (
   browserTool: string,
 ): Promise<BrowserSession> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to create browser sessions")
-  }
-
-  const response = await fetch("/api/v1/browser/session", {
+  return apiRequest<BrowserSession>("/api/v1/browser/session", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       browser_tool: browserTool,
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to create browser session")
-  }
-
-  return response.json()
 }
 
 const closeBrowserSession = async (sessionId: string): Promise<void> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to close browser sessions")
-  }
-
-  const response = await fetch(`/api/v1/browser/session/${sessionId}/close`, {
+  await apiRequest(`/api/v1/browser/session/${sessionId}/close`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to close browser session")
-  }
 }
 
 const getStatusColor = (status: string) => {

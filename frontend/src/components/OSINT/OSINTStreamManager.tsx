@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface OSINTStream {
@@ -67,26 +67,7 @@ interface OSINTAlert {
 }
 
 const fetchOSINTStreams = async (): Promise<OSINTStream[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view OSINT streams")
-  }
-
-  const response = await fetch("/api/v1/osint/streams", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch OSINT streams")
-  }
-
-  const data = await response.json()
+  const data = await apiRequest<{ streams: OSINTStream[] }>("/api/v1/osint/streams")
   return data.streams || []
 }
 
@@ -95,159 +76,54 @@ const createOSINTStream = async (
   keywords: string[],
   engine?: string,
 ): Promise<OSINTStream> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to create OSINT streams")
-  }
-
-  const response = await fetch("/api/v1/osint/stream", {
+  return apiRequest<OSINTStream>("/api/v1/osint/stream", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       platform,
       keywords,
       engine: engine,
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to create OSINT stream")
-  }
-
-  return response.json()
 }
 
 const updateStreamStatus = async (
   streamId: string,
   isActive: boolean,
 ): Promise<void> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to update stream status")
-  }
-
-  const response = await fetch(`/api/v1/osint/streams/${streamId}/status`, {
+  await apiRequest(`/api/v1/osint/streams/${streamId}/status`, {
     method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       is_active: isActive,
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to update stream status")
-  }
 }
 
 const executeStream = async (streamId: string): Promise<OSINTSignal[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to execute streams")
-  }
-
-  const response = await fetch(`/api/v1/osint/streams/${streamId}/execute`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to execute stream")
-  }
-
-  const data = await response.json()
+  const data = await apiRequest<{ signals: OSINTSignal[] }>(
+    `/api/v1/osint/streams/${streamId}/execute`,
+    {
+      method: "POST",
+    }
+  )
   return data.signals || []
 }
 
 const fetchStreamSignals = async (streamId: string): Promise<OSINTSignal[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view stream signals")
-  }
-
-  const response = await fetch(`/api/v1/osint/streams/${streamId}/signals?limit=100`, {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch stream signals")
-  }
-
-  const data = await response.json()
+  const data = await apiRequest<{ signals: OSINTSignal[] }>(
+    `/api/v1/osint/streams/${streamId}/signals?limit=100`
+  )
   return data.signals || []
 }
 
 const fetchAlerts = async (): Promise<OSINTAlert[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view alerts")
-  }
-
-  const response = await fetch("/api/v1/osint/alerts?limit=100", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch alerts")
-  }
-
-  const data = await response.json()
+  const data = await apiRequest<{ alerts: OSINTAlert[] }>("/api/v1/osint/alerts?limit=100")
   return data.alerts || []
 }
 
 const markAlertRead = async (alertId: string): Promise<void> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to mark alerts as read")
-  }
-
-  const response = await fetch(`/api/v1/osint/alerts/${alertId}/read`, {
+  await apiRequest(`/api/v1/osint/alerts/${alertId}/read`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to mark alert as read")
-  }
 }
 
 const getSeverityColor = (severity: string) => {

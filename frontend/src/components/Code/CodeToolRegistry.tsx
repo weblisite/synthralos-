@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface CodeTool {
@@ -72,50 +72,12 @@ interface CodeExecution {
 }
 
 const fetchCodeTools = async (): Promise<CodeTool[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view code tools")
-  }
-
-  const response = await fetch("/api/v1/code/tools?limit=100", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch code tools")
-  }
-
-  const data = await response.json()
+  const data = await apiRequest<{ tools: CodeTool[] }>("/api/v1/code/tools?limit=100")
   return data.tools || []
 }
 
 const fetchSandboxes = async (): Promise<CodeSandbox[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view sandboxes")
-  }
-
-  const response = await fetch("/api/v1/code/sandboxes", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch sandboxes")
-  }
-
-  return response.json()
+  return apiRequest<CodeSandbox[]>("/api/v1/code/sandboxes")
 }
 
 const createSandbox = async (
@@ -123,33 +85,14 @@ const createSandbox = async (
   runtime: string,
   config?: Record<string, any>,
 ): Promise<CodeSandbox> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to create sandboxes")
-  }
-
-  const response = await fetch("/api/v1/code/sandbox", {
+  return apiRequest<CodeSandbox>("/api/v1/code/sandbox", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       name,
       runtime,
       config: config || {},
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to create sandbox")
-  }
-
-  return response.json()
 }
 
 const executeCode = async (
@@ -158,20 +101,8 @@ const executeCode = async (
   runtime?: string,
   inputData?: Record<string, any>,
 ): Promise<CodeExecution> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to execute code")
-  }
-
-  const response = await fetch("/api/v1/code/execute", {
+  return apiRequest<CodeExecution>("/api/v1/code/execute", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       code,
       language,
@@ -179,13 +110,6 @@ const executeCode = async (
       input_data: inputData || {},
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to execute code")
-  }
-
-  return response.json()
 }
 
 const executeInSandbox = async (
@@ -194,33 +118,14 @@ const executeInSandbox = async (
   language: string,
   inputData?: Record<string, any>,
 ): Promise<CodeExecution> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to execute code in sandbox")
-  }
-
-  const response = await fetch(`/api/v1/code/sandbox/${sandboxId}/execute`, {
+  return apiRequest<CodeExecution>(`/api/v1/code/sandbox/${sandboxId}/execute`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       code,
       language,
       input_data: inputData || {},
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to execute code in sandbox")
-  }
-
-  return response.json()
 }
 
 const getStatusColor = (status: string) => {

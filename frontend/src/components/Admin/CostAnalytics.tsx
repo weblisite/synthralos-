@@ -18,7 +18,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 
 interface CostMetrics {
   total_cost: number
@@ -53,27 +53,7 @@ export function CostAnalytics() {
   const fetchCostMetrics = useCallback(async () => {
     setIsLoading(true)
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to view cost analytics")
-        return
-      }
-
-      // Fetch cost analytics from backend
-      const response = await fetch(`/api/v1/admin/analytics/costs`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch cost analytics")
-      }
-
-      const data = await response.json()
+      const data = await apiRequest<CostMetrics>("/api/v1/admin/analytics/costs")
       setMetrics({
         total_cost: data.total_cost || 0,
         total_executions: data.total_executions || 0,

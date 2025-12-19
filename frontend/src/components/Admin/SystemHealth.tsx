@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiRequest } from "@/lib/api"
 
 interface ServiceStatus {
   name: string
@@ -31,27 +32,7 @@ interface HealthData {
 }
 
 async function fetchSystemHealth(): Promise<HealthData> {
-  const { supabase } = await import("@/lib/supabase")
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session?.access_token) {
-    throw new Error("No authentication token")
-  }
-
-  const response = await fetch("/api/v1/admin/system/health", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch system health: ${response.status}`)
-  }
-
-  return response.json()
+  return apiRequest<HealthData>("/api/v1/admin/system/health")
 }
 
 export function SystemHealth() {

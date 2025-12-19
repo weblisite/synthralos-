@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiRequest } from "@/lib/api"
 
 interface ActivityItem {
   type: string
@@ -37,27 +38,7 @@ interface ActivityData {
 }
 
 async function fetchActivityLogs(): Promise<ActivityData> {
-  const { supabase } = await import("@/lib/supabase")
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session?.access_token) {
-    throw new Error("No authentication token")
-  }
-
-  const response = await fetch("/api/v1/admin/system/activity?limit=50", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch activity logs: ${response.status}`)
-  }
-
-  return response.json()
+  return apiRequest<ActivityData>("/api/v1/admin/system/activity?limit=50")
 }
 
 export function ActivityLogs() {

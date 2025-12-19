@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface RAGIndex {
@@ -55,87 +55,30 @@ interface RAGQuery {
 }
 
 const fetchRAGIndexes = async (): Promise<RAGIndex[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view RAG indexes")
-  }
-
-  const response = await fetch("/api/v1/rag/indexes", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch RAG indexes")
-  }
-
-  return response.json()
+  return apiRequest<RAGIndex[]>("/api/v1/rag/indexes")
 }
 
 const createRAGIndex = async (name: string, vectorDbType: string): Promise<RAGIndex> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to create RAG indexes")
-  }
-
-  const response = await fetch("/api/v1/rag/index", {
+  return apiRequest<RAGIndex>("/api/v1/rag/index", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       name,
       vector_db_type: vectorDbType,
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to create RAG index")
-  }
-
-  return response.json()
 }
 
 const queryRAGIndex = async (
   indexId: string,
   queryText: string,
 ): Promise<RAGQuery> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to query RAG indexes")
-  }
-
-  const response = await fetch("/api/v1/rag/query", {
+  return apiRequest<RAGQuery>("/api/v1/rag/query", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       index_id: indexId,
       query_text: queryText,
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to query RAG index")
-  }
-
-  return response.json()
 }
 
 const addDocumentToIndex = async (
@@ -143,31 +86,14 @@ const addDocumentToIndex = async (
   content: string,
   metadata: Record<string, any>,
 ): Promise<void> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to add documents")
-  }
-
-  const response = await fetch("/api/v1/rag/document", {
+  await apiRequest("/api/v1/rag/document", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       index_id: indexId,
       content,
       document_metadata: metadata,
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to add document")
-  }
 }
 
 const uploadDocumentToIndex = async (

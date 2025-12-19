@@ -13,7 +13,7 @@ import { DataTable } from "@/components/Common/DataTable"
 import { type ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 
 interface FailedExecution {
   id: string
@@ -35,27 +35,9 @@ export function RetryManagement() {
   const fetchFailedExecutions = useCallback(async () => {
     setIsLoading(true)
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to view retry management")
-        return
-      }
-
-      // Use dedicated failed executions endpoint
-      const response = await fetch(`/api/v1/workflows/executions/failed?limit=1000`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch failed executions")
-      }
-
-      const data = await response.json()
+      const data = await apiRequest<FailedExecution[]>(
+        `/api/v1/workflows/executions/failed?limit=1000`
+      )
       setFailedExecutions(Array.isArray(data) ? data : [])
     } catch (error) {
       showErrorToast(
@@ -73,29 +55,9 @@ export function RetryManagement() {
   const handleRetry = useCallback(
     async (execution: FailedExecution) => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-
-        if (!session) {
-          showErrorToast("You must be logged in to retry executions")
-          return
-        }
-
-        const response = await fetch(
-          `/api/v1/workflows/executions/${execution.id}/replay`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          },
-        )
-
-        if (!response.ok) {
-          throw new Error("Failed to retry execution")
-        }
-
+        await apiRequest(`/api/v1/workflows/executions/${execution.id}/replay`, {
+          method: "POST",
+        })
         showSuccessToast("Execution retried successfully")
         fetchFailedExecutions()
       } catch (error) {

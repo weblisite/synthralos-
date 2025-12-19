@@ -111,7 +111,15 @@ export function FileUpload({
           formData.append("folder_path", folderPath)
         }
 
-        return fetch("/api/v1/storage/upload", {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (!session) {
+          throw new Error("You must be logged in to upload files")
+        }
+        
+        const url = getApiPath("/api/v1/storage/upload")
+        return fetch(url, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${session.access_token}`,

@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiRequest } from "@/lib/api"
 
 interface SystemMetrics {
   users: {
@@ -52,27 +53,7 @@ interface SystemMetrics {
 }
 
 async function fetchSystemMetrics(): Promise<SystemMetrics> {
-  const { supabase } = await import("@/lib/supabase")
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session?.access_token) {
-    throw new Error("No authentication token")
-  }
-
-  const response = await fetch("/api/v1/admin/system/metrics", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch system metrics: ${response.status}`)
-  }
-
-  return response.json()
+  return apiRequest<SystemMetrics>("/api/v1/admin/system/metrics")
 }
 
 export function SystemMetrics() {

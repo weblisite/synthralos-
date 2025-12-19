@@ -6,6 +6,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react"
+import { apiRequest, getApiPath } from "@/lib/api"
 import { supabase } from "@/lib/supabase"
 
 interface ChatMessage {
@@ -208,23 +209,13 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
           )
         } else {
           // Fallback to HTTP POST
-          const response = await fetch("/api/v1/chat", {
+          const data = await apiRequest("/api/v1/chat", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
             body: JSON.stringify({
               message: content,
               mode: currentMode,
             }),
           })
-
-          if (!response.ok) {
-            throw new Error("Failed to send message")
-          }
-
-          const data = await response.json()
           
           // Handle streaming response if applicable
           if (data.message) {

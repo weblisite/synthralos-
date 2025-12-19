@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 import type { ColumnDef } from "@tanstack/react-table"
 
 interface ScrapeJob {
@@ -49,26 +49,7 @@ interface ScrapeJob {
 }
 
 const fetchScrapeJobs = async (): Promise<ScrapeJob[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view scraping jobs")
-  }
-
-  const response = await fetch("/api/v1/scraping/jobs", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch scraping jobs")
-  }
-
-  return response.json()
+  return apiRequest<ScrapeJob[]>("/api/v1/scraping/jobs")
 }
 
 const createScrapeJob = async (
@@ -76,50 +57,19 @@ const createScrapeJob = async (
   engine?: string,
   autoSelectProxy: boolean = true,
 ): Promise<ScrapeJob> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to create scraping jobs")
-  }
-
-  const response = await fetch("/api/v1/scraping/scrape", {
+  return apiRequest<ScrapeJob>("/api/v1/scraping/scrape", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       url,
       engine: engine,
       auto_select_proxy: autoSelectProxy,
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to create scraping job")
-  }
-
-  return response.json()
 }
 
 const processScrapeJob = async (jobId: string): Promise<void> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to process scraping jobs")
-  }
-
-  const response = await fetch(`/api/v1/scraping/process/${jobId}`, {
+  await apiRequest(`/api/v1/scraping/process/${jobId}`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
   })
 
   if (!response.ok) {

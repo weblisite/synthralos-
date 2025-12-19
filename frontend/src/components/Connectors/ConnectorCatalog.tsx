@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 import { ConnectorWizard } from "./ConnectorWizard"
 import { OAuthModal } from "./OAuthModal"
 import { ConnectorTestRunner } from "./ConnectorTestRunner"
@@ -68,59 +68,15 @@ export function ConnectorCatalog() {
   const fetchConnectors = useCallback(async () => {
     setIsLoading(true)
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to view connectors")
-        return
-      }
-
       const params = new URLSearchParams()
       if (selectedCategory !== "all") {
         params.append("category", selectedCategory)
       }
       params.append("include_custom", "true")
 
-      const response = await fetch(`/api/v1/connectors/list?${params}`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type")
-        let errorMessage = `Failed to fetch connectors: ${response.status} ${response.statusText}`
-        
-        if (contentType && contentType.includes("application/json")) {
-          try {
-            const errorData = await response.json()
-            errorMessage = errorData.detail || errorMessage
-          } catch {
-            // Ignore JSON parse errors
-          }
-        } else {
-          // Response is HTML (error page), try to get text
-          try {
-            const text = await response.text()
-            if (text.includes("<!DOCTYPE")) {
-              errorMessage = `Backend returned HTML error page. Check backend logs. Status: ${response.status}`
-            }
-          } catch {
-            // Ignore text parse errors
-          }
-        }
-        throw new Error(errorMessage)
-      }
-
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Backend returned non-JSON response. Check backend configuration.")
-      }
-
-      const data = await response.json()
+      const data = await apiRequest<{ connectors?: Connector[] } | Connector[]>(
+        `/api/v1/connectors/list?${params}`
+      )
       // Handle both old array format and new object format
       const connectorsList = Array.isArray(data) ? data : (data.connectors || [])
       setConnectors(connectorsList)
@@ -138,25 +94,10 @@ export function ConnectorCatalog() {
 
   const fetchAuthStatuses = useCallback(async (connectorsList: Connector[]) => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) return
-
       const statusPromises = connectorsList.map(async (connector) => {
         try {
-          const response = await fetch(`/api/v1/connectors/${connector.slug}/auth-status`, {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-              "Content-Type": "application/json",
-            },
-          })
-          
-          if (response.ok) {
-            const status = await response.json()
-            return { slug: connector.slug, status }
-          }
+          const status = await apiRequest(`/api/v1/connectors/${connector.slug}/auth-status`)
+          return { slug: connector.slug, status }
         } catch (error) {
           // Ignore errors for individual status checks
         }
@@ -176,23 +117,8 @@ export function ConnectorCatalog() {
 
   const fetchConnectorDetails = useCallback(async (slug: string) => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) return
-
-      const response = await fetch(`/api/v1/connectors/${slug}`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (response.ok) {
-        const details = await response.json()
-        setConnectorDetails(details)
-      }
+      const details = await apiRequest(`/api/v1/connectors/${slug}`)
+      setConnectorDetails(details)
     } catch (error) {
       showErrorToast("Failed to fetch connector details")
     }
@@ -200,33 +126,14 @@ export function ConnectorCatalog() {
 
   const handleDisconnect = useCallback(async (slug: string) => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in")
-        return
-      }
-
-      const response = await fetch(`/api/v1/connectors/${slug}/authorization`, {
+      await apiRequest(`/api/v1/connectors/${slug}/authorization`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
       })
-
-      if (response.ok) {
-        showSuccessToast("Authorization revoked successfully")
-        // Refresh auth status
-        await fetchAuthStatuses(connectors)
-        if (selectedConnector?.slug === slug) {
-          fetchConnectorDetails(slug)
-        }
-      } else {
-        const error = await response.json()
-        showErrorToast(error.detail || "Failed to revoke authorization")
+      showSuccessToast("Authorization revoked successfully")
+      // Refresh auth status
+      await fetchAuthStatuses(connectors)
+      if (selectedConnector?.slug === slug) {
+        fetchConnectorDetails(slug)
       }
     } catch (error) {
       showErrorToast("Failed to revoke authorization")

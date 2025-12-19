@@ -20,7 +20,7 @@ import {
   Plug,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface Connector {
@@ -138,38 +138,19 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
     const fetchConnectors = async () => {
       setIsConnectorsLoading(true)
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-
-        if (!session) {
-          setIsConnectorsLoading(false)
-          return
-        }
-
-        const response = await fetch(`/api/v1/connectors/list?include_custom=true`, {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          const connectorsList = Array.isArray(data) ? data : (data.connectors || [])
-          // Filter out deprecated connectors, show all others (draft, beta, stable)
-          const activeConnectors = connectorsList.filter(
-            (c: Connector & { status?: string }) =>
-              !c.status || c.status !== "deprecated"
-          )
-          // Update connectors immediately to show progress
-          setConnectors(activeConnectors)
-          setHasFetchedConnectors(true)
-          console.log(`[NodePalette] Loaded ${activeConnectors.length} connectors`)
-        } else {
-          const errorText = await response.text()
-          console.error("[NodePalette] Failed to fetch connectors:", response.status, response.statusText, errorText)
-        }
+        const data = await apiRequest<{ connectors?: any[] } | any[]>(
+          `/api/v1/connectors/list?include_custom=true`
+        )
+        const connectorsList = Array.isArray(data) ? data : (data.connectors || [])
+        // Filter out deprecated connectors, show all others (draft, beta, stable)
+        const activeConnectors = connectorsList.filter(
+          (c: Connector & { status?: string }) =>
+            !c.status || c.status !== "deprecated"
+        )
+        // Update connectors immediately to show progress
+        setConnectors(activeConnectors)
+        setHasFetchedConnectors(true)
+        console.log(`[NodePalette] Loaded ${activeConnectors.length} connectors`)
       } catch (error) {
         console.error("[NodePalette] Failed to fetch connectors:", error)
       } finally {

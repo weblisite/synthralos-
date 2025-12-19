@@ -49,7 +49,11 @@ export async function apiRequest<T = unknown>(
   const url = getApiPath(path)
   const headers = new Headers(options.headers)
   headers.set("Authorization", `Bearer ${session.access_token}`)
-  headers.set("Content-Type", "application/json")
+  
+  // Don't set Content-Type for FormData - browser will set it with boundary
+  if (!(options.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json")
+  }
 
   const response = await fetch(url, {
     ...options,

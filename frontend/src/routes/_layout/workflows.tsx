@@ -115,22 +115,8 @@ function WorkflowsPage() {
         }
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        setIsSaving(false)
-        showErrorToast("You must be logged in to save workflows")
-        return
-      }
-
-      const response = await fetch("/api/v1/workflows", {
+      const workflow = await apiRequest<{ id: string }>("/api/v1/workflows", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
         body: JSON.stringify({
           name: workflowName,
           description: workflowDescription || null,
@@ -138,13 +124,6 @@ function WorkflowsPage() {
           graph_config: graphConfig,
         }),
       })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: "Unknown error" }))
-        throw new Error(error.detail || "Failed to save workflow")
-      }
-
-      const workflow = await response.json()
       
       setWorkflowId(workflow.id)
       
@@ -201,33 +180,16 @@ function WorkflowsPage() {
     }
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to run workflows")
-        return
-      }
-
       // Call backend API to run workflow
       // FastAPI expects trigger_data directly in the body (not wrapped)
       const triggerData = triggerNode.data.config || {}
-      const response = await fetch(`/api/v1/workflows/${workflowId}/run`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(triggerData),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Failed to run workflow")
-      }
-
-      const execution = await response.json()
+      const execution = await apiRequest<{ execution_id: string }>(
+        `/api/v1/workflows/${workflowId}/run`,
+        {
+          method: "POST",
+          body: JSON.stringify(triggerData),
+        }
+      )
       showSuccessToast(`Workflow execution started: ${execution.execution_id}`)
 
       // Update executionId to show in ExecutionPanel

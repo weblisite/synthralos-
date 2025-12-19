@@ -49,58 +49,20 @@ interface OCRJob {
 }
 
 const fetchOCRJobs = async (): Promise<OCRJob[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view OCR jobs")
-  }
-
-  const response = await fetch("/api/v1/ocr/jobs", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch OCR jobs")
-  }
-
-  return response.json()
+  return apiRequest<OCRJob[]>("/api/v1/ocr/jobs")
 }
 
 const createOCRJob = async (
   documentUrl: string,
   engine?: string,
 ): Promise<OCRJob> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to create OCR jobs")
-  }
-
-  const response = await fetch("/api/v1/ocr/extract", {
+  return apiRequest<OCRJob>("/api/v1/ocr/extract", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       document_url: documentUrl,
       engine: engine,
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to create OCR job")
-  }
-
-  return response.json()
 }
 
 const getStatusColor = (status: string) => {

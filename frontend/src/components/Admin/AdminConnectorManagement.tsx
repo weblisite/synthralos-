@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 import { ConnectorWizard } from "@/components/Connectors/ConnectorWizard"
 
 interface Connector {
@@ -55,15 +55,6 @@ export function AdminConnectorManagement() {
   const fetchConnectors = useCallback(async () => {
     setIsLoading(true)
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in")
-        return
-      }
-
       const params = new URLSearchParams()
       if (selectedStatus !== "all") {
         params.append("status_filter", selectedStatus)
@@ -72,18 +63,9 @@ export function AdminConnectorManagement() {
         params.append("category", selectedCategory)
       }
 
-      const response = await fetch(`/api/v1/admin/connectors/list?${params}`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch connectors: ${response.status}`)
-      }
-
-      const data = await response.json()
+      const data = await apiRequest<{ connectors: Connector[] }>(
+        `/api/v1/admin/connectors/list?${params}`
+      )
       setConnectors(data.connectors || [])
     } catch (error) {
       showErrorToast(
@@ -100,30 +82,11 @@ export function AdminConnectorManagement() {
 
   const handleUpdateStatus = useCallback(async (slug: string, newStatus: string) => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in")
-        return
-      }
-
-      const response = await fetch(`/api/v1/admin/connectors/${slug}/status?new_status=${newStatus}`, {
+      await apiRequest(`/api/v1/admin/connectors/${slug}/status?new_status=${newStatus}`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
       })
-
-      if (response.ok) {
-        showSuccessToast(`Connector status updated to ${newStatus}`)
-        fetchConnectors()
-      } else {
-        const error = await response.json()
-        showErrorToast(error.detail || "Failed to update status")
-      }
+      showSuccessToast(`Connector status updated to ${newStatus}`)
+      fetchConnectors()
     } catch (error) {
       showErrorToast("Failed to update connector status")
     }
@@ -135,30 +98,11 @@ export function AdminConnectorManagement() {
     }
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in")
-        return
-      }
-
-      const response = await fetch(`/api/v1/admin/connectors/${slug}`, {
+      await apiRequest(`/api/v1/admin/connectors/${slug}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
       })
-
-      if (response.ok) {
-        showSuccessToast("Connector deleted successfully")
-        fetchConnectors()
-      } else {
-        const error = await response.json()
-        showErrorToast(error.detail || "Failed to delete connector")
-      }
+      showSuccessToast("Connector deleted successfully")
+      fetchConnectors()
     } catch (error) {
       showErrorToast("Failed to delete connector")
     }
