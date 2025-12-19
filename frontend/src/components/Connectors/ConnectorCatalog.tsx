@@ -5,7 +5,7 @@
  */
 
 import { type ColumnDef } from "@tanstack/react-table"
-import { ExternalLink, Plus, Search, X, CheckCircle2, XCircle } from "lucide-react"
+import { ExternalLink, Plus, Search, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -67,17 +67,13 @@ export function ConnectorCatalog() {
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [isOAuthModalOpen, setIsOAuthModalOpen] = useState(false)
   const [connectorDetails, setConnectorDetails] = useState<any>(null)
-  const [authStatuses, setAuthStatuses] = useState<Record<string, any>>({})
-  const { showErrorToast, showSuccessToast } = useCustomToast()
+  const { showErrorToast } = useCustomToast()
   
   // Use Nango connections hook
   const { 
-    connections, 
     isConnected, 
-    connect, 
     disconnect, 
-    getConnectionStatus,
-    isLoading: isLoadingConnections 
+    getConnectionStatus
   } = useConnections()
 
   const fetchConnectors = useCallback(async () => {
@@ -95,9 +91,6 @@ export function ConnectorCatalog() {
       // Handle both old array format and new object format
       const connectorsList = Array.isArray(data) ? data : (data.connectors || [])
       setConnectors(connectorsList)
-      
-      // Fetch authorization statuses for all connectors
-      await fetchAuthStatuses(connectorsList)
     } catch (error) {
       showErrorToast(
         error instanceof Error ? error.message : "Failed to fetch connectors",
@@ -106,29 +99,6 @@ export function ConnectorCatalog() {
       setIsLoading(false)
     }
   }, [showErrorToast, selectedCategory])
-
-  const fetchAuthStatuses = useCallback(async (connectorsList: Connector[]) => {
-    try {
-      const statusPromises = connectorsList.map(async (connector) => {
-        try {
-          const status = await apiClient.request(`/api/v1/connectors/${connector.slug}/auth-status`)
-          return { slug: connector.slug, status }
-        } catch (error) {
-          // Ignore errors for individual status checks
-        }
-        return { slug: connector.slug, status: { authorized: false } }
-      })
-
-      const statuses = await Promise.all(statusPromises)
-      const statusMap: Record<string, any> = {}
-      statuses.forEach(({ slug, status }) => {
-        statusMap[slug] = status
-      })
-      setAuthStatuses(statusMap)
-    } catch (error) {
-      // Ignore errors
-    }
-  }, [])
 
   const fetchConnectorDetails = useCallback(async (slug: string) => {
     try {

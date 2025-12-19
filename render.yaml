@@ -132,8 +132,29 @@ services:
       #   sync: false
       # - key: ANTHROPIC_API_KEY
       #   sync: false
-      # - key: NANGO_SECRET_KEY
-      #   sync: false
+      
+      # ========================================================================
+      # Nango OAuth Configuration (REQUIRED for connector OAuth)
+      # ========================================================================
+      # Nango is used for unified OAuth management across all connectors.
+      # See docs/NANGO_OAUTH_IMPLEMENTATION.md for setup instructions.
+      #
+      # Setup Instructions:
+      # 1. Create a Nango account at https://nango.dev
+      # 2. Configure OAuth apps for each connector provider (Gmail, Slack, etc.)
+      # 3. Get your secret key from Nango dashboard > Settings > API Keys
+      # 4. Set these values in Render dashboard after creating the service
+      # ========================================================================
+      - key: NANGO_SECRET_KEY
+        sync: false  # REQUIRED: Set manually in Render dashboard
+        # Get from: Nango Dashboard > Settings > API Keys > Secret Key
+      
+      - key: NANGO_BASE_URL
+        value: https://api.nango.dev  # Optional: Defaults to https://api.nango.dev
+        # Change this if using self-hosted Nango instance
+      
+      - key: NANGO_ENABLED
+        value: "true"  # Enable/disable Nango integration
 
   # Frontend Web Service
   - type: web
