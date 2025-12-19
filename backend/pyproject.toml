@@ -65,6 +65,7 @@ dependencies = [
     "opentelemetry-instrumentation-requests>=0.42b0",  # Requests instrumentation
     "posthog>=3.0.0",  # PostHog analytics
     "langfuse>=2.0.0",  # Langfuse LLM observability
+    "nango>=0.1.0",  # Nango OAuth proxy for connector integrations
     # Note: Other frameworks (swarm, camel-ai, kush-ai, kyro, riona) 
     # may not have stable PyPI packages yet - placeholder implementations provided
     # Note: infisical SDK has pydantic<2.0 dependency conflict

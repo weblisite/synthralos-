@@ -37,6 +37,9 @@ import { apiClient } from "@/lib/apiClient"
 import { ConnectorWizard } from "./ConnectorWizard"
 import { OAuthModal } from "./OAuthModal"
 import { ConnectorTestRunner } from "./ConnectorTestRunner"
+import { ConnectButton } from "./ConnectButton"
+import { ConnectionStatus } from "./ConnectionStatus"
+import { useConnections } from "@/hooks/useConnections"
 
 interface Connector {
   id: string
@@ -50,6 +53,8 @@ interface Connector {
   is_platform?: boolean
   owner_id?: string | null
   auth_status?: "authorized" | "not_authorized" | "unknown"
+  nango_enabled?: boolean
+  nango_provider_key?: string
 }
 
 export function ConnectorCatalog() {
@@ -64,6 +69,16 @@ export function ConnectorCatalog() {
   const [connectorDetails, setConnectorDetails] = useState<any>(null)
   const [authStatuses, setAuthStatuses] = useState<Record<string, any>>({})
   const { showErrorToast, showSuccessToast } = useCustomToast()
+  
+  // Use Nango connections hook
+  const { 
+    connections, 
+    isConnected, 
+    connect, 
+    disconnect, 
+    getConnectionStatus,
+    isLoading: isLoadingConnections 
+  } = useConnections()
 
   const fetchConnectors = useCallback(async () => {
     setIsLoading(true)
@@ -143,6 +158,12 @@ export function ConnectorCatalog() {
   useEffect(() => {
     fetchConnectors()
   }, [fetchConnectors, selectedCategory])
+  
+  // Refresh connections when component mounts or connectors change
+  useEffect(() => {
+    // Connections are automatically fetched by useConnections hook
+    // This effect ensures we refresh when connectors list changes
+  }, [connectors])
 
   // Get unique categories
   const categories = Array.from(
@@ -257,11 +278,13 @@ export function ConnectorCatalog() {
       },
     },
     {
-      id: "auth_status",
-      header: "Authorization",
+      id: "connection_status",
+      header: "Connection",
       cell: ({ row }) => {
         const connector = row.original
-        return getAuthStatusBadge(connector.slug)
+        const connection = getConnectionStatus(connector.id)
+        const status = connection?.status || 'disconnected'
+        return <ConnectionStatus status={status as 'connected' | 'disconnected' | 'pending' | 'error'} />
       },
     },
     {
@@ -269,6 +292,12 @@ export function ConnectorCatalog() {
       header: "Actions",
       cell: ({ row }) => {
         const connector = row.original
+        const connection = getConnectionStatus(connector.id)
+        const isConn = isConnected(connector.id)
+        // Check if connector has Nango enabled (from connector list or details)
+        const connectorData = connectors.find(c => c.id === connector.id)
+        const hasNango = connectorData?.nango_enabled || connectorDetails?.manifest?.nango?.enabled
+        
         return (
           <div className="flex items-center gap-2">
             <Button
@@ -282,6 +311,34 @@ export function ConnectorCatalog() {
               <ExternalLink className="h-4 w-4 mr-2" />
               View
             </Button>
+            {hasNango && (
+              isConn ? (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    if (connection) {
+                      disconnect({ 
+                        connectorId: connector.id, 
+                        connectionId: connection.id 
+                      })
+                    }
+                  }}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Disconnect
+                </Button>
+              ) : (
+                <ConnectButton
+                  connectorId={connector.id}
+                  connectorName={connector.name}
+                  onConnected={() => {
+                    fetchConnectors()
+                  }}
+                  className="text-sm"
+                />
+              )
+            )}
           </div>
         )
       },
@@ -430,30 +487,45 @@ export function ConnectorCatalog() {
                   )}
               </div>
 
-              {connectorDetails?.manifest?.oauth && (
+              {(connectorDetails?.manifest?.oauth || connectorDetails?.manifest?.nango?.enabled) && (
                 <div className="space-y-2">
-                  {authStatuses[selectedConnector.slug]?.authorized ? (
+                  <h3 className="font-semibold">Connection</h3>
+                  {isConnected(selectedConnector.id) ? (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        <span>Authorized</span>
-                        {authStatuses[selectedConnector.slug]?.expires_at && (
-                          <span className="text-xs">
-                            (Expires: {new Date(authStatuses[selectedConnector.slug].expires_at).toLocaleDateString()})
-                          </span>
-                        )}
-                      </div>
+                      <ConnectionStatus status="connected" />
+                      {(() => {
+                        const connection = getConnectionStatus(selectedConnector.id)
+                        return connection?.connected_at && (
+                          <p className="text-sm text-muted-foreground">
+                            Connected: {new Date(connection.connected_at).toLocaleDateString()}
+                            {connection.last_synced_at && (
+                              <> • Last synced: {new Date(connection.last_synced_at).toLocaleDateString()}</>
+                            )}
+                          </p>
+                        )
+                      })()}
                       <div className="flex gap-2">
-                        <Button
-                          onClick={() => setIsOAuthModalOpen(true)}
-                          variant="outline"
+                        <ConnectButton
+                          connectorId={selectedConnector.id}
+                          connectorName={selectedConnector.name}
+                          onConnected={() => {
+                            fetchConnectorDetails(selectedConnector.slug)
+                            fetchConnectors()
+                          }}
                           className="flex-1"
-                        >
-                          Re-authorize {selectedConnector.name}
-                        </Button>
+                        />
                         <Button
-                          onClick={() => handleDisconnect(selectedConnector.slug)}
                           variant="destructive"
+                          onClick={() => {
+                            const connection = getConnectionStatus(selectedConnector.id)
+                            if (connection) {
+                              disconnect({ 
+                                connectorId: selectedConnector.id, 
+                                connectionId: connection.id 
+                              })
+                              fetchConnectorDetails(selectedConnector.slug)
+                            }
+                          }}
                           className="flex-1"
                         >
                           <X className="h-4 w-4 mr-2" />
@@ -462,13 +534,18 @@ export function ConnectorCatalog() {
                       </div>
                     </div>
                   ) : (
-                    <Button
-                      onClick={() => setIsOAuthModalOpen(true)}
-                      variant="default"
-                      className="w-full"
-                    >
-                      Authorize {selectedConnector.name}
-                    </Button>
+                    <div className="space-y-2">
+                      <ConnectionStatus status="disconnected" />
+                      <ConnectButton
+                        connectorId={selectedConnector.id}
+                        connectorName={selectedConnector.name}
+                        onConnected={() => {
+                          fetchConnectorDetails(selectedConnector.slug)
+                          fetchConnectors()
+                        }}
+                        className="w-full"
+                      />
+                    </div>
                   )}
                 </div>
               )}

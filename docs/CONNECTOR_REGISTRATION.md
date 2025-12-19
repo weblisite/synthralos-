@@ -70,3 +70,4 @@ SELECT slug, name, status, is_platform FROM connector LIMIT 10;
 - The registration script skips connectors that already exist
 - All connectors are marked with status from manifest (draft, beta, stable)
 
+

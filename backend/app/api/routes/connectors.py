@@ -5,8 +5,10 @@ Endpoints for connector registration, discovery, and management.
 """
 
 import uuid
+import logging
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlmodel import select
@@ -40,7 +42,11 @@ from app.connectors.webhook import (
     default_webhook_service,
 )
 from app.models import Connector, ConnectorVersion
+from app.models.user_connector_connection import UserConnectorConnection
 from app.core.config import settings
+from app.services.nango_service import get_nango_service
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/connectors", tags=["connectors"])
@@ -1016,4 +1022,382 @@ def webhook_ingress(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+# ============================================================================
+# Nango OAuth Connection Endpoints
+# ============================================================================
+
+@router.post("/{connector_id}/connect")
+async def connect_connector(
+    connector_id: str,
+    current_user: CurrentUser,
+    session: SessionDep,
+    instance_id: str | None = None,
+) -> Any:
+    """
+    Initiate OAuth connection to a connector via Nango.
+    Opens popup window with Nango OAuth URL.
+    
+    Path Parameters:
+    - connector_id: Connector UUID or slug
+    
+    Query Parameters:
+    - instance_id: Optional instance identifier for multiple accounts (e.g., "work@gmail.com")
+    
+    Returns:
+    - oauth_url: URL to open in popup window
+    - connection_id: Connection identifier for tracking
+    - popup: Boolean indicating popup should be used
+    """
+    if not settings.NANGO_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Nango integration is not enabled",
+        )
+    
+    # Get connector (try by ID first, then by slug)
+    try:
+        connector_uuid = UUID(connector_id)
+        connector = session.get(Connector, connector_uuid)
+    except ValueError:
+        # Not a UUID, try by slug
+        connector = session.exec(
+            select(Connector).where(Connector.slug == connector_id)
+        ).first()
+    
+    if not connector:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Connector '{connector_id}' not found",
+        )
+    
+    # Get connector version to check Nango config
+    connector_version = session.get(ConnectorVersion, connector.latest_version_id)
+    if not connector_version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Connector version not found for '{connector.slug}'",
+        )
+    
+    manifest = connector_version.manifest
+    nango_config = manifest.get("nango", {})
+    
+    if not nango_config.get("enabled", False):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Connector '{connector.slug}' does not support Nango OAuth",
+        )
+    
+    provider_key = nango_config.get("provider_key", connector.slug)
+    
+    # Generate connection ID
+    connection_id = f"{current_user.id}_{connector.id}"
+    if instance_id:
+        connection_id += f"_{instance_id}"
+    
+    # Check if connection already exists
+    existing = session.exec(
+        select(UserConnectorConnection).where(
+            UserConnectorConnection.user_id == current_user.id,
+            UserConnectorConnection.connector_id == connector.id,
+            UserConnectorConnection.nango_connection_id == connection_id
+        )
+    ).first()
+    
+    if existing and existing.status == "connected":
+        # Return existing connection info
+        return {
+            "oauth_url": None,
+            "connection_id": str(existing.id),
+            "popup": False,
+            "already_connected": True,
+            "message": "Already connected",
+        }
+    
+    # Create or update connection record
+    if existing:
+        connection = existing
+        connection.status = "pending"
+    else:
+        connection = UserConnectorConnection(
+            user_id=current_user.id,
+            connector_id=connector.id,
+            nango_connection_id=connection_id,
+            status="pending",
+            config={"instance_id": instance_id} if instance_id else None,
+        )
+        session.add(connection)
+    
+    session.commit()
+    
+    # Get OAuth URL from Nango
+    return_url = f"{settings.FRONTEND_HOST}/connectors/callback?connection_id={connection_id}"
+    
+    try:
+        nango_service = get_nango_service()
+        oauth_data = await nango_service.create_connection(
+            user_id=str(current_user.id),
+            connector_slug=connector.slug,
+            connection_id=connection_id,
+            return_url=return_url,
+            provider_key=provider_key,
+        )
+        
+        return {
+            "oauth_url": oauth_data["oauth_url"],
+            "connection_id": str(connection.id),
+            "nango_connection_id": connection_id,
+            "popup": True,
+            "already_connected": False,
+        }
+    except Exception as e:
+        connection.status = "error"
+        connection.last_error = str(e)
+        connection.error_count += 1
+        session.commit()
+        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to initiate OAuth connection: {str(e)}",
+        )
+
+
+@router.get("/callback")
+async def oauth_callback(
+    connection_id: str,
+    provider_config_key: str | None = None,
+    session: SessionDep = Depends(),
+) -> Any:
+    """
+    Handle OAuth callback from Nango.
+    Called by Nango after successful OAuth.
+    Updates connection status in database.
+    
+    Query Parameters:
+    - connection_id: Nango connection identifier
+    - provider_config_key: Nango provider key (optional)
+    
+    Returns:
+    - Success message with connection details
+    """
+    # Find connection by nango_connection_id
+    connection = session.exec(
+        select(UserConnectorConnection).where(
+            UserConnectorConnection.nango_connection_id == connection_id
+        )
+    ).first()
+    
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Connection '{connection_id}' not found",
+        )
+    
+    # Verify connection status with Nango
+    try:
+        connector = session.get(Connector, connection.connector_id)
+        connector_version = session.get(ConnectorVersion, connector.latest_version_id)
+        manifest = connector_version.manifest
+        nango_config = manifest.get("nango", {})
+        provider_key = provider_config_key or nango_config.get("provider_key", connector.slug)
+        
+        nango_service = get_nango_service()
+        # Verify connection exists in Nango
+        nango_status = await nango_service.get_connection_status(
+            connection_id=connection_id,
+            provider_key=provider_key
+        )
+        
+        # Update connection status
+        connection.status = "connected"
+        connection.connected_at = datetime.utcnow()
+        connection.last_synced_at = datetime.utcnow()
+        connection.last_error = None
+        connection.error_count = 0
+        session.commit()
+        
+        return {
+            "success": True,
+            "connection_id": str(connection.id),
+            "nango_connection_id": connection_id,
+            "connector_id": str(connection.connector_id),
+            "connector_slug": connector.slug,
+            "status": "connected",
+            "message": "Successfully connected",
+        }
+    except Exception as e:
+        connection.status = "error"
+        connection.last_error = str(e)
+        connection.error_count += 1
+        session.commit()
+        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify connection: {str(e)}",
+        )
+
+
+@router.get("/connections")
+def list_connections(
+    current_user: CurrentUser,
+    session: SessionDep,
+    connector_id: str | None = None,
+) -> Any:
+    """
+    List all user's connector connections.
+    
+    Query Parameters:
+    - connector_id: Optional filter by connector ID or slug
+    
+    Returns:
+    - List of connections with status and metadata
+    """
+    query = select(UserConnectorConnection).where(
+        UserConnectorConnection.user_id == current_user.id
+    )
+    
+    if connector_id:
+        try:
+            connector_uuid = UUID(connector_id)
+            query = query.where(UserConnectorConnection.connector_id == connector_uuid)
+        except ValueError:
+            # Not a UUID, try by slug
+            connector = session.exec(
+                select(Connector).where(Connector.slug == connector_id)
+            ).first()
+            if connector:
+                query = query.where(UserConnectorConnection.connector_id == connector.id)
+            else:
+                return {"connections": [], "total_count": 0}
+    
+    connections = session.exec(query).all()
+    
+    # Load connectors in bulk
+    connector_ids = {c.connector_id for c in connections}
+    connectors_map = {}
+    if connector_ids:
+        connectors = session.exec(
+            select(Connector).where(Connector.id.in_(connector_ids))
+        ).all()
+        connectors_map = {c.id: c for c in connectors}
+    
+    result = []
+    for conn in connections:
+        connector = connectors_map.get(conn.connector_id)
+        result.append({
+            "id": str(conn.id),
+            "connector_id": str(conn.connector_id),
+            "connector_slug": connector.slug if connector else None,
+            "connector_name": connector.name if connector else None,
+            "nango_connection_id": conn.nango_connection_id,
+            "status": conn.status,
+            "connected_at": conn.connected_at.isoformat() if conn.connected_at else None,
+            "disconnected_at": conn.disconnected_at.isoformat() if conn.disconnected_at else None,
+            "last_synced_at": conn.last_synced_at.isoformat() if conn.last_synced_at else None,
+            "config": conn.config,
+            "error_count": conn.error_count,
+            "last_error": conn.last_error,
+        })
+    
+    return {
+        "connections": result,
+        "total_count": len(result),
+    }
+
+
+@router.delete("/{connector_id}/disconnect")
+async def disconnect_connector(
+    connector_id: str,
+    connection_id: str,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Disconnect a connector connection.
+    
+    Path Parameters:
+    - connector_id: Connector UUID or slug
+    
+    Query Parameters:
+    - connection_id: Connection UUID to disconnect
+    
+    Returns:
+    - Success message
+    """
+    if not settings.NANGO_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Nango integration is not enabled",
+        )
+    
+    # Get connector
+    try:
+        connector_uuid = UUID(connector_id)
+        connector = session.get(Connector, connector_uuid)
+    except ValueError:
+        connector = session.exec(
+            select(Connector).where(Connector.slug == connector_id)
+        ).first()
+    
+    if not connector:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Connector '{connector_id}' not found",
+        )
+    
+    # Get connection
+    try:
+        connection_uuid = UUID(connection_id)
+        connection = session.get(UserConnectorConnection, connection_uuid)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid connection_id format",
+        )
+    
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Connection not found",
+        )
+    
+    if connection.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to disconnect this connection",
+        )
+    
+    if connection.connector_id != connector.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Connection does not belong to this connector",
+        )
+    
+    # Delete from Nango
+    try:
+        connector_version = session.get(ConnectorVersion, connector.latest_version_id)
+        manifest = connector_version.manifest
+        nango_config = manifest.get("nango", {})
+        provider_key = nango_config.get("provider_key", connector.slug)
+        
+        nango_service = get_nango_service()
+        await nango_service.delete_connection(
+            connection_id=connection.nango_connection_id,
+            provider_key=provider_key
+        )
+    except Exception as e:
+        # Log error but continue with database update
+        logger.warning(f"Failed to delete connection from Nango: {e}")
+    
+    # Update status
+    connection.status = "disconnected"
+    connection.disconnected_at = datetime.utcnow()
+    session.commit()
+    
+    return {
+        "success": True,
+        "message": "Disconnected successfully",
+        "connection_id": str(connection.id),
+    }
 

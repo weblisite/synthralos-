@@ -89,3 +89,4 @@ if __name__ == "__main__":
     success = migrate_all_connectors()
     sys.exit(0 if success else 1)
 
+

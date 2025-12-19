@@ -62,3 +62,4 @@ SELECT slug, name, status FROM connector WHERE is_platform = true ORDER BY slug;
 - **Batch SQL Files**: `backend/scripts/connector_batches/batch_*.sql` (10 files)
 - **Migration Scripts**: `backend/scripts/migrate_connectors_*.py`
 
+

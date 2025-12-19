@@ -140,3 +140,4 @@ if __name__ == "__main__":
         print("\n❌ Failed to generate migration SQL")
         sys.exit(1)
 
+

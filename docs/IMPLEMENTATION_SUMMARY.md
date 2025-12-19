@@ -1,349 +1,188 @@
-# Connector Catalog Implementation Summary
+# Nango OAuth Implementation Summary
 
-## Overview
+## ✅ Completed Implementation
 
-This document summarizes all the implementations completed for the Connector Catalog with RBAC, user features, and admin management.
+### Backend Components
 
-## ✅ Completed Implementations
+1. **Database Model** (`backend/app/models/user_connector_connection.py`)
+   - SQLModel for storing user-connector connections
+   - Tracks connection status, timestamps, errors, and config
 
-### 1. **Backend Database Model Updates**
+2. **Nango Service** (`backend/app/services/nango_service.py`)
+   - Wrapper around Nango SDK
+   - Handles OAuth connection creation, token retrieval, and deletion
+   - Supports both sync and async Nango SDK versions
 
-**File:** `backend/app/models.py`
+3. **API Endpoints** (`backend/app/api/routes/connectors.py`)
+   - `POST /api/v1/connectors/{id}/connect` - Initiate OAuth
+   - `GET /api/v1/connectors/callback` - Handle OAuth callback
+   - `GET /api/v1/connectors/connections` - List user connections
+   - `DELETE /api/v1/connectors/{id}/disconnect` - Disconnect
 
-**Changes:**
-- Added `owner_id: uuid.UUID | None` - NULL for platform connectors, UUID for user-owned
-- Added `is_platform: bool` - True for platform connectors, False for user-specific
-- Added `created_by: uuid.UUID | None` - User who created the connector
+4. **Configuration** (`backend/app/core/config.py`)
+   - Added `NANGO_BASE_URL`, `NANGO_SECRET_KEY`, `NANGO_PUBLIC_KEY`, `NANGO_ENABLED`
 
-**Migration Script:** `backend/scripts/migrate_connectors_rbac.py`
-- Updates existing connectors to be platform connectors
+5. **Dependencies** (`backend/pyproject.toml`)
+   - Added `nango>=0.1.0` dependency
 
----
+6. **Database Migration** (`backend/app/alembic/versions/XXXX_add_user_connector_connection.py`)
+   - Creates `user_connector_connection` table with indexes
 
-### 2. **Backend API - RBAC Implementation**
+### Frontend Components
 
-**Files:**
-- `backend/app/api/routes/connectors.py` - User endpoints
-- `backend/app/api/routes/admin_connectors.py` - Admin endpoints (NEW)
+1. **ConnectButton** (`frontend/src/components/Connectors/ConnectButton.tsx`)
+   - Opens OAuth popup window
+   - Handles connection flow
+   - Shows loading state
 
-#### User Endpoints (`/api/v1/connectors/`)
+2. **ConnectionStatus** (`frontend/src/components/Connectors/ConnectionStatus.tsx`)
+   - Displays connection status with icons
+   - Shows connected/disconnected/pending/error states
 
-**Updated:**
-- `POST /register` - Now registers user custom connectors (`is_platform=false`)
-- `GET /list` - Returns platform connectors + user's custom connectors
-- `GET /{slug}/auth-status` - Check authorization status (NEW)
-- `DELETE /{slug}/authorization` - Revoke authorization (NEW)
+3. **useConnections Hook** (`frontend/src/hooks/useConnections.ts`)
+   - React Query hook for managing connections
+   - Provides connect/disconnect functions
+   - Caches connection data
 
-**Features:**
-- Users can register custom connectors
-- Users see platform connectors + their custom connectors
-- Category filtering supported
-- Authorization status checking
+### Documentation
 
-#### Admin Endpoints (`/api/v1/admin/connectors/`)
+1. **Implementation Guide** (`docs/NANGO_OAUTH_IMPLEMENTATION.md`)
+   - Complete architecture and flow documentation
+   - API reference
+   - Security considerations
 
-**New Endpoints:**
-- `POST /register` - Register platform connectors (admin-only)
-- `GET /list` - List all connectors (admin-only)
-- `PATCH /{slug}/status` - Update connector status (admin-only)
-- `DELETE /{slug}` - Delete connector (admin-only)
-- `GET /stats` - Get connector statistics (admin-only)
+2. **Setup Checklist** (`docs/NANGO_SETUP_CHECKLIST.md`)
+   - Step-by-step setup instructions
+   - Testing checklist
 
-**Features:**
-- Requires `is_superuser = True`
-- Platform connector management
-- Version management
-- Analytics and statistics
+3. **ConnectorCatalog Update Example** (`docs/CONNECTORCATALOG_UPDATE_EXAMPLE.md`)
+   - Example code for updating existing component
 
----
+## ⏳ Next Steps
 
-### 3. **Backend Connector Registry Updates**
+### Immediate Actions Required
 
-**File:** `backend/app/connectors/registry.py`
+1. **Install Nango SDK:**
+   ```bash
+   cd backend
+   pip install nango
+   # Or: uv pip install nango
+   ```
 
-**Updated Methods:**
-- `register_connector()` - Now accepts `owner_id`, `is_platform`, `created_by`
-- `list_connectors()` - Now supports filtering by `owner_id`, `is_platform`, `include_user_connectors`
+2. **Run Database Migration:**
+   ```bash
+   alembic upgrade head
+   ```
+   Or apply via Supabase MCP using the migration file.
 
-**Features:**
-- Platform vs user connector separation
-- Owner-based filtering
-- Proper slug uniqueness (global for platform, per-owner for custom)
+3. **Add Environment Variables to Render:**
+   - `NANGO_SECRET_KEY` - Your Nango secret key
+   - `NANGO_BASE_URL` - Optional, defaults to https://api.nango.dev
+   - `NANGO_ENABLED=true`
 
----
+4. **Update ConnectorCatalog Component:**
+   - Import new components
+   - Use `useConnections` hook
+   - Replace OAuth buttons with `ConnectButton`
+   - Show connection status
 
-### 4. **Frontend User Connector Catalog**
+5. **Test OAuth Flow:**
+   - Test connecting a connector
+   - Verify popup opens and completes
+   - Check connection appears in list
+   - Test disconnect
 
-**File:** `frontend/src/components/Connectors/ConnectorCatalog.tsx`
+### Future Enhancements
 
-**New Features:**
+1. **Workflow Builder Integration:**
+   - Show connection selector when adding connector nodes
+   - Store `connection_id` in node config
+   - Use connection when executing workflows
 
-1. **Tabs for Platform vs Custom Connectors**
-   - "Platform Connectors" tab - Shows all platform connectors
-   - "My Custom Connectors" tab - Shows user's custom connectors
+2. **Connection Management UI:**
+   - List all user connections
+   - Show connection details (account name, workspace, etc.)
+   - Allow reconnection on error
+   - Show last synced time
 
-2. **Category Filtering**
-   - Dropdown to filter by category
-   - Categories extracted from connector manifests
-   - Works with search
+3. **Multiple Connections:**
+   - UI for managing multiple accounts per connector
+   - Instance selection dropdown
+   - Connection naming/labeling
 
-3. **Authorization Status Display**
-   - Shows "✅ Authorized" or "❌ Not Authorized" badges in table
-   - Fetches authorization status for all connectors
-   - Real-time status updates
+## Architecture Overview
 
-4. **Disconnect Functionality**
-   - "Disconnect" button in connector details modal
-   - Revokes OAuth authorization
-   - Confirmation and success feedback
-
-5. **Enhanced Connector Details Modal**
-   - Shows authorization status
-   - "Re-authorize" button if already authorized
-   - "Disconnect" button
-   - Token expiration info
-
-6. **Search Enhancement**
-   - Search by name, slug, description, category
-   - Works across both tabs
-
-**UI Components Added:**
-- Tabs component for Platform/Custom separation
-- Select dropdown for category filtering
-- Authorization status badges
-- Disconnect button with confirmation
-
----
-
-### 5. **Frontend Admin Connector Management**
-
-**Files:**
-- `frontend/src/components/Admin/AdminConnectorManagement.tsx` (NEW)
-- `frontend/src/routes/_layout/admin.tsx` (Updated)
-
-**Features:**
-
-1. **Platform Connector Registry**
-   - List all connectors (platform + user custom)
-   - Filter by status (draft, beta, stable, deprecated)
-   - Filter by category
-   - Search functionality
-
-2. **Register Platform Connector**
-   - Uses admin endpoint (`/api/v1/admin/connectors/register`)
-   - Sets `is_platform=true`
-   - Available to all users after registration
-
-3. **Status Management**
-   - Dropdown to change connector status
-   - Update status inline in table
-   - Status options: draft, beta, stable, deprecated
-
-4. **Delete Connectors**
-   - Delete button for each connector
-   - Only allows deleting deprecated platform connectors or user connectors
-   - Confirmation dialog
-
-5. **Admin Panel Integration**
-   - Added "Connectors" tab to Admin Panel
-   - Accessible at `/admin` → Connectors tab
-   - Admin-only access (checks `is_superuser`)
-
----
-
-### 6. **Connector Wizard Updates**
-
-**File:** `frontend/src/components/Connectors/ConnectorWizard.tsx`
-
-**Updates:**
-- Added `endpoint` prop - Allows using admin endpoint
-- Added `isPlatform` prop - Sets `is_platform` flag
-- User wizard: Uses `/api/v1/connectors/register` with `is_platform=false`
-- Admin wizard: Uses `/api/v1/admin/connectors/register` with `is_platform=true`
-
----
-
-## Implementation Details
-
-### Database Schema Changes
-
-```python
-class Connector(SQLModel, table=True):
-    # ... existing fields ...
-    owner_id: uuid.UUID | None = Field(default=None, foreign_key="user.id", nullable=True)
-    is_platform: bool = Field(default=True)
-    created_by: uuid.UUID | None = Field(default=None, foreign_key="user.id", nullable=True)
+```
+┌─────────────┐
+│   Frontend  │
+│  (React)    │
+└──────┬──────┘
+       │
+       │ API Calls
+       ▼
+┌─────────────┐
+│   Backend   │
+│  (FastAPI)  │
+└──────┬──────┘
+       │
+       │ Nango SDK
+       ▼
+┌─────────────┐
+│    Nango    │
+│   Service   │
+└──────┬──────┘
+       │
+       │ OAuth Flow
+       ▼
+┌─────────────┐
+│   Provider  │
+│ (Gmail/etc) │
+└─────────────┘
 ```
 
-### API Response Format
+## Key Features
 
-**User Connector List:**
-```json
-{
-  "connectors": [
-    {
-      "id": "uuid",
-      "slug": "gmail",
-      "name": "Gmail",
-      "status": "beta",
-      "category": "Communication & Collaboration",
-      "is_platform": true,
-      "owner_id": null,
-      "latest_version": "1.0.0"
-    }
-  ],
-  "total_count": 99
-}
-```
+- ✅ Popup-based OAuth (no redirect)
+- ✅ Automatic token refresh (handled by Nango)
+- ✅ Multiple connections per connector
+- ✅ Connection status tracking
+- ✅ Error handling and retry
+- ✅ Secure token storage (via Nango)
+- ✅ User isolation (connections per user)
 
-**Authorization Status:**
-```json
-{
-  "authorized": true,
-  "requires_oauth": true,
-  "expires_at": "2025-12-20T10:00:00Z",
-  "expires_in": 7200,
-  "token_type": "Bearer"
-}
-```
+## Files Created
 
----
+### Backend
+- `backend/app/models/user_connector_connection.py`
+- `backend/app/services/nango_service.py`
+- `backend/app/alembic/versions/XXXX_add_user_connector_connection.py`
 
-## User Flows
+### Frontend
+- `frontend/src/components/Connectors/ConnectButton.tsx`
+- `frontend/src/components/Connectors/ConnectionStatus.tsx`
+- `frontend/src/hooks/useConnections.ts`
 
-### User Flow: Browse and Authorize Connector
+### Documentation
+- `docs/NANGO_OAUTH_IMPLEMENTATION.md`
+- `docs/NANGO_SETUP_CHECKLIST.md`
+- `docs/CONNECTORCATALOG_UPDATE_EXAMPLE.md`
+- `docs/IMPLEMENTATION_SUMMARY.md`
 
-1. User opens Connector Catalog (`/connectors`)
-2. Sees "Platform Connectors" tab (default)
-3. Filters by category (e.g., "Communication & Collaboration")
-4. Searches for "Gmail"
-5. Sees Gmail connector with "❌ Not Authorized" badge
-6. Clicks "View" → Opens connector details modal
-7. Clicks "Authorize Gmail" → OAuth flow
-8. Returns to catalog → Sees "✅ Authorized" badge
-9. Can now use Gmail in workflows/agents
+## Testing
 
-### User Flow: Register Custom Connector
+After setup, test:
+1. Connect a connector (e.g., Gmail)
+2. Verify popup opens
+3. Complete OAuth flow
+4. Check connection status updates
+5. List connections endpoint
+6. Disconnect functionality
+7. Error handling (invalid credentials, etc.)
 
-1. User opens Connector Catalog (`/connectors`)
-2. Clicks "Register Custom Connector"
-3. Provides manifest JSON and wheel URL
-4. Connector registered with `is_platform=false`, `owner_id=user.id`
-5. Appears in "My Custom Connectors" tab
-6. Only visible to the user who created it
+## Notes
 
-### Admin Flow: Register Platform Connector
-
-1. Admin opens Admin Panel (`/admin`)
-2. Clicks "Connectors" tab
-3. Clicks "Register Platform Connector"
-4. Provides manifest JSON and wheel URL
-5. Connector registered with `is_platform=true`, `owner_id=None`
-6. Connector becomes available to all users
-7. Users can authorize and use it
-
-### Admin Flow: Manage Connector Status
-
-1. Admin opens Admin Panel → Connectors tab
-2. Sees list of all connectors
-3. Changes status dropdown for a connector (e.g., beta → stable)
-4. Status updated immediately
-5. All users see updated status
-
----
-
-## Security & Access Control
-
-### User Access
-- ✅ Can view platform connectors
-- ✅ Can view their own custom connectors
-- ✅ Can authorize connectors
-- ✅ Can register custom connectors
-- ❌ Cannot register platform connectors
-- ❌ Cannot modify connector status
-- ❌ Cannot delete platform connectors
-
-### Admin Access
-- ✅ Can view all connectors
-- ✅ Can register platform connectors
-- ✅ Can update connector status
-- ✅ Can delete deprecated/platform connectors
-- ✅ Can view connector statistics
-- ✅ Can manage connector versions
-
----
-
-## Files Created/Modified
-
-### Backend Files Created:
-1. `backend/app/api/routes/admin_connectors.py` - Admin connector endpoints
-2. `backend/scripts/migrate_connectors_rbac.py` - Migration script
-
-### Backend Files Modified:
-1. `backend/app/models.py` - Added RBAC fields to Connector model
-2. `backend/app/connectors/registry.py` - Updated for RBAC
-3. `backend/app/api/routes/connectors.py` - Added auth-status, disconnect endpoints
-4. `backend/app/api/main.py` - Added admin_connectors router
-
-### Frontend Files Created:
-1. `frontend/src/components/Admin/AdminConnectorManagement.tsx` - Admin connector management UI
-
-### Frontend Files Modified:
-1. `frontend/src/components/Connectors/ConnectorCatalog.tsx` - Added tabs, category filter, auth status, disconnect
-2. `frontend/src/components/Connectors/ConnectorWizard.tsx` - Added endpoint and isPlatform props
-3. `frontend/src/routes/_layout/admin.tsx` - Added Connectors tab
-
----
-
-## Testing Checklist
-
-### User Features:
-- [ ] Browse platform connectors
-- [ ] Filter by category
-- [ ] Search connectors
-- [ ] View connector details
-- [ ] See authorization status
-- [ ] Authorize connector
-- [ ] Disconnect connector
-- [ ] Register custom connector
-- [ ] View custom connectors in "My Custom Connectors" tab
-
-### Admin Features:
-- [ ] Access admin panel (requires is_superuser)
-- [ ] View all connectors
-- [ ] Register platform connector
-- [ ] Update connector status
-- [ ] Delete connector
-- [ ] View connector statistics
-- [ ] Filter by status and category
-
----
-
-## Next Steps (Optional Enhancements)
-
-1. **Connector Usage Tracking** - Show where connectors are used (workflows, agents)
-2. **Connector Health Monitoring** - Monitor API status, errors
-3. **Bulk Operations** - Bulk enable/disable connectors
-4. **Connector Approval Workflow** - Approve user-submitted connectors for platform
-5. **Version Management UI** - View and manage connector versions
-6. **Analytics Dashboard** - Usage statistics, popular connectors
-7. **Token Refresh Automation** - Automatic token refresh before expiration
-
----
-
-## Summary
-
-All requested features have been implemented:
-
-✅ **RBAC Separation** - User vs Admin access properly separated
-✅ **Category Filtering** - Users can filter connectors by category
-✅ **Authorization Status** - Users see which connectors are authorized
-✅ **Disconnect Functionality** - Users can revoke authorizations
-✅ **Custom Connector Registration** - Users can register their own connectors
-✅ **Admin Panel** - Admins can manage platform connectors
-✅ **Platform Connector Registration** - Admins can register connectors for all users
-✅ **Status Management** - Admins can update connector status
-✅ **Tabs** - Platform vs Custom connector separation in UI
-
-The implementation follows SaaS best practices with proper role-based access control, user-scoped custom connectors, and platform-wide connector management.
-
+- All 99 connectors already have Nango config in manifests
+- Provider keys should match connector slugs or be in manifest
+- Nango handles token refresh automatically
+- Connections are user-scoped and secure
+- Multiple accounts per connector supported via `instance_id`

@@ -112,8 +112,9 @@ class Settings(BaseSettings):
     WAZUH_PASSWORD: str = ""  # Optional Wazuh API password
     
     # Nango Configuration
-    NANGO_URL: str = "https://api.nango.dev"  # Nango API URL
-    NANGO_SECRET_KEY: str = ""  # Nango secret key
+    NANGO_BASE_URL: str = "https://api.nango.dev"  # Nango API base URL
+    NANGO_SECRET_KEY: str = ""  # Nango secret key (from Nango dashboard)
+    NANGO_PUBLIC_KEY: str = ""  # Nango public key (optional, for frontend)
     NANGO_ENABLED: bool = True  # Enable/disable Nango integration
     
     # LLM Provider Configuration
