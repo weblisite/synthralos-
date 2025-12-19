@@ -75,7 +75,7 @@ def get_system_health(
         "openai": bool(settings.OPENAI_API_KEY),
         "anthropic": bool(settings.ANTHROPIC_API_KEY),
         "google": bool(settings.GOOGLE_API_KEY),
-        "nango": bool(settings.NANGO_URL and settings.NANGO_SECRET_KEY),
+        "nango": bool(getattr(settings, 'NANGO_BASE_URL', None) or getattr(settings, 'NANGO_URL', None)) and bool(getattr(settings, 'NANGO_SECRET_KEY', '')),
     }
     
     health_status["services"] = services

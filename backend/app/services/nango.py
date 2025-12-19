@@ -32,9 +32,11 @@ class NangoService:
     
     def __init__(self):
         """Initialize Nango service."""
-        self.base_url = settings.NANGO_URL.rstrip("/")
-        self.secret_key = settings.NANGO_SECRET_KEY
-        self.enabled = settings.NANGO_ENABLED and bool(self.secret_key)
+        # Use NANGO_BASE_URL if available, fallback to NANGO_URL for backward compatibility
+        base_url = getattr(settings, 'NANGO_BASE_URL', None) or getattr(settings, 'NANGO_URL', None) or 'https://api.nango.dev'
+        self.base_url = str(base_url).rstrip("/")
+        self.secret_key = getattr(settings, 'NANGO_SECRET_KEY', '')
+        self.enabled = getattr(settings, 'NANGO_ENABLED', True) and bool(self.secret_key)
         self._registry = None  # Lazy load to avoid circular import
     
     def _get_registry(self):
@@ -330,6 +332,40 @@ class NangoService:
             raise NangoError(f"Failed to refresh tokens via Nango: {e}")
 
 
-# Default Nango service instance
-default_nango_service = NangoService()
+# Default Nango service instance (lazy initialization to avoid startup errors)
+# Only create if Nango is enabled and configured
+_default_nango_service: NangoService | None = None
+
+def _create_nango_service() -> NangoService | None:
+    """Create Nango service instance if configured."""
+    try:
+        # Use NANGO_BASE_URL if available, fallback to NANGO_URL for backward compatibility
+        base_url = getattr(settings, 'NANGO_BASE_URL', None) or getattr(settings, 'NANGO_URL', None)
+        secret_key = getattr(settings, 'NANGO_SECRET_KEY', '')
+        enabled = getattr(settings, 'NANGO_ENABLED', True)
+        
+        if enabled and base_url and secret_key:
+            return NangoService()
+    except Exception:
+        # If initialization fails, return None (Nango not available)
+        pass
+    return None
+
+def get_default_nango_service() -> NangoService | None:
+    """Get or create default Nango service instance."""
+    global _default_nango_service
+    if _default_nango_service is None:
+        _default_nango_service = _create_nango_service()
+    return _default_nango_service
+
+# For backward compatibility, create a proxy object that handles None gracefully
+class _DefaultNangoService:
+    """Wrapper to maintain backward compatibility with existing code."""
+    def __getattr__(self, name):
+        service = get_default_nango_service()
+        if service is None:
+            raise NangoError("Nango service is not configured. Set NANGO_SECRET_KEY and NANGO_BASE_URL environment variables.")
+        return getattr(service, name)
+
+default_nango_service = _DefaultNangoService()
 
