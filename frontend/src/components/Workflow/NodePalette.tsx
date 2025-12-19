@@ -138,21 +138,31 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
     const fetchConnectors = async () => {
       setIsConnectorsLoading(true)
       try {
-        const data = await apiClient.request<{ connectors?: any[] } | any[]>(
+        const data = await apiClient.request<{ connectors?: any[]; total_count?: number } | any[]>(
           `/api/v1/connectors/list?include_custom=true`
         )
+        console.log("[NodePalette] Raw API response:", data)
+        
+        // Handle both response formats: array or object with connectors property
         const connectorsList = Array.isArray(data) ? data : (data.connectors || [])
+        console.log("[NodePalette] Parsed connectors list:", connectorsList.length, "items")
+        
         // Filter out deprecated connectors, show all others (draft, beta, stable)
         const activeConnectors = connectorsList.filter(
           (c: Connector & { status?: string }) =>
             !c.status || c.status !== "deprecated"
         )
+        console.log("[NodePalette] Active connectors (non-deprecated):", activeConnectors.length)
+        
         // Update connectors immediately to show progress
         setConnectors(activeConnectors)
         setHasFetchedConnectors(true)
-        console.log(`[NodePalette] Loaded ${activeConnectors.length} connectors`)
+        console.log(`[NodePalette] Successfully loaded ${activeConnectors.length} connectors`)
       } catch (error) {
         console.error("[NodePalette] Failed to fetch connectors:", error)
+        // Set empty array on error to show "No connectors available" instead of loading forever
+        setConnectors([])
+        setHasFetchedConnectors(true)
       } finally {
         setIsConnectorsLoading(false)
       }
