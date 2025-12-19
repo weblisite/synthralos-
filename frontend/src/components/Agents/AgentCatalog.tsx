@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiRequest, getApiPath } from "@/lib/api"
 import { supabase } from "@/lib/supabase"
 
 interface AgentFramework {
@@ -36,28 +37,11 @@ interface AgentCatalogProps {
 }
 
 const fetchAgentCatalog = async (): Promise<AgentFramework[]> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view agent catalog")
-  }
-
-  const response = await fetch("/api/v1/agents/catalog", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch agent catalog")
-  }
-
-  const data = await response.json()
-  // API returns { frameworks: [...], total: ... }
-  return Array.isArray(data.frameworks) ? data.frameworks : (Array.isArray(data) ? data : [])
+  const data = await apiRequest<{ frameworks?: AgentFramework[] } | AgentFramework[]>(
+    "/api/v1/agents/catalog"
+  )
+  // API returns { frameworks: [...], total: ... } or array directly
+  return Array.isArray(data) ? data : (Array.isArray(data.frameworks) ? data.frameworks : [])
 }
 
 const executeAgentTask = async (
@@ -65,33 +49,14 @@ const executeAgentTask = async (
   inputData: Record<string, any>,
   framework?: string,
 ): Promise<{ task_id: string }> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to execute agent tasks")
-  }
-
-  const response = await fetch("/api/v1/agents/run", {
+  return await apiRequest<{ task_id: string }>("/api/v1/agents/run", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       task_type: taskType,
       input_data: inputData,
       framework: framework,
     }),
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to execute agent task")
-  }
-
-  return response.json()
 }
 
 const getFrameworkDescription = (framework: string): string => {

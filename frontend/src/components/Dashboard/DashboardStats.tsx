@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { supabase } from "@/lib/supabase"
+import { apiRequest } from "@/lib/api"
 
 interface DashboardStats {
   workflows: {
@@ -86,26 +86,7 @@ interface DashboardStats {
 }
 
 const fetchDashboardStats = async (): Promise<DashboardStats> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to view dashboard stats")
-  }
-
-  const response = await fetch("/api/v1/stats/dashboard", {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch dashboard stats")
-  }
-
-  return response.json()
+  return apiRequest<DashboardStats>("/api/v1/stats/dashboard")
 }
 
 const StatCard = ({
