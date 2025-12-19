@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { WorkflowBuilder } from "@/components/Workflow/WorkflowBuilder"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
 
 export const Route = createFileRoute("/_layout/workflows")({
   component: WorkflowsPage,
