@@ -139,21 +139,6 @@ export function ConnectorCatalog() {
     }
   }, [showErrorToast])
 
-  const handleDisconnect = useCallback(async (slug: string) => {
-    try {
-      await apiClient.request(`/api/v1/connectors/${slug}/authorization`, {
-        method: "DELETE",
-      })
-      showSuccessToast("Authorization revoked successfully")
-      // Refresh auth status
-      await fetchAuthStatuses(connectors)
-      if (selectedConnector?.slug === slug) {
-        fetchConnectorDetails(slug)
-      }
-    } catch (error) {
-      showErrorToast("Failed to revoke authorization")
-    }
-  }, [connectors, selectedConnector, showErrorToast, showSuccessToast, fetchAuthStatuses, fetchConnectorDetails])
 
   useEffect(() => {
     fetchConnectors()
@@ -205,32 +190,6 @@ export function ConnectorCatalog() {
     return <Badge variant={variants[status] || "secondary"}>{status}</Badge>
   }
 
-  const getAuthStatusBadge = (slug: string) => {
-    const status = authStatuses[slug]
-    if (!status) {
-      return (
-        <Badge variant="secondary" className="text-xs">
-          Unknown
-        </Badge>
-      )
-    }
-    
-    if (status.authorized) {
-      return (
-        <Badge variant="default" className="text-xs bg-green-500">
-          <CheckCircle2 className="h-3 w-3 mr-1" />
-          Authorized
-        </Badge>
-      )
-    }
-    
-    return (
-      <Badge variant="secondary" className="text-xs">
-        <XCircle className="h-3 w-3 mr-1" />
-        Not Authorized
-      </Badge>
-    )
-  }
 
   const columns: ColumnDef<Connector>[] = [
     {

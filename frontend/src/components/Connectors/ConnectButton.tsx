@@ -18,7 +18,6 @@ export function ConnectButton({
   className = ""
 }: ConnectButtonProps) {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [popup, setPopup] = useState<Window | null>(null);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -73,8 +72,6 @@ export function ConnectButton({
         setIsConnecting(false);
         return;
       }
-
-      setPopup(popupWindow);
 
       // Listen for OAuth completion
       const checkPopup = setInterval(() => {
