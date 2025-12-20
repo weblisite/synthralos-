@@ -1,7 +1,7 @@
 # ============================================================================
 # SynthralOS Render Blueprint Configuration
 # ============================================================================
-# 
+#
 # Architecture:
 # - Database: Supabase PostgreSQL (external service, not managed by Render)
 # - Authentication: Supabase Auth (external service, not managed by Render)
@@ -40,7 +40,7 @@ services:
         generateValue: true
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "11520"  # 8 days
-      
+
       # ========================================================================
       # Supabase Configuration (REQUIRED)
       # ========================================================================
@@ -59,66 +59,81 @@ services:
         sync: false  # REQUIRED: Set manually in Render dashboard
         # Format: https://[PROJECT_REF].supabase.co
         # Get from: Supabase Dashboard > Settings > API > Project URL
-      
+
       - key: SUPABASE_ANON_KEY
         sync: false  # REQUIRED: Set manually in Render dashboard
         # Get from: Supabase Dashboard > Settings > API > Project API keys > anon/public key
-      
+
       - key: SUPABASE_DB_URL
         sync: false  # REQUIRED: Set manually in Render dashboard
         # Get from: Supabase Dashboard > Settings > Database > Connection string
         # Use "Connection pooling" option (port 6543) for serverless/Render
         # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-        # 
+        #
         # Alternative: If you prefer to use SUPABASE_DB_PASSWORD instead:
         # - key: SUPABASE_DB_PASSWORD
         #   sync: false  # Get from: Supabase Dashboard > Settings > Database > Database password
-      
+
       # ========================================================================
       # Frontend Configuration
       # ========================================================================
       - key: FRONTEND_HOST
         sync: false  # Set to frontend URL after deployment (e.g., https://synthralos-frontend.onrender.com)
-      
+
       - key: BACKEND_CORS_ORIGINS
         sync: false  # Set to frontend URL after deployment (e.g., https://synthralos-frontend.onrender.com)
-      
+
       # ========================================================================
       # Optional: Observability & Monitoring Services
       # ========================================================================
-      # Uncomment and configure as needed:
-      # See docs/OBSERVABILITY_SETUP.md for detailed setup instructions
+      # See docs/OBSERVABILITY_SETUP.md and docs/WARNINGS_RESOLUTION.md for setup instructions
       #
+      # Langfuse (LLM Observability) - RECOMMENDED for Production
       # - key: LANGFUSE_KEY
-      #   sync: false  # LLM observability - Get from https://cloud.langfuse.com
+      #   sync: false  # REQUIRED: Get from https://cloud.langfuse.com > Settings > API Keys
       # - key: LANGFUSE_SECRET_KEY
       #   sync: false  # Optional - defaults to LANGFUSE_KEY if not set
       # - key: LANGFUSE_HOST
       #   value: https://cloud.langfuse.com  # Optional - custom host for self-hosted
       #
+      # PostHog (Product Analytics) - RECOMMENDED for Production
       # - key: POSTHOG_KEY
-      #   sync: false  # Product analytics - Get from https://posthog.com
+      #   sync: false  # REQUIRED: Get from https://posthog.com > Project Settings > Project API Key
+      # - key: POSTHOG_HOST
+      #   value: https://app.posthog.com  # Optional - defaults to https://app.posthog.com
       #
+      # Wazuh (Security Monitoring) - Optional
       # - key: WAZUH_URL
-      #   sync: false  # Security monitoring - e.g., http://wazuh:55000
+      #   sync: false  # e.g., http://wazuh:55000 or https://wazuh.example.com
       # - key: WAZUH_USER
       #   sync: false  # Optional - Wazuh API username
       # - key: WAZUH_PASSWORD
       #   sync: false  # Optional - Wazuh API password
       #
+      # Signoz (Distributed Tracing) - Optional
       # - key: SIGNOZ_ENDPOINT
-      #   sync: false  # Distributed tracing - e.g., http://signoz:4317
+      #   sync: false  # e.g., http://signoz:4317 or https://signoz.example.com:4317
       #
+      # ChromaDB (Vector Database for RAG) - Optional
       # - key: CHROMA_SERVER_HOST
-      #   sync: false  # Vector database for RAG - e.g., chromadb.example.com
+      #   sync: false  # e.g., chromadb.example.com or localhost
       # - key: CHROMA_SERVER_HTTP_PORT
-      #   value: "8000"  # ChromaDB HTTP port
+      #   value: "8000"  # ChromaDB HTTP port (default: 8000)
       # - key: CHROMA_SERVER_AUTH_TOKEN
       #   sync: false  # Optional - Auth token for ChromaDB Cloud
       #
+      # Twitter/X API (OSINT) - Optional
+      # - key: TWITTER_API_KEY
+      #   sync: false  # Get from https://developer.twitter.com > Your App > Keys and Tokens
+      # - key: TWITTER_API_SECRET
+      #   sync: false  # Get from https://developer.twitter.com > Your App > Keys and Tokens
+      # - key: TWITTER_BEARER_TOKEN
+      #   sync: false  # Get from https://developer.twitter.com > Your App > Keys and Tokens
+      #
+      # Sentry (Error Tracking) - Optional
       # - key: SENTRY_DSN
       #   sync: false  # Error tracking - Get from https://sentry.io
-      
+
       # ========================================================================
       # Optional: Additional Service Configuration
       # ========================================================================
@@ -132,7 +147,7 @@ services:
       #   sync: false
       # - key: ANTHROPIC_API_KEY
       #   sync: false
-      
+
       # ========================================================================
       # Nango OAuth Configuration (REQUIRED for connector OAuth)
       # ========================================================================
@@ -148,11 +163,11 @@ services:
       - key: NANGO_SECRET_KEY
         sync: false  # REQUIRED: Set manually in Render dashboard
         # Get from: Nango Dashboard > Settings > API Keys > Secret Key
-      
+
       - key: NANGO_BASE_URL
         value: https://api.nango.dev  # Optional: Defaults to https://api.nango.dev
         # Change this if using self-hosted Nango instance
-      
+
       - key: NANGO_ENABLED
         value: "true"  # Enable/disable Nango integration
 
@@ -170,12 +185,12 @@ services:
         # Format: https://synthralos-backend.onrender.com
         # IMPORTANT: Do NOT include /api/v1 - OpenAPI SDK adds it automatically
         # Backend must be deployed first to get the URL
-      
+
       - key: VITE_SUPABASE_URL
         sync: false  # REQUIRED: Set to your Supabase project URL
         # Format: https://[PROJECT_REF].supabase.co
         # Get from: Supabase Dashboard > Settings > API > Project URL
-      
+
       - key: VITE_SUPABASE_ANON_KEY
         sync: false  # REQUIRED: Set to your Supabase anon key
         # Get from: Supabase Dashboard > Settings > API > Project API keys > anon/public key
@@ -183,7 +198,7 @@ services:
 # ============================================================================
 # Database Service: NOT INCLUDED
 # ============================================================================
-# 
+#
 # This blueprint does NOT include a Render database service because:
 # - Database: Supabase PostgreSQL (external service)
 # - Authentication: Supabase Auth (external service)
@@ -198,4 +213,3 @@ services:
 # - See docs/MIGRATION_STATUS_REPORT.md for current migration status
 #
 # ============================================================================
-
