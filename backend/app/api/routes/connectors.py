@@ -41,8 +41,7 @@ from app.connectors.webhook import (
     WebhookNotFoundError,
     default_webhook_service,
 )
-from app.models import Connector, ConnectorVersion
-from app.models.user_connector_connection import UserConnectorConnection
+from app.models import Connector, ConnectorVersion, UserConnectorConnection
 from app.core.config import settings
 from app.services.nango_service import get_nango_service
 

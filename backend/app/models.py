@@ -589,3 +589,47 @@ class EventLog(SQLModel, table=True):
     context: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     status: str = Field(max_length=50)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+# ============================================================================
+# NANGO OAUTH CONNECTION MODELS
+# ============================================================================
+
+class UserConnectorConnection(SQLModel, table=True):
+    """
+    Stores user's OAuth connections to connectors via Nango.
+    Each user can have multiple connections to the same connector
+    (e.g., multiple Gmail accounts, multiple Slack workspaces).
+    """
+    __tablename__ = "user_connector_connection"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+    connector_id: uuid.UUID = Field(foreign_key="connector.id", index=True)
+    
+    # Nango connection identifier
+    # Format: "{user_id}_{connector_id}_{instance_id}" or "{user_id}_{connector_id}"
+    nango_connection_id: str = Field(index=True, unique=True, max_length=255)
+    
+    # Connection metadata
+    status: str = Field(default="pending", max_length=50)  # pending, connected, disconnected, error
+    connected_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    disconnected_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    last_synced_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    
+    # Connector-specific config (e.g., which Gmail account, which Slack workspace)
+    # Example: {"gmail_account": "work@gmail.com", "slack_workspace": "acme-corp"}
+    config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    
+    # Error tracking
+    last_error: str | None = Field(default=None, max_length=1000)
+    error_count: int = Field(default=0)
+    
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime(timezone=True))
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime(timezone=True), onupdate=datetime.utcnow)
+    )
