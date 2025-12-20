@@ -32,6 +32,14 @@ repos:
         language: system
         types: [text]
         files: ^frontend/
+      - id: check-uv-lock
+        name: Check uv.lock is in sync with pyproject.toml
+        entry: bash backend/scripts/check-uv-lock.sh
+        language: system
+        types: [text]
+        files: ^backend/pyproject.toml$
+        pass_filenames: false
+        always_run: false
 
 ci:
   autofix_commit_msg: 🎨 [pre-commit.ci] Auto format from pre-commit.com hooks
