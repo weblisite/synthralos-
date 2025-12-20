@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import EmailStr
-from sqlalchemy import Column, JSON, Index
+from sqlalchemy import Column, JSON, Index, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
