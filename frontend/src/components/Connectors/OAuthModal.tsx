@@ -4,7 +4,7 @@
  * Handles OAuth flow for connector authentication.
  */
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -33,13 +33,7 @@ export function OAuthModal({
   const [isLoading, setIsLoading] = useState(false)
   const { showErrorToast } = useCustomToast()
 
-  useEffect(() => {
-    if (isOpen && connectorSlug) {
-      fetchAuthUrl()
-    }
-  }, [isOpen, connectorSlug, fetchAuthUrl])
-
-  const fetchAuthUrl = async () => {
+  const fetchAuthUrl = useCallback(async () => {
     setIsLoading(true)
     try {
       const {
@@ -79,7 +73,13 @@ export function OAuthModal({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [connectorSlug, showErrorToast])
+
+  useEffect(() => {
+    if (isOpen && connectorSlug) {
+      fetchAuthUrl()
+    }
+  }, [isOpen, connectorSlug, fetchAuthUrl])
 
   const handleAuthorize = () => {
     if (authUrl) {
