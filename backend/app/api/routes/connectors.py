@@ -1166,7 +1166,7 @@ async def connect_connector(
 async def oauth_callback(
     connection_id: str,
     provider_config_key: str | None = None,
-    session: SessionDep = Depends(),
+    session: SessionDep,
 ) -> Any:
     """
     Handle OAuth callback from Nango.
