@@ -5,6 +5,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query"
+import { formatDistanceToNow } from "date-fns"
 import {
   Activity,
   Bot,
@@ -16,12 +17,11 @@ import {
   Workflow,
   Zap,
 } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Skeleton } from "@/components/ui/skeleton"
 import { apiClient } from "@/lib/apiClient"
 
 interface DashboardStats {
@@ -152,16 +152,24 @@ const ActivityItem = ({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{activity.title}</p>
         <p className="text-xs text-muted-foreground">
-          {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+          {formatDistanceToNow(new Date(activity.timestamp), {
+            addSuffix: true,
+          })}
         </p>
       </div>
-      <Badge className={getStatusColor(activity.status)}>{activity.status}</Badge>
+      <Badge className={getStatusColor(activity.status)}>
+        {activity.status}
+      </Badge>
     </div>
   )
 }
 
 export function DashboardStats() {
-  const { data: stats, isLoading, error } = useQuery({
+  const {
+    data: stats,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["dashboardStats"],
     queryFn: fetchDashboardStats,
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -263,7 +271,9 @@ export function DashboardStats() {
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Completed</span>
-              <span className="font-semibold">{stats.executions.completed_30d}</span>
+              <span className="font-semibold">
+                {stats.executions.completed_30d}
+              </span>
             </div>
             <Progress value={stats.executions.success_rate} className="h-2" />
             <div className="flex justify-between text-sm">
@@ -292,7 +302,9 @@ export function DashboardStats() {
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Completed</span>
-              <span className="font-semibold">{stats.agents.completed_30d}</span>
+              <span className="font-semibold">
+                {stats.agents.completed_30d}
+              </span>
             </div>
             <Progress value={stats.agents.success_rate} className="h-2" />
             <div className="flex justify-between text-sm">
@@ -321,7 +333,9 @@ export function DashboardStats() {
           <CardContent className="space-y-3">
             <div className="flex justify-between text-sm">
               <span>Browser Sessions (30d)</span>
-              <span className="font-semibold">{stats.browser.sessions_30d}</span>
+              <span className="font-semibold">
+                {stats.browser.sessions_30d}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span>OSINT Streams</span>
@@ -362,4 +376,3 @@ export function DashboardStats() {
     </div>
   )
 }
-

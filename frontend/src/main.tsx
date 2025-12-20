@@ -21,35 +21,35 @@ OpenAPI.TOKEN = async () => {
       data: { session },
       error,
     } = await supabase.auth.getSession()
-    
+
     if (error) {
-      console.error('[OpenAPI.TOKEN] Error getting session:', error)
+      console.error("[OpenAPI.TOKEN] Error getting session:", error)
       return ""
     }
-    
+
     if (!session) {
-      console.warn('[OpenAPI.TOKEN] No session found')
+      console.warn("[OpenAPI.TOKEN] No session found")
       return ""
     }
-    
+
     const token = session.access_token || ""
-    
+
     if (!token) {
-      console.warn('[OpenAPI.TOKEN] No access token found in session', {
+      console.warn("[OpenAPI.TOKEN] No access token found in session", {
         hasSession: !!session,
         hasUser: !!session.user,
-        expiresAt: session.expires_at
+        expiresAt: session.expires_at,
       })
     } else {
-      console.log('[OpenAPI.TOKEN] Token retrieved successfully', {
+      console.log("[OpenAPI.TOKEN] Token retrieved successfully", {
         tokenLength: token.length,
-        tokenPrefix: token.substring(0, 20) + '...'
+        tokenPrefix: `${token.substring(0, 20)}...`,
       })
     }
-    
+
     return token
   } catch (error) {
-    console.error('[OpenAPI.TOKEN] Exception getting session:', error)
+    console.error("[OpenAPI.TOKEN] Exception getting session:", error)
     return ""
   }
 }

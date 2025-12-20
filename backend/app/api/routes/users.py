@@ -143,6 +143,8 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     """
     Create new user without the need to be logged in.
     """
+    from app.observability.posthog import default_posthog_client
+
     user = crud.get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
@@ -151,6 +153,26 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
         )
     user_create = UserCreate.model_validate(user_in)
     user = crud.create_user(session=session, user_create=user_create)
+
+    # Track user signup in PostHog
+    default_posthog_client.capture(
+        distinct_id=str(user.id),
+        event="user_signed_up",
+        properties={
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_superuser": user.is_superuser,
+        },
+    )
+    default_posthog_client.identify(
+        distinct_id=str(user.id),
+        properties={
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_superuser": user.is_superuser,
+        },
+    )
+
     return user
 
 

@@ -6,17 +6,23 @@
 
 import { useCallback, useEffect, useState } from "react"
 import {
-  LineChart,
+  CartesianGrid,
+  Legend,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
 
@@ -53,7 +59,9 @@ export function CostAnalytics() {
   const fetchCostMetrics = useCallback(async () => {
     setIsLoading(true)
     try {
-      const data = await apiClient.request<CostMetrics>("/api/v1/admin/analytics/costs")
+      const data = await apiClient.request<CostMetrics>(
+        "/api/v1/admin/analytics/costs",
+      )
       setMetrics({
         total_cost: data.total_cost || 0,
         total_executions: data.total_executions || 0,
@@ -85,7 +93,7 @@ export function CostAnalytics() {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold">Cost Analytics</h2>
-      
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
@@ -143,7 +151,9 @@ export function CostAnalytics() {
                       {service.executions} executions
                     </span>
                   </div>
-                  <div className="font-semibold">${service.cost.toFixed(2)}</div>
+                  <div className="font-semibold">
+                    ${service.cost.toFixed(2)}
+                  </div>
                 </div>
               ))}
             </div>
@@ -170,7 +180,9 @@ export function CostAnalytics() {
                 />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip
-                  formatter={(value: number | undefined) => value !== undefined ? `$${value.toFixed(2)}` : "$0.00"}
+                  formatter={(value: number | undefined) =>
+                    value !== undefined ? `$${value.toFixed(2)}` : "$0.00"
+                  }
                   labelStyle={{ color: "#000" }}
                 />
                 <Legend />
@@ -202,4 +214,3 @@ export function CostAnalytics() {
     </div>
   )
 }
-

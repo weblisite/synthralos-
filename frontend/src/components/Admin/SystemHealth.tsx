@@ -5,10 +5,22 @@
  */
 
 import { useQuery } from "@tanstack/react-query"
-import { AlertCircle, CheckCircle2, Database, Server, XCircle } from "lucide-react"
+import {
+  AlertCircle,
+  CheckCircle2,
+  Database,
+  Server,
+  XCircle,
+} from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
@@ -38,14 +50,21 @@ async function fetchSystemHealth(): Promise<HealthData> {
 export function SystemHealth() {
   const { showErrorToast } = useCustomToast()
 
-  const { data: health, isLoading, error } = useQuery<HealthData>({
+  const {
+    data: health,
+    isLoading,
+    error,
+  } = useQuery<HealthData>({
     queryKey: ["systemHealth"],
     queryFn: fetchSystemHealth,
     refetchInterval: 30000, // Refresh every 30 seconds
   })
 
   if (error) {
-    showErrorToast("Failed to load system health", error instanceof Error ? error.message : "Unknown error")
+    showErrorToast(
+      "Failed to load system health",
+      error instanceof Error ? error.message : "Unknown error",
+    )
   }
 
   if (isLoading) {
@@ -116,7 +135,10 @@ export function SystemHealth() {
               className={`h-3 w-3 rounded-full ${getStatusColor(health?.status || "unhealthy")}`}
             />
             <span className="text-sm text-muted-foreground">
-              Last checked: {health?.timestamp ? new Date(health.timestamp).toLocaleString() : "Never"}
+              Last checked:{" "}
+              {health?.timestamp
+                ? new Date(health.timestamp).toLocaleString()
+                : "Never"}
             </span>
           </div>
         </CardContent>
@@ -191,7 +213,9 @@ export function SystemHealth() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">No services configured</p>
+              <p className="text-sm text-muted-foreground">
+                No services configured
+              </p>
             )}
           </div>
         </CardContent>
@@ -231,4 +255,3 @@ export function SystemHealth() {
     </div>
   )
 }
-

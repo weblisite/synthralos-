@@ -22,7 +22,12 @@ interface TriggerNodeData extends Record<string, unknown> {
 export function TriggerNode(props: NodeProps) {
   const { data, selected } = props
   const nodeData = data as TriggerNodeData
-  const status = (nodeData.status || "idle") as "paused" | "running" | "completed" | "failed" | "idle"
+  const status = (nodeData.status || "idle") as
+    | "paused"
+    | "running"
+    | "completed"
+    | "failed"
+    | "idle"
 
   return (
     <div className="relative">
@@ -38,7 +43,9 @@ export function TriggerNode(props: NodeProps) {
       >
         <div className="flex items-center gap-2">
           <Play className="h-4 w-4 text-primary" />
-          <div className="font-semibold text-sm">{nodeData.label || "Trigger"}</div>
+          <div className="font-semibold text-sm">
+            {nodeData.label || "Trigger"}
+          </div>
         </div>
         <Handle type="source" position={Position.Right} className="w-3 h-3" />
       </div>

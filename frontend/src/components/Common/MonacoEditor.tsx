@@ -5,8 +5,8 @@
  */
 
 import Editor from "@monaco-editor/react"
+import { useEffect, useMemo, useState } from "react"
 import { useTheme } from "@/components/theme-provider"
-import { useMemo, useEffect, useState } from "react"
 
 interface MonacoEditorProps {
   value: string
@@ -31,11 +31,11 @@ export function MonacoEditor({
 }: MonacoEditorProps) {
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  
+
   useEffect(() => {
     setMounted(true)
   }, [])
-  
+
   // Determine theme
   const editorTheme = useMemo(() => {
     if (!mounted) return "vs" // Default to light theme until mounted
@@ -83,4 +83,3 @@ export function MonacoEditor({
     </div>
   )
 }
-

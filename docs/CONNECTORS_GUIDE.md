@@ -437,4 +437,3 @@ for connector in response.json()["connectors"]:
 - [API Documentation](../backend/app/api/routes/connectors.py)
 - [Nango Documentation](https://docs.nango.dev)
 - [OAuth 2.0 Specification](https://oauth.net/2/)
-

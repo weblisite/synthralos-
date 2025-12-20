@@ -4,14 +4,16 @@
  * Manages web scraping jobs and results.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Globe, Play, Eye, Loader2, RefreshCw } from "lucide-react"
-import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import { Eye, Globe, Loader2, Play, RefreshCw } from "lucide-react"
+import { useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { DataTable } from "@/components/Common/DataTable"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -23,8 +25,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectContent,
@@ -32,9 +32,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import type { ColumnDef } from "@tanstack/react-table"
 
 interface ScrapeJob {
   id: string
@@ -73,7 +73,9 @@ const processScrapeJob = async (jobId: string): Promise<void> => {
       method: "POST",
     })
   } catch (error: any) {
-    throw new Error(error.message || error.detail || "Failed to process scraping job")
+    throw new Error(
+      error.message || error.detail || "Failed to process scraping job",
+    )
   }
 }
 
@@ -103,20 +105,14 @@ const columns: ColumnDef<ScrapeJob>[] = [
   {
     accessorKey: "engine",
     header: "Engine",
-    cell: ({ row }) => (
-      <Badge variant="outline">{row.original.engine}</Badge>
-    ),
+    cell: ({ row }) => <Badge variant="outline">{row.original.engine}</Badge>,
   },
   {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
       const status = row.original.status
-      return (
-        <Badge className={getStatusColor(status)}>
-          {status}
-        </Badge>
-      )
+      return <Badge className={getStatusColor(status)}>{status}</Badge>
     },
   },
   {
@@ -173,15 +169,15 @@ function JobActionsCell({ job }: { job: ScrapeJob }) {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Scraping Job Details</DialogTitle>
-            <DialogDescription>
-              Job ID: {job.id}
-            </DialogDescription>
+            <DialogDescription>Job ID: {job.id}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <Label>Status</Label>
-                <Badge className={getStatusColor(job.status)}>{job.status}</Badge>
+                <Badge className={getStatusColor(job.status)}>
+                  {job.status}
+                </Badge>
               </div>
               <div>
                 <Label>Engine</Label>
@@ -247,7 +243,8 @@ export function ScrapingJobManager() {
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const createJobMutation = useMutation({
-    mutationFn: () => createScrapeJob(url, selectedEngine || undefined, autoSelectProxy),
+    mutationFn: () =>
+      createScrapeJob(url, selectedEngine || undefined, autoSelectProxy),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scrapeJobs"] })
       showSuccessToast("Job started successfully")
@@ -305,19 +302,34 @@ export function ScrapingJobManager() {
               </div>
               <div>
                 <Label htmlFor="engine">Scraping Engine (Optional)</Label>
-                <Select value={selectedEngine} onValueChange={setSelectedEngine}>
+                <Select
+                  value={selectedEngine}
+                  onValueChange={setSelectedEngine}
+                >
                   <SelectTrigger id="engine">
                     <SelectValue placeholder="Auto-select" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Auto-select</SelectItem>
-                    <SelectItem value="beautifulsoup">BeautifulSoup (Simple HTML)</SelectItem>
-                    <SelectItem value="playwright">Playwright (JS Rendering)</SelectItem>
-                    <SelectItem value="scrapy">Scrapy (Spider Framework)</SelectItem>
-                    <SelectItem value="crawl4ai">Crawl4AI (Multi-page)</SelectItem>
-                    <SelectItem value="scrapegraph_ai">ScrapeGraph AI (Visual)</SelectItem>
+                    <SelectItem value="beautifulsoup">
+                      BeautifulSoup (Simple HTML)
+                    </SelectItem>
+                    <SelectItem value="playwright">
+                      Playwright (JS Rendering)
+                    </SelectItem>
+                    <SelectItem value="scrapy">
+                      Scrapy (Spider Framework)
+                    </SelectItem>
+                    <SelectItem value="crawl4ai">
+                      Crawl4AI (Multi-page)
+                    </SelectItem>
+                    <SelectItem value="scrapegraph_ai">
+                      ScrapeGraph AI (Visual)
+                    </SelectItem>
                     <SelectItem value="jobspy">Jobspy (Job Boards)</SelectItem>
-                    <SelectItem value="watercrawl">WaterCrawl (Agent-driven)</SelectItem>
+                    <SelectItem value="watercrawl">
+                      WaterCrawl (Agent-driven)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -325,7 +337,9 @@ export function ScrapingJobManager() {
                 <Checkbox
                   id="auto-proxy"
                   checked={autoSelectProxy}
-                  onCheckedChange={(checked) => setAutoSelectProxy(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setAutoSelectProxy(checked === true)
+                  }
                 />
                 <Label htmlFor="auto-proxy" className="cursor-pointer">
                   Auto-select proxy
@@ -371,4 +385,3 @@ export function ScrapingJobManager() {
     </div>
   )
 }
-

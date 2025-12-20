@@ -4,10 +4,16 @@
  * Manages platform-wide configuration and settings.
  */
 
-import { useState } from "react"
 import { Save, Settings } from "lucide-react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -137,7 +143,7 @@ export function PlatformSettings() {
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    maxUsers: parseInt(e.target.value) || 0,
+                    maxUsers: parseInt(e.target.value, 10) || 0,
                   })
                 }
               />
@@ -154,7 +160,7 @@ export function PlatformSettings() {
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    maxWorkflowsPerUser: parseInt(e.target.value) || 0,
+                    maxWorkflowsPerUser: parseInt(e.target.value, 10) || 0,
                   })
                 }
               />
@@ -171,7 +177,7 @@ export function PlatformSettings() {
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    defaultExecutionTimeout: parseInt(e.target.value) || 0,
+                    defaultExecutionTimeout: parseInt(e.target.value, 10) || 0,
                   })
                 }
               />
@@ -195,4 +201,3 @@ export function PlatformSettings() {
     </div>
   )
 }
-

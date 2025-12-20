@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import type { UserCreate } from "@/client"
-import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -30,6 +29,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiClient } from "@/lib/apiClient"
 import { handleError } from "@/utils"
 
 const formSchema = z
@@ -73,8 +73,7 @@ const AddUser = () => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: UserCreate) =>
-      apiClient.users.create(data),
+    mutationFn: (data: UserCreate) => apiClient.users.create(data),
     onSuccess: () => {
       showSuccessToast("User created successfully")
       form.reset()

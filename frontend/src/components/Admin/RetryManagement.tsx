@@ -4,14 +4,20 @@
  * Displays failed executions and allows manual retry management.
  */
 
-import { useCallback, useEffect, useState } from "react"
+import type { ColumnDef } from "@tanstack/react-table"
+import { format } from "date-fns"
 import { Play, RefreshCw } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DataTable } from "@/components/Common/DataTable"
-import { type ColumnDef } from "@tanstack/react-table"
-import { format } from "date-fns"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
 
@@ -28,7 +34,9 @@ interface FailedExecution {
 }
 
 export function RetryManagement() {
-  const [failedExecutions, setFailedExecutions] = useState<FailedExecution[]>([])
+  const [failedExecutions, setFailedExecutions] = useState<FailedExecution[]>(
+    [],
+  )
   const [isLoading, setIsLoading] = useState(true)
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -36,12 +44,14 @@ export function RetryManagement() {
     setIsLoading(true)
     try {
       const data = await apiClient.request<FailedExecution[]>(
-        `/api/v1/workflows/executions/failed?limit=1000`
+        `/api/v1/workflows/executions/failed?limit=1000`,
       )
       setFailedExecutions(Array.isArray(data) ? data : [])
     } catch (error) {
       showErrorToast(
-        error instanceof Error ? error.message : "Failed to fetch failed executions",
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch failed executions",
       )
     } finally {
       setIsLoading(false)
@@ -55,9 +65,12 @@ export function RetryManagement() {
   const handleRetry = useCallback(
     async (execution: FailedExecution) => {
       try {
-        await apiClient.request(`/api/v1/workflows/executions/${execution.id}/replay`, {
-          method: "POST",
-        })
+        await apiClient.request(
+          `/api/v1/workflows/executions/${execution.id}/replay`,
+          {
+            method: "POST",
+          },
+        )
         showSuccessToast("Execution retried successfully")
         fetchFailedExecutions()
       } catch (error) {
@@ -110,7 +123,9 @@ export function RetryManagement() {
       accessorKey: "started_at",
       header: "Failed At",
       cell: ({ row }) => {
-        const date = new Date(row.original.completed_at || row.original.started_at)
+        const date = new Date(
+          row.original.completed_at || row.original.started_at,
+        )
         return <div>{format(date, "MMM d, yyyy HH:mm:ss")}</div>
       },
     },
@@ -167,4 +182,3 @@ export function RetryManagement() {
     </div>
   )
 }
-

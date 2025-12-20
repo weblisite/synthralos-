@@ -251,7 +251,7 @@ Response: true (200 OK)
 
 **Symptom:** API calls return 401 even after login
 
-**Solution:** 
+**Solution:**
 - Check token is being sent: `Authorization: Bearer <token>`
 - Verify token hasn't expired
 - Check Supabase Auth configuration
@@ -309,4 +309,3 @@ curl -H "Authorization: Bearer $TOKEN" \
 - `docs/RENDER_DEPLOYMENT.md` - Full deployment guide
 - `docs/SUPABASE_DATABASE_MIGRATION.md` - Supabase setup
 - `render.yaml` - Blueprint configuration
-

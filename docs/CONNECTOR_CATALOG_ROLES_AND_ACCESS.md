@@ -64,8 +64,8 @@
 
 ### 1. **Platform Connector Registration** (Admin-Only)
 
-**Who:** Platform admins (SynthralOS team)  
-**Purpose:** Register connectors that become available to ALL users  
+**Who:** Platform admins (SynthralOS team)
+**Purpose:** Register connectors that become available to ALL users
 **Location:** Admin Panel (`/admin/connectors`)
 
 **Process:**
@@ -93,8 +93,8 @@ POST /api/v1/admin/connectors/register
 
 ### 2. **Custom Connector Registration** (User Feature)
 
-**Who:** Regular users (SaaS platform users)  
-**Purpose:** Users create their own custom connectors for private use  
+**Who:** Regular users (SaaS platform users)
+**Purpose:** Users create their own custom connectors for private use
 **Location:** User Connector Catalog (`/connectors`)
 
 **Process:**
@@ -206,13 +206,13 @@ def register_connector(
 ) -> Any:
     """
     Register a connector.
-    
+
     - If is_platform=True: Requires superuser (platform connector)
     - If is_platform=False: Creates user-owned connector
     """
     if is_platform and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Only admins can register platform connectors")
-    
+
     # Register connector with owner_id
     connector = registry.register_connector(
         session=session,
@@ -231,7 +231,7 @@ def list_connectors(
 ) -> Any:
     """
     List connectors available to user.
-    
+
     Returns:
     - All platform connectors (is_platform=True)
     - User's custom connectors (if include_custom=True)
@@ -241,7 +241,7 @@ def list_connectors(
         session=session,
         is_platform=True,
     )
-    
+
     # Get user's custom connectors
     custom_connectors = []
     if include_custom:
@@ -249,7 +249,7 @@ def list_connectors(
             session=session,
             owner_id=current_user.id,
         )
-    
+
     return {
         "platform": platform_connectors,
         "custom": custom_connectors,
@@ -266,11 +266,11 @@ def list_connectors(
     <TabsTrigger value="platform">Platform Connectors</TabsTrigger>
     <TabsTrigger value="custom">My Custom Connectors</TabsTrigger>
   </TabsList>
-  
+
   <TabsContent value="platform">
     {/* Show platform connectors */}
   </TabsContent>
-  
+
   <TabsContent value="custom">
     {/* Show user's custom connectors */}
     <Button onClick={() => setShowWizard(true)}>
@@ -325,7 +325,7 @@ def get_connector_auth_status(
         connector_slug=slug,
         user_id=current_user.id,
     )
-    
+
     return {
         "authorized": tokens is not None,
         "expires_at": tokens.get("expires_at") if tokens else None,
@@ -481,4 +481,3 @@ This will create a proper SaaS platform where:
 - **Users** can browse, authorize, and use connectors
 - **Admins** can manage platform connectors for all users
 - **Both** can register connectors (platform vs custom)
-

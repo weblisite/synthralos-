@@ -9,7 +9,7 @@ This document describes the Nango OAuth integration for SynthralOS connectors. N
 ### Flow Diagram
 
 ```
-User → Frontend (Connect Button) 
+User → Frontend (Connect Button)
     → Backend (/api/v1/connectors/{id}/connect)
     → Nango Service (create_connection)
     → Nango API (OAuth URL)
@@ -193,11 +193,11 @@ import { ConnectionStatus } from '@/components/Connectors/ConnectionStatus';
 ```tsx
 import { useConnections } from '@/hooks/useConnections';
 
-const { 
-  connections, 
-  isConnected, 
-  connect, 
-  disconnect 
+const {
+  connections,
+  isConnected,
+  connect,
+  disconnect
 } = useConnections('gmail-uuid');
 
 // Check if connected
@@ -241,28 +241,28 @@ async def execute_connector_action(
     node = get_workflow_node(node_id)
     connector_id = node.connector_id
     connection_id = node.connection_id  # User selects which connection
-    
+
     # Get user's connection
     connection = session.query(UserConnectorConnection).filter(
         UserConnectorConnection.id == connection_id,
         UserConnectorConnection.user_id == user_id,
         UserConnectorConnection.status == "connected"
     ).first()
-    
+
     # Get connector and provider key
     connector = await get_connector_by_id(connector_id, session)
     connector_version = session.get(ConnectorVersion, connector.latest_version_id)
     manifest = connector_version.manifest
     nango_config = manifest.get("nango", {})
     provider_key = nango_config.get("provider_key", connector.slug)
-    
+
     # Get access token from Nango
     nango_service = get_nango_service()
     access_token = await nango_service.get_access_token(
         connection_id=connection.nango_connection_id,
         provider_key=provider_key
     )
-    
+
     # Execute the action using the connector's API
     result = await execute_connector_api_call(
         connector=connector,
@@ -270,11 +270,11 @@ async def execute_connector_action(
         access_token=access_token,
         params=node.config
     )
-    
+
     # Update last synced time
     connection.last_synced_at = datetime.utcnow()
     session.commit()
-    
+
     return result
 ```
 
@@ -381,5 +381,3 @@ Users can have multiple connections to the same connector (e.g., multiple Gmail 
 7. ⏳ Implement workflow execution with connections
 8. ⏳ Add connection management UI
 9. ⏳ Test with all 99 connectors
-
-

@@ -1,33 +1,32 @@
 /**
  * Unified API Client
- * 
+ *
  * Provides a single interface for API calls that defaults to apiRequest()
  * but can leverage OpenAPI SDK when available for type safety.
- * 
+ *
  * Strategy:
  * - Use apiRequest() as the default (flexible, works for all endpoints)
  * - Use OpenAPI SDK services when available (type-safe, better for stable endpoints)
  */
 
-import { apiRequest, getApiPath } from "./api"
-
 // Import OpenAPI SDK services for endpoints that have them
 import {
-  UsersService,
   LoginService,
-  UtilsService,
-  type UserPublic,
+  type Message,
+  type UpdatePassword,
   type UserCreate,
+  type UserPublic,
+  type UsersPublic,
+  UsersService,
   type UserUpdate,
   type UserUpdateMe,
-  type UpdatePassword,
-  type UsersPublic,
-  type Message,
+  UtilsService,
 } from "@/client"
+import { apiRequest, getApiPath } from "./api"
 
 /**
  * Unified API Client Interface
- * 
+ *
  * This provides a single entry point for all API calls.
  * It defaults to apiRequest() but can use OpenAPI SDK when appropriate.
  */
@@ -127,7 +126,10 @@ export const apiClient = {
      * Reset password
      * Uses OpenAPI SDK for type safety
      */
-    resetPassword: async (token: string, newPassword: string): Promise<Message> => {
+    resetPassword: async (
+      token: string,
+      newPassword: string,
+    ): Promise<Message> => {
       return LoginService.resetPassword({
         requestBody: {
           token,
@@ -154,7 +156,7 @@ export const apiClient = {
   /**
    * Generic API request method
    * Defaults to apiRequest() for all other endpoints
-   * 
+   *
    * Use this for endpoints not covered by OpenAPI SDK:
    * - Dashboard stats
    * - Agents
@@ -179,13 +181,11 @@ export const apiClient = {
 }
 
 /**
+ * Re-export OpenAPI SDK services for direct use when needed
+ */
+export { LoginService, UsersService, UtilsService } from "@/client"
+/**
  * Default export - use apiRequest() directly for flexibility
  * This is the primary method for most API calls
  */
 export { apiRequest, getApiPath, getApiUrl } from "./api"
-
-/**
- * Re-export OpenAPI SDK services for direct use when needed
- */
-export { UsersService, LoginService, UtilsService } from "@/client"
-

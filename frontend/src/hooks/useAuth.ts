@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { useEffect, useRef, useState, useMemo } from "react"
 import * as React from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { UserPublic } from "@/client"
 import { apiClient } from "@/lib/apiClient"
 import { supabase } from "@/lib/supabase"
@@ -35,11 +35,14 @@ export const useAuth = () => {
       }
 
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        console.log('[useAuth] Initial session check:', {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+        console.log("[useAuth] Initial session check:", {
           hasSession: !!session,
           error: error?.message,
-          userId: session?.user?.id
+          userId: session?.user?.id,
         })
 
         if (mounted) {
@@ -57,7 +60,7 @@ export const useAuth = () => {
           }
         }
       } catch (err) {
-        console.error('[useAuth] Error getting session:', err)
+        console.error("[useAuth] Error getting session:", err)
         if (mounted) {
           sessionInitializedRef.current = true
           // Don't set to false on error - preserve current state
@@ -74,34 +77,41 @@ export const useAuth = () => {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       // Skip INITIAL_SESSION if we already handled it manually
       if (event === "INITIAL_SESSION" && sessionInitializedRef.current) {
-        console.log('[useAuth] Skipping INITIAL_SESSION event (already handled manually)')
+        console.log(
+          "[useAuth] Skipping INITIAL_SESSION event (already handled manually)",
+        )
         return
       }
 
-      console.log('[useAuth] Auth state changed:', { 
-        event, 
+      console.log("[useAuth] Auth state changed:", {
+        event,
         hasSession: !!session,
-        userId: session?.user?.id 
+        userId: session?.user?.id,
       })
-      
+
       if (mounted) {
         // Always verify actual session state before making decisions
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession()
         const actuallyHasSession = !!currentSession
-        
+
         // Handle explicit sign out
         if (event === "SIGNED_OUT") {
           hasEverHadSessionRef.current = false
           setHasSession(false)
           userDataRef.current = null
           queryClient.clear()
-          
-          if (window.location.pathname !== "/login" && window.location.pathname !== "/signup") {
+
+          if (
+            window.location.pathname !== "/login" &&
+            window.location.pathname !== "/signup"
+          ) {
             window.location.href = "/login"
           }
           return
         }
-        
+
         // For all other events, only update hasSession if we have a verified session
         // Never set to false except on SIGNED_OUT - this prevents flipping
         if (session || actuallyHasSession) {
@@ -128,43 +138,54 @@ export const useAuth = () => {
 
   // Use a ref to persist user data across query disable/enable cycles
   const userDataRef = React.useRef<UserPublic | null>(null)
-  
+
   // Fetch user from backend API
-  const { data: user, isLoading, isFetching, error } = useQuery<UserPublic | null, Error>({
+  const {
+    data: user,
+    isLoading,
+    isFetching,
+    error,
+  } = useQuery<UserPublic | null, Error>({
     queryKey: ["currentUser"],
     queryFn: async () => {
       // Wait a bit for session to be ready (helps with race conditions)
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       // Always verify session before making API call
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession()
       if (!currentSession?.access_token) {
-        console.log('[useAuth] No session or access token, returning cached data or null')
+        console.log(
+          "[useAuth] No session or access token, returning cached data or null",
+        )
         // Return cached data if available, otherwise null
         // Don't clear cached data here - it might be a temporary state flip
         return userDataRef.current
       }
-      
+
       try {
-        console.log('[useAuth] Fetching user data...')
+        console.log("[useAuth] Fetching user data...")
         const userData = await apiClient.users.getMe()
-        console.log('[useAuth] User data fetched successfully:', userData)
+        console.log("[useAuth] User data fetched successfully:", userData)
         // Store successful user data in ref for persistence
         if (userData) {
           userDataRef.current = userData
         }
         return userData
       } catch (error: any) {
-        console.error('[useAuth] Failed to fetch user data:', error)
-        console.error('[useAuth] Error details:', {
+        console.error("[useAuth] Failed to fetch user data:", error)
+        console.error("[useAuth] Error details:", {
           message: error?.message,
           status: error?.status,
-          body: error?.body
+          body: error?.body,
         })
-        
+
         // If 403, verify session before clearing
         if (error?.status === 403) {
-          const { data: { session: verifySession } } = await supabase.auth.getSession()
+          const {
+            data: { session: verifySession },
+          } = await supabase.auth.getSession()
           if (!verifySession) {
             // Only clear if session is actually gone
             userDataRef.current = null
@@ -173,7 +194,7 @@ export const useAuth = () => {
           // Re-throw to trigger retry
           throw error
         }
-        
+
         // Return cached data if available, otherwise null
         return userDataRef.current
       }
@@ -196,7 +217,8 @@ export const useAuth = () => {
     // Keep previous REAL data visible during refetches to prevent flickering
     // This uses the actual previous query result (real data), not mock/placeholder data
     // It ensures the User component stays visible with real data during refetches
-    placeholderData: (previousData) => previousData || userDataRef.current || null,
+    placeholderData: (previousData) =>
+      previousData || userDataRef.current || null,
     // Keep data fresh for 5 minutes to reduce unnecessary API calls
     staleTime: 5 * 60 * 1000,
     // Keep data in cache for 10 minutes even when component unmounts
@@ -222,29 +244,33 @@ export const useAuth = () => {
   // Priority: 1) user (from query, if truthy), 2) userDataRef.current (persisted), 3) null
   const effectiveUser = useMemo(() => {
     // Always prefer query data if it exists and is truthy
-    if (user && typeof user === 'object' && Object.keys(user).length > 0) {
+    if (user && typeof user === "object" && Object.keys(user).length > 0) {
       return user
     }
     // Fall back to ref if query data is null/undefined/empty
-    if (userDataRef.current && typeof userDataRef.current === 'object' && Object.keys(userDataRef.current).length > 0) {
+    if (
+      userDataRef.current &&
+      typeof userDataRef.current === "object" &&
+      Object.keys(userDataRef.current).length > 0
+    ) {
       return userDataRef.current
     }
     return null
   }, [user]) // Only recompute when user changes, ref is stable
-  
+
   // Never clear ref based on hasSession state - only clear on explicit logout
   // The ref persists user data across all state flips and navigation
   // This ensures the User component always has data when available
 
   // Debug logging
   useEffect(() => {
-    console.log('[useAuth] User state:', { 
-      user, 
+    console.log("[useAuth] User state:", {
+      user,
       effectiveUser,
-      isLoading, 
-      error, 
+      isLoading,
+      error,
       hasSession,
-      refData: userDataRef.current 
+      refData: userDataRef.current,
     })
   }, [user, effectiveUser, isLoading, error, hasSession])
 

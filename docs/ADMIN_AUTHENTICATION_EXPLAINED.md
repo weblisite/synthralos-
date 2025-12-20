@@ -34,13 +34,13 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
     # 1. Verify Supabase token
     supabase = get_supabase_client()
     user_response = supabase.auth.get_user(token)
-    
+
     # 2. Extract email from token
     user_email = user_response.user.email
-    
+
     # 3. Look up user in database
     user = session.exec(select(User).where(User.email == user_email)).first()
-    
+
     # 4. Return user (includes is_superuser field)
     return user
 
@@ -123,24 +123,24 @@ const { data, error } = await supabase.auth.admin.updateUserById(
 # In backend/app/api/deps.py
 def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
     token = credentials.credentials
-    
+
     # Decode JWT to get app_metadata
     payload = jwt.decode(token, options={"verify_signature": False})
     app_metadata = payload.get("app_metadata", {})
     user_role = app_metadata.get("role", "user")
-    
+
     # Check if admin directly from token
     is_admin = user_role in ["admin", "superuser"]
-    
+
     # Still sync with database for other user data
     user = session.exec(select(User).where(User.email == user_email)).first()
-    
+
     # Update database if role changed
     if user and user.is_superuser != is_admin:
         user.is_superuser = is_admin
         session.add(user)
         session.commit()
-    
+
     return user
 ```
 
@@ -175,15 +175,15 @@ def promote_user_to_admin_supabase(email: str) -> None:
         settings.SUPABASE_URL,
         settings.SUPABASE_SERVICE_ROLE_KEY  # Admin key
     )
-    
+
     # Get user by email
     users = supabase.auth.admin.list_users()
     user = next((u for u in users if u.email == email), None)
-    
+
     if not user:
         print(f"User {email} not found in Supabase")
         return
-    
+
     # Update app_metadata
     supabase.auth.admin.update_user_by_id(
         user.id,
@@ -194,7 +194,7 @@ def promote_user_to_admin_supabase(email: str) -> None:
             }
         }
     )
-    
+
     # Also update local database
     with Session(engine) as session:
         db_user = session.exec(select(User).where(User.email == email)).first()
@@ -209,20 +209,20 @@ def promote_user_to_admin_supabase(email: str) -> None:
 # backend/app/api/deps.py (updated)
 def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
     token = credentials.credentials
-    
+
     # Verify token with Supabase
     supabase = get_supabase_client()
     user_response = supabase.auth.get_user(token)
-    
+
     # Extract role from app_metadata (in token)
     app_metadata = user_response.user.app_metadata or {}
     user_role = app_metadata.get("role", "user")
     is_superuser = app_metadata.get("is_superuser", False) or user_role in ["admin", "superuser"]
-    
+
     # Get or create user in database
     user_email = user_response.user.email
     user = session.exec(select(User).where(User.email == user_email)).first()
-    
+
     if not user:
         # Create user
         user = User(
@@ -242,7 +242,7 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
             session.add(user)
             session.commit()
             session.refresh(user)
-    
+
     return user
 ```
 
@@ -326,4 +326,3 @@ If you want to improve the implementation:
    - Database-level security for sensitive data
 
 Would you like me to implement the improved version using Supabase `app_metadata`?
-

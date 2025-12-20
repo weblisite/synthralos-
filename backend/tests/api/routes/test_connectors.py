@@ -179,4 +179,3 @@ class TestConnectorInvocation:
 
         # Should either succeed or return a proper error (not 404)
         assert response.status_code in [200, 400, 500]
-

@@ -4,13 +4,13 @@
  * Admin-only interface for managing platform connectors.
  */
 
-import { type ColumnDef } from "@tanstack/react-table"
+import type { ColumnDef } from "@tanstack/react-table"
 import { Plus, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
+import { ConnectorWizard } from "@/components/Connectors/ConnectorWizard"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/Common/DataTable"
-import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -28,7 +29,6 @@ import {
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import { ConnectorWizard } from "@/components/Connectors/ConnectorWizard"
 
 interface Connector {
   id: string
@@ -64,7 +64,7 @@ export function AdminConnectorManagement() {
       }
 
       const data = await apiClient.request<{ connectors: Connector[] }>(
-        `/api/v1/admin/connectors/list?${params}`
+        `/api/v1/admin/connectors/list?${params}`,
       )
       setConnectors(data.connectors || [])
     } catch (error) {
@@ -80,33 +80,46 @@ export function AdminConnectorManagement() {
     fetchConnectors()
   }, [fetchConnectors])
 
-  const handleUpdateStatus = useCallback(async (slug: string, newStatus: string) => {
-    try {
-      await apiClient.request(`/api/v1/admin/connectors/${slug}/status?new_status=${newStatus}`, {
-        method: "PATCH",
-      })
-      showSuccessToast(`Connector status updated to ${newStatus}`)
-      fetchConnectors()
-    } catch (error) {
-      showErrorToast("Failed to update connector status")
-    }
-  }, [showErrorToast, showSuccessToast, fetchConnectors])
+  const handleUpdateStatus = useCallback(
+    async (slug: string, newStatus: string) => {
+      try {
+        await apiClient.request(
+          `/api/v1/admin/connectors/${slug}/status?new_status=${newStatus}`,
+          {
+            method: "PATCH",
+          },
+        )
+        showSuccessToast(`Connector status updated to ${newStatus}`)
+        fetchConnectors()
+      } catch (_error) {
+        showErrorToast("Failed to update connector status")
+      }
+    },
+    [showErrorToast, showSuccessToast, fetchConnectors],
+  )
 
-  const handleDelete = useCallback(async (slug: string) => {
-    if (!confirm(`Are you sure you want to delete connector "${slug}"? This action cannot be undone.`)) {
-      return
-    }
+  const handleDelete = useCallback(
+    async (slug: string) => {
+      if (
+        !confirm(
+          `Are you sure you want to delete connector "${slug}"? This action cannot be undone.`,
+        )
+      ) {
+        return
+      }
 
-    try {
-      await apiClient.request(`/api/v1/admin/connectors/${slug}`, {
-        method: "DELETE",
-      })
-      showSuccessToast("Connector deleted successfully")
-      fetchConnectors()
-    } catch (error) {
-      showErrorToast("Failed to delete connector")
-    }
-  }, [showErrorToast, showSuccessToast, fetchConnectors])
+      try {
+        await apiClient.request(`/api/v1/admin/connectors/${slug}`, {
+          method: "DELETE",
+        })
+        showSuccessToast("Connector deleted successfully")
+        fetchConnectors()
+      } catch (_error) {
+        showErrorToast("Failed to delete connector")
+      }
+    },
+    [showErrorToast, showSuccessToast, fetchConnectors],
+  )
 
   const getStatusBadge = (status: Connector["status"]) => {
     const variants: Record<string, "default" | "destructive" | "secondary"> = {
@@ -120,7 +133,11 @@ export function AdminConnectorManagement() {
   }
 
   const categories = Array.from(
-    new Set(connectors.map((c) => c.category).filter((cat): cat is string => Boolean(cat)))
+    new Set(
+      connectors
+        .map((c) => c.category)
+        .filter((cat): cat is string => Boolean(cat)),
+    ),
   ).sort()
 
   const filteredConnectors = connectors.filter((connector) => {
@@ -149,7 +166,9 @@ export function AdminConnectorManagement() {
         return (
           <div>
             <div className="font-semibold">{connector.name}</div>
-            <div className="text-sm text-muted-foreground">{connector.slug}</div>
+            <div className="text-sm text-muted-foreground">
+              {connector.slug}
+            </div>
           </div>
         )
       },
@@ -164,7 +183,9 @@ export function AdminConnectorManagement() {
             {getStatusBadge(connector.status)}
             <Select
               value={connector.status}
-              onValueChange={(value) => handleUpdateStatus(connector.slug, value)}
+              onValueChange={(value) =>
+                handleUpdateStatus(connector.slug, value)
+              }
             >
               <SelectTrigger className="w-[120px] h-8">
                 <SelectValue />
@@ -229,7 +250,9 @@ export function AdminConnectorManagement() {
               variant="outline"
               size="sm"
               onClick={() => handleDelete(connector.slug)}
-              disabled={connector.is_platform && connector.status !== "deprecated"}
+              disabled={
+                connector.is_platform && connector.status !== "deprecated"
+              }
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
@@ -264,7 +287,8 @@ export function AdminConnectorManagement() {
             <DialogHeader>
               <DialogTitle>Register Platform Connector</DialogTitle>
               <DialogDescription>
-                Register a new platform connector that will be available to all users
+                Register a new platform connector that will be available to all
+                users
               </DialogDescription>
             </DialogHeader>
             <ConnectorWizard
@@ -319,5 +343,3 @@ export function AdminConnectorManagement() {
     </div>
   )
 }
-
-

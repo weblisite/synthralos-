@@ -164,4 +164,3 @@ For issues or questions:
 - Ready for testing after adding environment variables
 
 The platform is now ready to use Nango OAuth for all 99 connectors!
-

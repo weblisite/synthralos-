@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import type { UpdatePassword } from "@/client"
-import { apiClient } from "@/lib/apiClient"
 import {
   Form,
   FormControl,
@@ -16,6 +15,7 @@ import {
 import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiClient } from "@/lib/apiClient"
 import { handleError } from "@/utils"
 
 const formSchema = z
@@ -53,8 +53,7 @@ const ChangePassword = () => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: UpdatePassword) =>
-      apiClient.users.updatePassword(data),
+    mutationFn: (data: UpdatePassword) => apiClient.users.updatePassword(data),
     onSuccess: () => {
       showSuccessToast("Password updated successfully")
       form.reset()

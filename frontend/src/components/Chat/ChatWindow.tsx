@@ -5,8 +5,9 @@
  * Displays messages, handles input, and shows tool calls.
  */
 
-import { Send, X, Code, Bot, Zap } from "lucide-react"
-import { useState, useRef, useEffect } from "react"
+import { Bot, Code, Send, X, Zap } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -17,19 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { useChat } from "./AgUIProvider"
 import { ToolCallCard } from "./ToolCallCard"
 
 export function ChatWindow() {
-  const {
-    messages,
-    isLoading,
-    sendMessage,
-    clearMessages,
-    mode,
-    setMode,
-  } = useChat()
+  const { messages, isLoading, sendMessage, clearMessages, mode, setMode } =
+    useChat()
   const [input, setInput] = useState("")
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -38,13 +32,13 @@ export function ChatWindow() {
     // Auto-scroll to bottom when new messages arrive
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector(
-        '[data-radix-scroll-area-viewport]',
+        "[data-radix-scroll-area-viewport]",
       )
       if (scrollContainer) {
         scrollContainer.scrollTop = scrollContainer.scrollHeight
       }
     }
-  }, [messages])
+  }, [])
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -52,7 +46,7 @@ export function ChatWindow() {
     const message = input.trim()
     setInput("")
     await sendMessage(message, mode)
-    
+
     // Focus input after sending
     inputRef.current?.focus()
   }
@@ -132,7 +126,8 @@ export function ChatWindow() {
               <Bot className="h-12 w-12 mb-4 opacity-50" />
               <p className="text-lg font-medium">Start a conversation</p>
               <p className="text-sm mt-2">
-                Ask me to help you build workflows, write code, or automate tasks.
+                Ask me to help you build workflows, write code, or automate
+                tasks.
               </p>
             </div>
           ) : (
@@ -227,4 +222,3 @@ export function ChatWindow() {
     </div>
   )
 }
-

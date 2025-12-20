@@ -24,23 +24,27 @@ except ImportError:
 class PostHogClient:
     """
     PostHog client wrapper.
-    
+
     Provides methods for:
     - Event tracking
     - Feature flag evaluation
     - User identification
     """
-    
+
     def __init__(self):
         """Initialize PostHog client."""
         self.is_available = POSTHOG_AVAILABLE and bool(settings.POSTHOG_KEY)
-        
+
         if not self.is_available:
-            logger.warning("PostHog not configured (POSTHOG_KEY not set). Analytics will be disabled.")
-            logger.info("To enable PostHog: Set POSTHOG_KEY environment variable. See docs/OBSERVABILITY_SETUP.md")
+            logger.warning(
+                "PostHog not configured (POSTHOG_KEY not set). Analytics will be disabled."
+            )
+            logger.info(
+                "To enable PostHog: Set POSTHOG_KEY environment variable. See docs/OBSERVABILITY_SETUP.md"
+            )
             self.client = None
             return
-        
+
         try:
             self.client = Posthog(
                 project_api_key=settings.POSTHOG_KEY,
@@ -51,7 +55,7 @@ class PostHogClient:
             logger.error(f"Failed to initialize PostHog client: {e}")
             self.client = None
             self.is_available = False
-    
+
     def capture(
         self,
         distinct_id: str,
@@ -60,7 +64,7 @@ class PostHogClient:
     ) -> None:
         """
         Capture an event.
-        
+
         Args:
             distinct_id: User ID or session ID
             event: Event name
@@ -68,7 +72,7 @@ class PostHogClient:
         """
         if not self.is_available or not self.client:
             return
-        
+
         try:
             self.client.capture(
                 distinct_id=distinct_id,
@@ -77,7 +81,7 @@ class PostHogClient:
             )
         except Exception as e:
             logger.error(f"Failed to capture PostHog event: {e}")
-    
+
     def identify(
         self,
         distinct_id: str,
@@ -85,14 +89,14 @@ class PostHogClient:
     ) -> None:
         """
         Identify a user.
-        
+
         Args:
             distinct_id: User ID
             properties: Optional user properties
         """
         if not self.is_available or not self.client:
             return
-        
+
         try:
             self.client.identify(
                 distinct_id=distinct_id,
@@ -100,7 +104,7 @@ class PostHogClient:
             )
         except Exception as e:
             logger.error(f"Failed to identify user in PostHog: {e}")
-    
+
     def is_feature_enabled(
         self,
         distinct_id: str,
@@ -108,17 +112,17 @@ class PostHogClient:
     ) -> bool:
         """
         Check if a feature flag is enabled.
-        
+
         Args:
             distinct_id: User ID
             feature_flag: Feature flag key
-            
+
         Returns:
             True if feature is enabled, False otherwise
         """
         if not self.is_available or not self.client:
             return False
-        
+
         try:
             return self.client.is_feature_enabled(
                 feature_flag=feature_flag,
@@ -127,7 +131,7 @@ class PostHogClient:
         except Exception as e:
             logger.error(f"Failed to check feature flag in PostHog: {e}")
             return False
-    
+
     def get_feature_flag(
         self,
         distinct_id: str,
@@ -135,17 +139,17 @@ class PostHogClient:
     ) -> Any:
         """
         Get feature flag value.
-        
+
         Args:
             distinct_id: User ID
             feature_flag: Feature flag key
-            
+
         Returns:
             Feature flag value or None
         """
         if not self.is_available or not self.client:
             return None
-        
+
         try:
             return self.client.get_feature_flag(
                 feature_flag=feature_flag,
@@ -154,7 +158,7 @@ class PostHogClient:
         except Exception as e:
             logger.error(f"Failed to get feature flag from PostHog: {e}")
             return None
-    
+
     def shutdown(self) -> None:
         """Shutdown PostHog client."""
         if self.client:
@@ -166,4 +170,3 @@ class PostHogClient:
 
 # Default PostHog client instance
 default_posthog_client = PostHogClient()
-

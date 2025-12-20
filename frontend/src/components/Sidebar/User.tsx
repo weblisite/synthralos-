@@ -47,14 +47,14 @@ export function User({ user }: { user: any }) {
 
   // Debug logging
   React.useEffect(() => {
-    console.log('[User Component] User data:', user)
-    console.log('[User Component] User is null/undefined:', !user)
+    console.log("[User Component] User data:", user)
+    console.log("[User Component] User is null/undefined:", !user)
   }, [user])
 
   // Only hide if we have no user data
   // The component should always be visible once user data is loaded
   if (!user) {
-    console.log('[User Component] Returning null - user data not available')
+    console.log("[User Component] Returning null - user data not available")
     return null
   }
 

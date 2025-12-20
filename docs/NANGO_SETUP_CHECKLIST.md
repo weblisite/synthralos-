@@ -112,5 +112,3 @@ When users add connector nodes to workflows:
 - Nango handles token refresh automatically
 - Connections are isolated per user
 - Multiple connections per connector supported via `instance_id`
-
-

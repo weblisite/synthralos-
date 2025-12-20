@@ -329,4 +329,3 @@ For production, these should use absolute URLs or the SDK.
 - `docs/FRONTEND_BACKEND_INTERACTION.md` - How frontend and backend communicate
 - `docs/DEPLOYMENT_WARNINGS.md` - Common deployment issues
 - `render.yaml` - Blueprint configuration
-

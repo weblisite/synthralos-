@@ -27,4 +27,3 @@ __all__ = [
     "ActivityHandler",
     "get_activity_handler",
 ]
-

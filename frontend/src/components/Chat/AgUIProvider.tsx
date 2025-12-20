@@ -5,7 +5,15 @@
  * Manages chat state and WebSocket connections.
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react"
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { apiClient } from "@/lib/apiClient"
 import { supabase } from "@/lib/supabase"
 
@@ -48,12 +56,15 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
 
   const connectWebSocket = useCallback(async () => {
     // Don't create a new connection if one already exists and is open
-    if (wsConnectionRef.current && wsConnectionRef.current.readyState === WebSocket.OPEN) {
+    if (
+      wsConnectionRef.current &&
+      wsConnectionRef.current.readyState === WebSocket.OPEN
+    ) {
       setIsConnected(true)
       return
     }
 
-      // Close existing connection if it exists
+    // Close existing connection if it exists
     if (wsConnectionRef.current) {
       wsConnectionRef.current.close()
       wsConnectionRef.current = null
@@ -75,12 +86,12 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000"
       const wsProtocol = apiUrl.startsWith("https") ? "wss" : "ws"
       const wsHost = apiUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
-      
+
       // WebSocket endpoint for ag-ui bridge
       const wsUrl = `${wsProtocol}://${wsHost}/api/v1/agws?token=${session.access_token}`
       const ws = new WebSocket(wsUrl)
       wsConnectionRef.current = ws
-      
+
       // Set a timeout for connection
       connectionTimeout = setTimeout(() => {
         if (ws.readyState !== WebSocket.OPEN) {
@@ -103,7 +114,7 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          
+
           if (data.type === "message") {
             setMessages((prev) => [
               ...prev,
@@ -170,7 +181,7 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
   const sendMessage = useCallback(
     async (content: string, messageMode?: ChatMode) => {
       const currentMode = messageMode || mode
-      
+
       // Add user message
       const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -178,7 +189,7 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
         content,
         timestamp: new Date(),
       }
-      
+
       setMessages((prev) => [...prev, userMessage])
       setIsLoading(true)
 
@@ -220,7 +231,7 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
               mode: currentMode,
             }),
           })
-          
+
           // Handle streaming response if applicable
           if (data.message) {
             setMessages((prev) => [
@@ -234,7 +245,7 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
               },
             ])
           }
-          
+
           setIsLoading(false)
         }
       } catch (error) {
@@ -295,4 +306,3 @@ export function useChat() {
   }
   return context
 }
-

@@ -4,14 +4,15 @@
  * Manages code tools, sandboxes, and code executions.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Code, Plus, Play, Eye, Loader2, Box } from "lucide-react"
-import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import { Box, Code, Eye, Loader2, Play, Plus } from "lucide-react"
+import { useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { DataTable } from "@/components/Common/DataTable"
 import {
   Dialog,
   DialogContent,
@@ -22,9 +23,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -32,10 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import type { ColumnDef } from "@tanstack/react-table"
 
 interface CodeTool {
   id: string
@@ -72,7 +72,9 @@ interface CodeExecution {
 }
 
 const fetchCodeTools = async (): Promise<CodeTool[]> => {
-  const data = await apiClient.request<{ tools: CodeTool[] }>("/api/v1/code/tools?limit=100")
+  const data = await apiClient.request<{ tools: CodeTool[] }>(
+    "/api/v1/code/tools?limit=100",
+  )
   return data.tools || []
 }
 
@@ -118,14 +120,17 @@ const executeInSandbox = async (
   language: string,
   inputData?: Record<string, any>,
 ): Promise<CodeExecution> => {
-  return apiClient.request<CodeExecution>(`/api/v1/code/sandbox/${sandboxId}/execute`, {
-    method: "POST",
-    body: JSON.stringify({
-      code,
-      language,
-      input_data: inputData || {},
-    }),
-  })
+  return apiClient.request<CodeExecution>(
+    `/api/v1/code/sandbox/${sandboxId}/execute`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        code,
+        language,
+        input_data: inputData || {},
+      }),
+    },
+  )
 }
 
 const getStatusColor = (status: string) => {
@@ -157,9 +162,7 @@ const toolColumns: ColumnDef<CodeTool>[] = [
   {
     accessorKey: "runtime",
     header: "Runtime",
-    cell: ({ row }) => (
-      <Badge variant="outline">{row.original.runtime}</Badge>
-    ),
+    cell: ({ row }) => <Badge variant="outline">{row.original.runtime}</Badge>,
   },
   {
     accessorKey: "usage_count",
@@ -251,16 +254,12 @@ const sandboxColumns: ColumnDef<CodeSandbox>[] = [
   {
     accessorKey: "name",
     header: "Name",
-    cell: ({ row }) => (
-      <div className="font-semibold">{row.original.name}</div>
-    ),
+    cell: ({ row }) => <div className="font-semibold">{row.original.name}</div>,
   },
   {
     accessorKey: "runtime",
     header: "Runtime",
-    cell: ({ row }) => (
-      <Badge variant="outline">{row.original.runtime}</Badge>
-    ),
+    cell: ({ row }) => <Badge variant="outline">{row.original.runtime}</Badge>,
   },
   {
     accessorKey: "created_at",
@@ -286,7 +285,9 @@ function SandboxActionsCell({ sandbox }: { sandbox: CodeSandbox }) {
   const [code, setCode] = useState("")
   const [language, setLanguage] = useState("python")
   const [inputData, setInputData] = useState("")
-  const [executionResult, setExecutionResult] = useState<CodeExecution | null>(null)
+  const [executionResult, setExecutionResult] = useState<CodeExecution | null>(
+    null,
+  )
   const [isExecuting, setIsExecuting] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -307,7 +308,12 @@ function SandboxActionsCell({ sandbox }: { sandbox: CodeSandbox }) {
         }
       }
 
-      const result = await executeInSandbox(sandbox.id, code, language, parsedInputData)
+      const result = await executeInSandbox(
+        sandbox.id,
+        code,
+        language,
+        parsedInputData,
+      )
       setExecutionResult(result)
       showSuccessToast("Code executed", `Status: ${result.status}`)
     } catch (error) {
@@ -396,7 +402,9 @@ function SandboxActionsCell({ sandbox }: { sandbox: CodeSandbox }) {
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center justify-between">
                         <span>Status:</span>
-                        <Badge className={getStatusColor(executionResult.status)}>
+                        <Badge
+                          className={getStatusColor(executionResult.status)}
+                        >
                           {executionResult.status}
                         </Badge>
                       </div>
@@ -419,7 +427,9 @@ function SandboxActionsCell({ sandbox }: { sandbox: CodeSandbox }) {
                       {executionResult.error_message && (
                         <div>
                           <span className="text-red-500">Error:</span>
-                          <p className="text-red-500 text-xs mt-1">{executionResult.error_message}</p>
+                          <p className="text-red-500 text-xs mt-1">
+                            {executionResult.error_message}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -454,7 +464,9 @@ export function CodeToolRegistry() {
   const [language, setLanguage] = useState("python")
   const [runtime, setRuntime] = useState("e2b")
   const [inputData, setInputData] = useState("")
-  const [executionResult, setExecutionResult] = useState<CodeExecution | null>(null)
+  const [executionResult, setExecutionResult] = useState<CodeExecution | null>(
+    null,
+  )
 
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -508,11 +520,15 @@ export function CodeToolRegistry() {
         <div>
           <h2 className="text-2xl font-semibold">Code Tool Registry</h2>
           <p className="text-muted-foreground">
-            Manage code tools, sandboxes, and execute code in secure environments
+            Manage code tools, sandboxes, and execute code in secure
+            environments
           </p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={isCreateSandboxOpen} onOpenChange={setIsCreateSandboxOpen}>
+          <Dialog
+            open={isCreateSandboxOpen}
+            onOpenChange={setIsCreateSandboxOpen}
+          >
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Box className="h-4 w-4 mr-2" />
@@ -538,21 +554,30 @@ export function CodeToolRegistry() {
                 </div>
                 <div>
                   <Label htmlFor="sandbox-runtime">Runtime</Label>
-                  <Select value={sandboxRuntime} onValueChange={setSandboxRuntime}>
+                  <Select
+                    value={sandboxRuntime}
+                    onValueChange={setSandboxRuntime}
+                  >
                     <SelectTrigger id="sandbox-runtime">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="e2b">E2B (Secure)</SelectItem>
-                      <SelectItem value="wasmedge">WasmEdge (WebAssembly)</SelectItem>
-                      <SelectItem value="bacalhau">Bacalhau (Distributed)</SelectItem>
+                      <SelectItem value="wasmedge">
+                        WasmEdge (WebAssembly)
+                      </SelectItem>
+                      <SelectItem value="bacalhau">
+                        Bacalhau (Distributed)
+                      </SelectItem>
                       <SelectItem value="mcp_server">MCP Server</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <Button
                   onClick={() => createSandboxMutation.mutate()}
-                  disabled={!sandboxName.trim() || createSandboxMutation.isPending}
+                  disabled={
+                    !sandboxName.trim() || createSandboxMutation.isPending
+                  }
                   className="w-full"
                 >
                   {createSandboxMutation.isPending ? (
@@ -625,7 +650,9 @@ export function CodeToolRegistry() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="exec-input-data">Input Data (JSON, optional)</Label>
+                  <Label htmlFor="exec-input-data">
+                    Input Data (JSON, optional)
+                  </Label>
                   <Textarea
                     id="exec-input-data"
                     placeholder='{"key": "value"}'
@@ -659,7 +686,11 @@ export function CodeToolRegistry() {
                           <div className="space-y-2 text-sm">
                             <div className="flex items-center justify-between">
                               <span>Status:</span>
-                              <Badge className={getStatusColor(executionResult.status)}>
+                              <Badge
+                                className={getStatusColor(
+                                  executionResult.status,
+                                )}
+                              >
                                 {executionResult.status}
                               </Badge>
                             </div>
@@ -731,7 +762,8 @@ export function CodeToolRegistry() {
                 <div className="text-center">
                   <Box className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-sm text-muted-foreground mb-4">
-                    No sandboxes found. Create your first sandbox to get started.
+                    No sandboxes found. Create your first sandbox to get
+                    started.
                   </p>
                   <Button onClick={() => setIsCreateSandboxOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
@@ -746,4 +778,3 @@ export function CodeToolRegistry() {
     </div>
   )
 }
-

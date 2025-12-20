@@ -154,4 +154,3 @@ After deploying fixes:
    - No CORS errors
    - No 404 errors
    - Successful API responses
-

@@ -5,10 +5,10 @@
  */
 
 import { useState } from "react"
+import { MonacoEditor } from "@/components/Common/MonacoEditor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { MonacoEditor } from "@/components/Common/MonacoEditor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { supabase } from "@/lib/supabase"
@@ -20,7 +20,11 @@ interface ConnectorWizardProps {
   isPlatform?: boolean // Whether this is a platform connector
 }
 
-export function ConnectorWizard({ onSuccess, endpoint, isPlatform = false }: ConnectorWizardProps) {
+export function ConnectorWizard({
+  onSuccess,
+  endpoint,
+  isPlatform = false,
+}: ConnectorWizardProps) {
   const [step, setStep] = useState(1)
   const [manifest, setManifest] = useState("")
   const [wheelUrl, setWheelUrl] = useState("")
@@ -42,7 +46,7 @@ export function ConnectorWizard({ onSuccess, endpoint, isPlatform = false }: Con
       let parsedManifest
       try {
         parsedManifest = JSON.parse(manifest)
-      } catch (e) {
+      } catch (_e) {
         showErrorToast("Invalid JSON in manifest")
         return
       }
@@ -132,14 +136,18 @@ export function ConnectorWizard({ onSuccess, endpoint, isPlatform = false }: Con
             <div>
               <Label>Manifest Preview</Label>
               <pre className="mt-2 rounded-md bg-muted p-4 text-sm overflow-auto max-h-96">
-                {manifest ? JSON.stringify(JSON.parse(manifest), null, 2) : "No manifest"}
+                {manifest
+                  ? JSON.stringify(JSON.parse(manifest), null, 2)
+                  : "No manifest"}
               </pre>
             </div>
 
             {wheelUrl && (
               <div>
                 <Label>Wheel URL</Label>
-                <div className="mt-2 text-sm text-muted-foreground">{wheelUrl}</div>
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {wheelUrl}
+                </div>
               </div>
             )}
           </div>
@@ -157,4 +165,3 @@ export function ConnectorWizard({ onSuccess, endpoint, isPlatform = false }: Con
     </div>
   )
 }
-

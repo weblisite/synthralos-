@@ -1,7 +1,8 @@
 import logging
-from sqlmodel import Session, create_engine, select
+
 from sqlalchemy import event
 from sqlalchemy.pool import Pool
+from sqlmodel import Session, create_engine, select
 
 from app import crud
 from app.core.config import settings
@@ -22,14 +23,17 @@ engine = create_engine(
     echo=False,  # Set to True for SQL query logging
 )
 
+
 # Add event listener to log connection pool events
 @event.listens_for(Pool, "connect")
 def receive_connect(dbapi_conn, connection_record):
     logger.debug("Database connection established")
 
+
 @event.listens_for(Pool, "checkout")
 def receive_checkout(dbapi_conn, connection_record, connection_proxy):
     logger.debug("Connection checked out from pool")
+
 
 @event.listens_for(Pool, "checkin")
 def receive_checkin(dbapi_conn, connection_record):

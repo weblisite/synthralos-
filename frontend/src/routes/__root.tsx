@@ -8,7 +8,7 @@ export const Route = createRootRoute({
   component: () => {
     // Only show devtools in development mode
     const isDevelopment = import.meta.env.DEV
-    
+
     return (
       <>
         <HeadContent />

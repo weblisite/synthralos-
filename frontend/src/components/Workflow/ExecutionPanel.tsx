@@ -63,12 +63,12 @@ export function ExecutionPanel({
   const [isPolling, setIsPolling] = useState(false)
   const [isReplaying, setIsReplaying] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  
+
   // Use refs to avoid dependency issues
   const nodesRef = useRef<Node[]>(nodes)
   const onNodeStatusChangeRef = useRef(onNodeStatusChange)
   const onExecutionStatusChangeRef = useRef(onExecutionStatusChange)
-  
+
   // Keep refs in sync
   nodesRef.current = nodes
   onNodeStatusChangeRef.current = onNodeStatusChange
@@ -111,7 +111,7 @@ export function ExecutionPanel({
       if (status.execution_state && onNodeStatusChangeRef.current) {
         const executionState = status.execution_state
         const statusUpdates: Record<string, string> = {}
-        
+
         nodesRef.current.forEach((node) => {
           let nodeStatus = "idle"
           if (executionState.current_node_id === node.id) {
@@ -123,7 +123,7 @@ export function ExecutionPanel({
           }
           statusUpdates[node.id] = nodeStatus
         })
-        
+
         // Batch status updates to prevent multiple re-renders
         Object.entries(statusUpdates).forEach(([nodeId, nodeStatus]) => {
           onNodeStatusChangeRef.current?.(nodeId, nodeStatus)
@@ -192,7 +192,12 @@ export function ExecutionPanel({
 
       return () => clearInterval(interval)
     }
-  }, [executionId, isPolling]) // Remove fetchExecutionStatus and fetchLogs from deps to prevent loops
+  }, [
+    executionId,
+    isPolling, // Initial fetch
+    fetchExecutionStatus,
+    fetchLogs,
+  ]) // Remove fetchExecutionStatus and fetchLogs from deps to prevent loops
 
   // Auto-start polling if execution is running
   useEffect(() => {

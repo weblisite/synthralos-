@@ -25,4 +25,3 @@ function ChatPage() {
     </div>
   )
 }
-

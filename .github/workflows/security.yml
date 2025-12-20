@@ -30,7 +30,7 @@ jobs:
     strategy:
       matrix:
         language: [python, javascript]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -162,4 +162,3 @@ jobs:
             backend/python-licenses.json
             frontend/javascript-licenses.json
         continue-on-error: true
-

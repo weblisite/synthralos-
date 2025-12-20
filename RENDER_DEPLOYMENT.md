@@ -49,22 +49,22 @@ This guide will help you deploy SynthralOS on Render.
    API_V1_STR=/api/v1
    SECRET_KEY=<generate a secure random string>
    ACCESS_TOKEN_EXPIRE_MINUTES=11520
-   
+
    # Database (from PostgreSQL service)
    POSTGRES_SERVER=<from database service>
    POSTGRES_PORT=<from database service>
    POSTGRES_USER=<from database service>
    POSTGRES_PASSWORD=<from database service>
    POSTGRES_DB=<from database service>
-   
+
    # Supabase (required)
    SUPABASE_URL=<your-supabase-url>
    SUPABASE_ANON_KEY=<your-supabase-anon-key>
-   
+
    # Frontend URL (set after frontend is deployed)
    FRONTEND_HOST=https://synthralos-frontend.onrender.com
    BACKEND_CORS_ORIGINS=https://synthralos-frontend.onrender.com
-   
+
    # Optional: Add other services as needed
    # REDIS_URL=<redis-url>
    # OPENAI_API_KEY=<your-key>
@@ -209,4 +209,3 @@ If you need to run migrations manually:
 - Regularly rotate `SECRET_KEY` and API keys
 - Enable HTTPS (automatic on Render)
 - Review CORS settings regularly
-

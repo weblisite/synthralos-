@@ -9,11 +9,11 @@ Tests agent routing functionality including:
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlmodel import Session, create_engine, SQLModel
+from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 from app.agents.router import (
@@ -161,9 +161,7 @@ class TestAgentRouter:
             assert task.status == "completed"
             assert task.agent_framework == "agentgpt"
 
-    def test_execute_task_framework_not_found(
-        self, agent_router, db_session
-    ):
+    def test_execute_task_framework_not_found(self, agent_router, db_session):
         """Test task execution with non-existent framework."""
         with pytest.raises(FrameworkNotFoundError):
             agent_router.execute_task(
@@ -210,9 +208,7 @@ class TestAgentRouter:
         assert cache.context_key == "test_key"
         assert cache.context_data == context_data
 
-    def test_get_cached_context(
-        self, agent_router, db_session
-    ):
+    def test_get_cached_context(self, agent_router, db_session):
         """Test retrieving cached context."""
         agent_id = str(uuid.uuid4())
         context_data = {"key": "value"}
@@ -233,9 +229,7 @@ class TestAgentRouter:
         assert cached is not None
         assert cached == context_data
 
-    def test_get_cached_context_expired(
-        self, agent_router, db_session
-    ):
+    def test_get_cached_context_expired(self, agent_router, db_session):
         """Test retrieving expired cached context."""
         agent_id = str(uuid.uuid4())
         context_data = {"key": "value"}
@@ -256,9 +250,7 @@ class TestAgentRouter:
 
         assert cached is None
 
-    def test_clear_context_cache(
-        self, agent_router, db_session
-    ):
+    def test_clear_context_cache(self, agent_router, db_session):
         """Test clearing cached context."""
         agent_id = str(uuid.uuid4())
         context_data = {"key": "value"}
@@ -280,4 +272,3 @@ class TestAgentRouter:
         )
 
         assert cached is None
-

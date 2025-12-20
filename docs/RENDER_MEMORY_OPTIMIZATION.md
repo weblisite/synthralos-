@@ -1,6 +1,6 @@
 # Render Memory Optimization Guide
 
-**Issue:** Backend running out of memory on Render starter plan (512MB limit)  
+**Issue:** Backend running out of memory on Render starter plan (512MB limit)
 **Date:** December 18, 2025
 
 ## Problem
@@ -14,8 +14,8 @@ The Render logs show:
 
 ### Option 1: Upgrade Render Plan (Recommended)
 
-**Starter Plan:** 512MB RAM (current)  
-**Standard Plan:** 2GB RAM ($25/month)  
+**Starter Plan:** 512MB RAM (current)
+**Standard Plan:** 2GB RAM ($25/month)
 **Pro Plan:** 4GB RAM ($85/month)
 
 **Steps:**
@@ -119,4 +119,3 @@ PYTHONDONTWRITEBYTECODE=1  # Skip .pyc files
 - `docs/RENDER_DEPLOYMENT.md` - Full deployment guide
 - `docs/RENDER_DATABASE_CONNECTION_FIX.md` - Database connection setup
 - `backend/render-start.sh` - Startup script
-

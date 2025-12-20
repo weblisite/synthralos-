@@ -237,7 +237,7 @@ class NangoService:
     ) -> dict[str, Any]:
         """Generate Nango OAuth authorization URL."""
         ...
-    
+
     def handle_callback(
         self,
         provider_key: str,
@@ -246,7 +246,7 @@ class NangoService:
     ) -> dict[str, Any]:
         """Handle Nango OAuth callback."""
         ...
-    
+
     def get_tokens(
         self,
         provider_key: str,
@@ -254,7 +254,7 @@ class NangoService:
     ) -> dict[str, Any]:
         """Get stored tokens from Nango."""
         ...
-    
+
     def refresh_tokens(
         self,
         provider_key: str,
@@ -272,7 +272,7 @@ The `ConnectorOAuthService` (`app/connectors/oauth.py`) integrates Nango:
 class ConnectorOAuthService:
     def __init__(self):
         self.nango_service = default_nango_service
-    
+
     def generate_authorization_url(self, ...):
         # Check if connector uses Nango
         if use_nango:
@@ -414,4 +414,3 @@ Refreshes tokens via Nango or direct OAuth.
 - [Nango API Reference](https://docs.nango.dev/api-reference)
 - [OAuth 2.0 Specification](https://oauth.net/2/)
 - [Connector Guide](./CONNECTORS_GUIDE.md)
-

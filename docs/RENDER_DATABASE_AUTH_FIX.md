@@ -3,8 +3,8 @@
 ## Error
 
 ```
-sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection failed: 
-connection to server at "3.101.5.153", port 5432 failed: 
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection failed:
+connection to server at "3.101.5.153", port 5432 failed:
 FATAL: password authentication failed for user "postgres"
 ```
 
@@ -44,7 +44,7 @@ postgresql://postgres.eflnoopwsvrysthajkke:your-password-here@aws-0-us-west-1.po
 3. Click on **Environment** tab
 4. Find `SUPABASE_DB_URL` variable
 5. **Replace** the value with the pooler connection string from Step 1
-6. **Important**: 
+6. **Important**:
    - Ensure the password is correctly URL-encoded if it contains special characters
    - Ensure port is `6543` (pooler), not `5432` (direct)
    - Ensure hostname contains `pooler.supabase.com`
@@ -149,4 +149,3 @@ aws-0-[REGION].pooler.supabase.com
 3. **Check region**: Ensure the region in the connection string matches your Supabase project region
 4. **Test connection locally**: Try the connection string locally first to verify it works
 5. **Check Render logs**: Look for more detailed error messages in Render deployment logs
-

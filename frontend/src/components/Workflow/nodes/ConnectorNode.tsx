@@ -19,8 +19,9 @@ interface ConnectorNodeData extends Record<string, unknown> {
 export function ConnectorNode(props: NodeProps) {
   const { data, selected } = props
   const nodeData = data as ConnectorNodeData
-  const connectorName = nodeData.label || nodeData.config?.connector_slug || "Connector"
-  
+  const connectorName =
+    nodeData.label || nodeData.config?.connector_slug || "Connector"
+
   return (
     <div
       className={`px-4 py-2 shadow-lg rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 border-2 min-w-[150px] ${

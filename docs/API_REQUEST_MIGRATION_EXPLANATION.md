@@ -42,7 +42,7 @@ const response = await fetch("/api/v1/stats/dashboard", {
 ```typescript
 /**
  * API utility functions
- * 
+ *
  * Provides a centralized way to construct API URLs and make authenticated requests.
  */
 
@@ -91,7 +91,7 @@ export async function apiRequest<T = unknown>(
   const url = getApiPath(path)
   const headers = new Headers(options.headers)
   headers.set("Authorization", `Bearer ${session.access_token}`)
-  
+
   // Don't set Content-Type for FormData - browser will set it with boundary
   if (!(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json")
@@ -205,7 +205,7 @@ import { supabase } from "@/lib/supabase"
 const fetchConnectors = async () => {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new Error("Not logged in")
-  
+
   const response = await fetch("/api/v1/connectors", {
     headers: {
       Authorization: `Bearer ${session.access_token}`,
@@ -408,4 +408,3 @@ This migration:
 6. ✅ Makes the codebase cleaner and more consistent
 
 **Supabase is still the foundation** for authentication, storage, and database. We just centralized how we use Supabase tokens for API calls, making the code cleaner and ensuring all requests go to the correct backend domain.
-

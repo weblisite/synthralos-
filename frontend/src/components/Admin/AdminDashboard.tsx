@@ -5,12 +5,12 @@
  */
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ActivityLogs } from "./ActivityLogs"
+import { CostAnalytics } from "./CostAnalytics"
 import { ExecutionHistory } from "./ExecutionHistory"
 import { RetryManagement } from "./RetryManagement"
-import { CostAnalytics } from "./CostAnalytics"
 import { SystemHealth } from "./SystemHealth"
 import { SystemMetrics } from "./SystemMetrics"
-import { ActivityLogs } from "./ActivityLogs"
 
 export function AdminDashboard() {
   return (
@@ -18,7 +18,8 @@ export function AdminDashboard() {
       <div>
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-muted-foreground">
-          Manage executions, retries, monitor costs, and configure platform settings
+          Manage executions, retries, monitor costs, and configure platform
+          settings
         </p>
       </div>
 
@@ -59,4 +60,3 @@ export function AdminDashboard() {
     </div>
   )
 }
-

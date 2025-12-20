@@ -106,4 +106,3 @@ RUN uv sync
 - **`uv.lock`**: Exact versions that will be installed
 - **Always keep them in sync**: Run `uv lock` after changing `pyproject.toml`
 - **Production uses `uv.lock`**: `uv sync --frozen` ensures reproducible builds
-

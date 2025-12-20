@@ -18,4 +18,3 @@ __all__ = [
     "default_langfuse_client",
     "default_wazuh_client",
 ]
-

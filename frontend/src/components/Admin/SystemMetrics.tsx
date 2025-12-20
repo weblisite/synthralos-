@@ -15,7 +15,13 @@ import {
   Users,
   Workflow,
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
@@ -59,14 +65,21 @@ async function fetchSystemMetrics(): Promise<SystemMetrics> {
 export function SystemMetrics() {
   const { showErrorToast } = useCustomToast()
 
-  const { data: metrics, isLoading, error } = useQuery<SystemMetrics>({
+  const {
+    data: metrics,
+    isLoading,
+    error,
+  } = useQuery<SystemMetrics>({
     queryKey: ["systemMetrics"],
     queryFn: fetchSystemMetrics,
     refetchInterval: 60000, // Refresh every minute
   })
 
   if (error) {
-    showErrorToast("Failed to load system metrics", error instanceof Error ? error.message : "Unknown error")
+    showErrorToast(
+      "Failed to load system metrics",
+      error instanceof Error ? error.message : "Unknown error",
+    )
   }
 
   if (isLoading) {
@@ -211,7 +224,9 @@ export function SystemMetrics() {
             </div>
             <div className="flex justify-between border-t pt-2">
               <span className="text-sm font-medium">Success Rate</span>
-              <span className="font-bold">{metrics.executions.success_rate}%</span>
+              <span className="font-bold">
+                {metrics.executions.success_rate}%
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -224,24 +239,32 @@ export function SystemMetrics() {
           <CardContent className="space-y-2">
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">OCR Jobs</span>
-              <span className="font-medium">{metrics?.resources?.ocr_jobs ?? 0}</span>
+              <span className="font-medium">
+                {metrics?.resources?.ocr_jobs ?? 0}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Scrape Jobs</span>
-              <span className="font-medium">{metrics?.resources?.scrape_jobs ?? 0}</span>
+              <span className="font-medium">
+                {metrics?.resources?.scrape_jobs ?? 0}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Code Tools</span>
-              <span className="font-medium">{metrics?.resources?.code_tools ?? 0}</span>
+              <span className="font-medium">
+                {metrics?.resources?.code_tools ?? 0}
+              </span>
             </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="text-xs text-muted-foreground text-center">
-        Last updated: {metrics?.timestamp ? new Date(metrics.timestamp).toLocaleString() : "Never"}
+        Last updated:{" "}
+        {metrics?.timestamp
+          ? new Date(metrics.timestamp).toLocaleString()
+          : "Never"}
       </div>
     </div>
   )
 }
-

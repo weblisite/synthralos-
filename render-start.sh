@@ -18,4 +18,3 @@ echo "Pre-start checks completed. Starting server..."
 
 # Start the backend server
 exec fastapi run --host 0.0.0.0 --port ${PORT:-8000} app/main.py
-

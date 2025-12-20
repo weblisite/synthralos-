@@ -9,8 +9,13 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, HttpUrl
+
 from app.api.deps import CurrentUser, SessionDep
-from app.browser.service import BrowserService, BrowserServiceError, SessionNotFoundError
+from app.browser.service import (
+    BrowserService,
+    BrowserServiceError,
+    SessionNotFoundError,
+)
 
 router = APIRouter(prefix="/browser", tags=["browser"])
 
@@ -79,17 +84,17 @@ def create_browser_session(
 ) -> BrowserSessionResponse:
     """
     Create a new browser session.
-    
+
     Args:
         request: Browser session creation request
         current_user: Current authenticated user
         session: Database session
-        
+
     Returns:
         BrowserSessionResponse with session details
     """
     browser_service = BrowserService()
-    
+
     try:
         browser_session = browser_service.create_session(
             session=session,
@@ -98,7 +103,7 @@ def create_browser_session(
             automation_requirements=request.automation_requirements,
             auto_select_proxy=request.auto_select_proxy,
         )
-        
+
         return BrowserSessionResponse(
             id=str(browser_session.id),
             session_id=browser_session.session_id,
@@ -106,7 +111,9 @@ def create_browser_session(
             proxy_id=browser_session.proxy_id,
             status=browser_session.status,
             started_at=browser_session.started_at.isoformat(),
-            closed_at=browser_session.closed_at.isoformat() if browser_session.closed_at else None,
+            closed_at=browser_session.closed_at.isoformat()
+            if browser_session.closed_at
+            else None,
             error_message=browser_session.error_message,
         )
     except BrowserServiceError as e:
@@ -125,18 +132,18 @@ def execute_browser_action(
 ) -> BrowserActionResponse:
     """
     Execute a browser action.
-    
+
     Args:
         session_id: Browser session ID
         request: Browser action request
         current_user: Current authenticated user
         session: Database session
-        
+
     Returns:
         BrowserActionResponse with action result
     """
     browser_service = BrowserService()
-    
+
     try:
         session_uuid = uuid.UUID(session_id)
     except ValueError:
@@ -144,7 +151,7 @@ def execute_browser_action(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid session ID: {session_id}",
         )
-    
+
     try:
         browser_action = browser_service.execute_action(
             session=session,
@@ -152,7 +159,7 @@ def execute_browser_action(
             action_type=request.action_type,
             action_data=request.action_data,
         )
-        
+
         return BrowserActionResponse(
             id=str(browser_action.id),
             session_id=str(browser_action.session_id),
@@ -184,19 +191,19 @@ def get_browser_session(
 ) -> BrowserSessionDetailResponse:
     """
     Get browser session details including actions.
-    
+
     Args:
         session_id: Browser session ID
         skip: Skip count for actions pagination
         limit: Limit count for actions pagination
         current_user: Current authenticated user
         session: Database session
-        
+
     Returns:
         BrowserSessionDetailResponse with session and actions
     """
     browser_service = BrowserService()
-    
+
     try:
         session_uuid = uuid.UUID(session_id)
     except ValueError:
@@ -204,20 +211,20 @@ def get_browser_session(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid session ID: {session_id}",
         )
-    
+
     try:
         browser_session = browser_service.get_session(
             session=session,
             session_id=session_uuid,
         )
-        
+
         actions = browser_service.get_session_actions(
             session=session,
             session_id=session_uuid,
             skip=skip,
             limit=limit,
         )
-        
+
         session_response = BrowserSessionResponse(
             id=str(browser_session.id),
             session_id=browser_session.session_id,
@@ -225,10 +232,12 @@ def get_browser_session(
             proxy_id=browser_session.proxy_id,
             status=browser_session.status,
             started_at=browser_session.started_at.isoformat(),
-            closed_at=browser_session.closed_at.isoformat() if browser_session.closed_at else None,
+            closed_at=browser_session.closed_at.isoformat()
+            if browser_session.closed_at
+            else None,
             error_message=browser_session.error_message,
         )
-        
+
         actions_response = [
             BrowserActionResponse(
                 id=str(action.id),
@@ -240,7 +249,7 @@ def get_browser_session(
             )
             for action in actions
         ]
-        
+
         return BrowserSessionDetailResponse(
             session=session_response,
             actions=actions_response,
@@ -269,19 +278,19 @@ def list_browser_sessions(
 ) -> list[BrowserSessionResponse]:
     """
     List browser sessions with optional status filter.
-    
+
     Args:
         status: Optional status filter (active, closed, error)
         skip: Skip count for pagination
         limit: Limit count for pagination
         current_user: Current authenticated user
         session: Database session
-        
+
     Returns:
         List of BrowserSessionResponse
     """
     browser_service = BrowserService()
-    
+
     try:
         sessions = browser_service.list_sessions(
             session=session,
@@ -289,7 +298,7 @@ def list_browser_sessions(
             skip=skip,
             limit=limit,
         )
-        
+
         return [
             BrowserSessionResponse(
                 id=str(browser_session.id),
@@ -298,7 +307,9 @@ def list_browser_sessions(
                 proxy_id=browser_session.proxy_id,
                 status=browser_session.status,
                 started_at=browser_session.started_at.isoformat(),
-                closed_at=browser_session.closed_at.isoformat() if browser_session.closed_at else None,
+                closed_at=browser_session.closed_at.isoformat()
+                if browser_session.closed_at
+                else None,
                 error_message=browser_session.error_message,
             )
             for browser_session in sessions
@@ -318,17 +329,17 @@ def close_browser_session(
 ) -> BrowserSessionResponse:
     """
     Close a browser session.
-    
+
     Args:
         session_id: Browser session ID
         current_user: Current authenticated user
         session: Database session
-        
+
     Returns:
         BrowserSessionResponse with closed session details
     """
     browser_service = BrowserService()
-    
+
     try:
         session_uuid = uuid.UUID(session_id)
     except ValueError:
@@ -336,13 +347,13 @@ def close_browser_session(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid session ID: {session_id}",
         )
-    
+
     try:
         browser_session = browser_service.close_session(
             session=session,
             session_id=session_uuid,
         )
-        
+
         return BrowserSessionResponse(
             id=str(browser_session.id),
             session_id=browser_session.session_id,
@@ -350,7 +361,9 @@ def close_browser_session(
             proxy_id=browser_session.proxy_id,
             status=browser_session.status,
             started_at=browser_session.started_at.isoformat(),
-            closed_at=browser_session.closed_at.isoformat() if browser_session.closed_at else None,
+            closed_at=browser_session.closed_at.isoformat()
+            if browser_session.closed_at
+            else None,
             error_message=browser_session.error_message,
         )
     except SessionNotFoundError as e:
@@ -373,17 +386,17 @@ def monitor_page_changes(
 ) -> ChangeDetectionResponse | None:
     """
     Monitor a page for changes.
-    
+
     Args:
         request: Monitor request with URL and interval
         current_user: Current authenticated user
         session: Database session
-        
+
     Returns:
         ChangeDetectionResponse if changes detected, None otherwise
     """
     browser_service = BrowserService()
-    
+
     try:
         change_detection = browser_service.monitor_page_changes(
             session=session,
@@ -391,10 +404,10 @@ def monitor_page_changes(
             check_interval_seconds=request.check_interval_seconds,
             previous_content=request.previous_content,
         )
-        
+
         if not change_detection:
             return None
-        
+
         return ChangeDetectionResponse(
             id=str(change_detection.id),
             url=change_detection.url,
@@ -410,4 +423,3 @@ def monitor_page_changes(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
-

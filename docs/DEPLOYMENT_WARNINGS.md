@@ -23,7 +23,7 @@ MetaGPT requires OPENAI_API_KEY to be configured
 
 **Impact:** Agent features won't work until API keys are configured.
 
-**Action:** 
+**Action:**
 - **Optional:** Add `OPENAI_API_KEY` environment variable if you want to use agent frameworks
 - **Can ignore:** If you don't need agent features
 
@@ -66,7 +66,7 @@ WARNING:app.observability.opentelemetry:Signoz endpoint not configured. Skipping
 
 **What it means:** Optional observability services are not configured.
 
-**Impact:** 
+**Impact:**
 - No LLM observability (Langfuse)
 - No user analytics (PostHog)
 - No security monitoring (Wazuh)
@@ -162,4 +162,3 @@ After fixing `VITE_API_URL`, verify:
 - `docs/FRONTEND_BACKEND_INTERACTION.md` - How frontend and backend communicate
 - `docs/RENDER_DEPLOYMENT.md` - Deployment guide
 - `render.yaml` - Blueprint configuration
-

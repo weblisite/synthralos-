@@ -1,6 +1,6 @@
 /**
  * API utility functions
- * 
+ *
  * Provides a centralized way to construct API URLs and make authenticated requests.
  */
 
@@ -36,7 +36,7 @@ export function getApiPath(path: string): string {
  */
 export async function apiRequest<T = unknown>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   const {
     data: { session },
@@ -49,7 +49,7 @@ export async function apiRequest<T = unknown>(
   const url = getApiPath(path)
   const headers = new Headers(options.headers)
   headers.set("Authorization", `Bearer ${session.access_token}`)
-  
+
   // Don't set Content-Type for FormData - browser will set it with boundary
   if (!(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json")
@@ -63,10 +63,9 @@ export async function apiRequest<T = unknown>(
   if (!response.ok) {
     const errorText = await response.text().catch(() => "Unknown error")
     throw new Error(
-      `API request failed: ${response.status} ${response.statusText} - ${errorText}`
+      `API request failed: ${response.status} ${response.statusText} - ${errorText}`,
     )
   }
 
   return response.json()
 }
-

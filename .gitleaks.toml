@@ -43,4 +43,3 @@ id = "allow-test-credentials"
 description = "Allow test credentials"
 regex = '''TEST_.*'''
 tags = ["allowlist"]
-

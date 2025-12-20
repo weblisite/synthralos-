@@ -332,4 +332,3 @@ Frontend uses SDK to call REST API
 - `docs/OPENAPI_VS_OPENAI_CLARIFICATION.md` - OpenAPI vs OpenAI (the company)
 - `docs/FRONTEND_BACKEND_INTERACTION.md` - How frontend and backend communicate
 - `docs/VITE_API_URL_EXPLANATION.md` - How OpenAPI SDK constructs URLs
-

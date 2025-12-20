@@ -57,6 +57,5 @@ The `hasSession` state in `useAuth.ts` is not being set correctly. The initial s
 ## Files Modified
 
 1. `frontend/src/components/Sidebar/User.tsx` - Added React import and debug logging
-2. `frontend/src/components/Sidebar/AppSidebar.tsx` - Added React import and debug logging  
+2. `frontend/src/components/Sidebar/AppSidebar.tsx` - Added React import and debug logging
 3. `frontend/src/hooks/useAuth.ts` - Enhanced logging and error handling
-

@@ -47,4 +47,3 @@ mcp_supabase_apply_migration(
 - Migration script: `backend/scripts/migrate_connectors_supabase.py`
 - Batch generator: `backend/scripts/migrate_connectors_batch.py`
 - Execution helper: `backend/scripts/execute_all_batches.py`
-

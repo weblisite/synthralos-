@@ -25,7 +25,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     'c9eb18c2-e1eb-4113-a04f-e8ba77a94712',
     c.id,
     '1.0.0',
@@ -57,7 +57,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     '731d97c8-046f-410a-8c6f-d028e5457598',
     c.id,
     '1.0.0',
@@ -89,7 +89,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     '471e1f96-2c4c-4bf6-91e9-1b3180545a26',
     c.id,
     '1.0.0',
@@ -121,7 +121,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     'cb80b607-748f-4b2d-980f-fc067a19f90e',
     c.id,
     '1.0.0',
@@ -153,7 +153,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     '8e8c0495-c69b-4b91-a8bf-ddd1df221fd0',
     c.id,
     '1.0.0',
@@ -185,7 +185,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     'fec4ccdc-0023-4623-a4d4-806d4bc0334f',
     c.id,
     '1.0.0',
@@ -217,7 +217,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     '23217617-3d04-4060-a08c-0962ced2c754',
     c.id,
     '1.0.0',
@@ -249,7 +249,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     'cb358d15-c395-4edc-b590-11902ac28f90',
     c.id,
     '1.0.0',
@@ -281,7 +281,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     '6f47c115-c1cd-450e-b135-deb3134b26b7',
     c.id,
     '1.0.0',
@@ -313,7 +313,7 @@ ON CONFLICT (slug) DO UPDATE SET
     created_by = NULL;
 
 INSERT INTO connectorversion (id, connector_id, version, manifest, wheel_url, created_at)
-SELECT 
+SELECT
     'b487b1e4-0f37-4e0f-81a8-ecb23ca61d13',
     c.id,
     '1.0.0',

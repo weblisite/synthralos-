@@ -1,11 +1,18 @@
-import { useState, useCallback } from "react"
-import { Upload, X, FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
+import {
+  AlertCircle,
+  CheckCircle2,
+  FileText,
+  Loader2,
+  Upload,
+  X,
+} from "lucide-react"
+import { useCallback, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
 import { supabase } from "@/lib/supabase"
-import useCustomToast from "@/hooks/useCustomToast"
 
 interface FileUploadProps {
   bucket: string
@@ -36,51 +43,53 @@ export function FileUpload({
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>(
+    {},
+  )
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, any>>({})
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const handleFileSelect = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFiles = Array.from(event.target.files || [])
-      
+
       // Validate file size
       const oversizedFiles = selectedFiles.filter((file) => file.size > maxSize)
       if (oversizedFiles.length > 0) {
         showErrorToast(
-          `File(s) too large. Maximum size is ${(maxSize / 1024 / 1024).toFixed(2)}MB`
+          `File(s) too large. Maximum size is ${(maxSize / 1024 / 1024).toFixed(2)}MB`,
         )
         return
       }
-      
+
       // Validate file type if accept is specified
       if (accept) {
         const acceptTypes = accept.split(",").map((t) => t.trim())
         const invalidFiles = selectedFiles.filter((file) => {
           const fileType = file.type || ""
-          const fileExtension = "." + file.name.split(".").pop()?.toLowerCase()
+          const fileExtension = `.${file.name.split(".").pop()?.toLowerCase()}`
           return !acceptTypes.some(
             (acceptType) =>
               fileType === acceptType ||
-              fileType.startsWith(acceptType.split("/")[0] + "/") ||
+              fileType.startsWith(`${acceptType.split("/")[0]}/`) ||
               acceptType === fileExtension ||
-              acceptType === "*"
+              acceptType === "*",
           )
         })
-        
+
         if (invalidFiles.length > 0) {
           showErrorToast(`Invalid file type(s). Accepted types: ${accept}`)
           return
         }
       }
-      
+
       if (multiple) {
         setFiles((prev) => [...prev, ...selectedFiles])
       } else {
         setFiles(selectedFiles)
       }
     },
-    [accept, maxSize, multiple, showErrorToast]
+    [accept, maxSize, multiple, showErrorToast],
   )
 
   const handleUpload = useCallback(async () => {
@@ -118,7 +127,7 @@ export function FileUpload({
         if (!session) {
           throw new Error("You must be logged in to upload files")
         }
-        
+
         const url = apiClient.getApiUrl("/api/v1/storage/upload")
         return fetch(url, {
           method: "POST",
@@ -129,7 +138,9 @@ export function FileUpload({
         })
           .then(async (response) => {
             if (!response.ok) {
-              const error = await response.json().catch(() => ({ detail: "Upload failed" }))
+              const error = await response
+                .json()
+                .catch(() => ({ detail: "Upload failed" }))
               throw new Error(error.detail || "Upload failed")
             }
             return response.json()
@@ -157,39 +168,45 @@ export function FileUpload({
 
       await Promise.all(uploadPromises)
       showSuccessToast(`Successfully uploaded ${files.length} file(s)`)
-      
+
       // Clear files after successful upload
       setFiles([])
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Upload failed"
+      const errorMessage =
+        error instanceof Error ? error.message : "Upload failed"
       showErrorToast(errorMessage)
       onUploadError?.(errorMessage)
     } finally {
       setUploading(false)
     }
-  }, [files, bucket, folderPath, onUploadComplete, onUploadError, showSuccessToast, showErrorToast])
+  }, [
+    files,
+    bucket,
+    folderPath,
+    onUploadComplete,
+    onUploadError,
+    showSuccessToast,
+    showErrorToast,
+  ])
 
-  const handleRemoveFile = useCallback(
-    (fileName: string) => {
-      setFiles((prev) => prev.filter((f) => f.name !== fileName))
-      setUploadProgress((prev) => {
-        const newProgress = { ...prev }
-        delete newProgress[fileName]
-        return newProgress
-      })
-      setUploadedFiles((prev) => {
-        const newUploaded = { ...prev }
-        delete newUploaded[fileName]
-        return newUploaded
-      })
-    },
-    []
-  )
+  const handleRemoveFile = useCallback((fileName: string) => {
+    setFiles((prev) => prev.filter((f) => f.name !== fileName))
+    setUploadProgress((prev) => {
+      const newProgress = { ...prev }
+      delete newProgress[fileName]
+      return newProgress
+    })
+    setUploadedFiles((prev) => {
+      const newUploaded = { ...prev }
+      delete newUploaded[fileName]
+      return newUploaded
+    })
+  }, [])
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B"
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB"
-    return (bytes / (1024 * 1024)).toFixed(2) + " MB"
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
   }
 
   return (
@@ -244,14 +261,16 @@ export function FileUpload({
                   <p className="text-xs text-muted-foreground">
                     {formatFileSize(file.size)}
                   </p>
-                  {progress !== undefined && progress >= 0 && progress < 100 && (
-                    <div className="mt-2 w-full bg-secondary rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                  )}
+                  {progress !== undefined &&
+                    progress >= 0 &&
+                    progress < 100 && (
+                      <div className="mt-2 w-full bg-secondary rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    )}
                   {uploaded && (
                     <div className="flex items-center gap-2 mt-2 text-xs text-green-600">
                       <CheckCircle2 className="h-3 w-3" />
@@ -282,4 +301,3 @@ export function FileUpload({
     </div>
   )
 }
-

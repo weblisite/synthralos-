@@ -5,8 +5,8 @@
  */
 
 import type { Connection, Edge, Node } from "@xyflow/react"
-import { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import { Activity } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ExecutionPanel } from "./ExecutionPanel"
 import { NodeConfigPanel } from "./NodeConfigPanel"
@@ -41,7 +41,9 @@ export function WorkflowBuilder({
   onNodeUpdate,
 }: WorkflowBuilderProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
-  const [internalExecutionId, setInternalExecutionId] = useState<string | null>(null)
+  const [internalExecutionId, setInternalExecutionId] = useState<string | null>(
+    null,
+  )
   // Use external executionId if provided, otherwise use internal state
   const executionId = externalExecutionId ?? internalExecutionId
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, string>>({})
@@ -55,7 +57,7 @@ export function WorkflowBuilder({
     // We'll use a fixed center point that works well for most screen sizes
     const centerX = 500 // Fixed center X coordinate
     const centerY = 300 // Fixed center Y coordinate
-    
+
     // If we have a last node position, stack below it
     if (lastNodePositionRef.current) {
       return {
@@ -63,7 +65,7 @@ export function WorkflowBuilder({
         y: lastNodePositionRef.current.y + 120, // Stack 120px below (node height + spacing)
       }
     }
-    
+
     return { x: centerX, y: centerY }
   }, [])
 
@@ -90,24 +92,27 @@ export function WorkflowBuilder({
       // Check if this is a connector node
       const connectorSlug = event.dataTransfer.getData("connector-slug")
       const isConnector = type.startsWith("connector-")
-      
+
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type: isConnector ? "connector" : type,
         position,
         data: {
-          label: isConnector && connectorSlug
-            ? connectorSlug.charAt(0).toUpperCase() + connectorSlug.slice(1).replace(/-/g, " ")
-            : type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, " "),
-          config: isConnector && connectorSlug
-            ? { connector_slug: connectorSlug }
-            : {},
+          label:
+            isConnector && connectorSlug
+              ? connectorSlug.charAt(0).toUpperCase() +
+                connectorSlug.slice(1).replace(/-/g, " ")
+              : type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, " "),
+          config:
+            isConnector && connectorSlug
+              ? { connector_slug: connectorSlug }
+              : {},
         },
       }
 
       // Update last node position for next node
       lastNodePositionRef.current = position
-      
+
       onNodeAdd(newNode)
     },
     [onNodeAdd, getCenterPosition],
@@ -142,22 +147,25 @@ export function WorkflowBuilder({
         node.position = centerPos
         lastNodePositionRef.current = centerPos
       }
-      
+
       onNodeAdd(node)
     },
     [onNodeAdd, getCenterPosition],
   )
 
-  const handleExecutionStatusChange = useCallback((status: any) => {
-    // Only update internal state if external executionId is not provided
-    if (externalExecutionId === undefined) {
-      setInternalExecutionId(status.execution_id)
-    }
-    // Auto-open execution panel when execution starts
-    if (status.execution_id) {
-      setShowExecutionPanel(true)
-    }
-  }, [externalExecutionId])
+  const handleExecutionStatusChange = useCallback(
+    (status: any) => {
+      // Only update internal state if external executionId is not provided
+      if (externalExecutionId === undefined) {
+        setInternalExecutionId(status.execution_id)
+      }
+      // Auto-open execution panel when execution starts
+      if (status.execution_id) {
+        setShowExecutionPanel(true)
+      }
+    },
+    [externalExecutionId],
+  )
 
   const handleNodeStatusChange = useCallback(
     (nodeId: string, status: string) => {
@@ -195,7 +203,7 @@ export function WorkflowBuilder({
         className={`flex-1 min-h-0 transition-all duration-300 ${
           showNodeConfig || showExecutionDetails ? "mr-80" : ""
         }`}
-        style={{ height: '100%' }}
+        style={{ height: "100%" }}
         role="application"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -227,7 +235,7 @@ export function WorkflowBuilder({
           onPaneClick={handlePaneClick}
         />
       </div>
-      
+
       {/* Node Configuration Panel - Slides in from right */}
       {showNodeConfig && (
         <div className="absolute right-0 top-0 bottom-0 w-80 bg-background border-l shadow-lg z-20 animate-in slide-in-from-right duration-300">
@@ -238,7 +246,7 @@ export function WorkflowBuilder({
           />
         </div>
       )}
-      
+
       {/* Execution Panel - Slides in from right */}
       {showExecutionDetails && (
         <div className="absolute right-0 top-0 bottom-0 w-80 bg-background border-l shadow-lg z-20 animate-in slide-in-from-right duration-300">

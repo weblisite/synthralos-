@@ -435,4 +435,3 @@ CREATE UNIQUE INDEX ix_user_email ON "user" (email);
 
 -- Update Alembic version
 UPDATE alembic_version SET version_num = 'c4cd6f5a4f64';
-

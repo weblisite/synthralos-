@@ -95,8 +95,8 @@ python scripts/promote_user_to_admin.py myweblisite@gmail.com
 ```sql
 -- Connect to your PostgreSQL database
 -- Update the user's is_superuser field
-UPDATE "user" 
-SET is_superuser = true 
+UPDATE "user"
+SET is_superuser = true
 WHERE email = 'admin@synthralos.ai';
 ```
 
@@ -193,4 +193,3 @@ Once a user is admin, they can:
 3. **Always:** User must log out and log back in to activate admin access
 
 **Remember:** Users sign up as regular users. Admins are explicitly promoted, not created during signup.
-

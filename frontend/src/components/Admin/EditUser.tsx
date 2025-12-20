@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import type { UserPublic } from "@/client"
-import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -30,6 +29,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiClient } from "@/lib/apiClient"
 import { handleError } from "@/utils"
 
 const formSchema = z
@@ -75,8 +75,7 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      apiClient.users.update(user.id, data),
+    mutationFn: (data: FormData) => apiClient.users.update(user.id, data),
     onSuccess: () => {
       showSuccessToast("User updated successfully")
       setIsOpen(false)

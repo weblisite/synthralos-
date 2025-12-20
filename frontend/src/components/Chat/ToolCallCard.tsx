@@ -4,7 +4,8 @@
  * Displays tool call information in chat messages.
  */
 
-import { Code, CheckCircle2, Loader2, XCircle } from "lucide-react"
+import { CheckCircle2, Code, Loader2, XCircle } from "lucide-react"
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -12,7 +13,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { useState } from "react"
 
 interface ToolCallCardProps {
   toolCall: {
@@ -108,4 +108,3 @@ export function ToolCallCard({ toolCall }: ToolCallCardProps) {
     </Collapsible>
   )
 }
-

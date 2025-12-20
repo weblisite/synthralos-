@@ -8,4 +8,3 @@ severity_level = medium
 confidence_level = medium
 # Skip certain tests that are false positives
 skips = B101,B601
-

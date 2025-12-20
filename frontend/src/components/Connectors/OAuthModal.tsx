@@ -37,7 +37,7 @@ export function OAuthModal({
     if (isOpen && connectorSlug) {
       fetchAuthUrl()
     }
-  }, [isOpen, connectorSlug])
+  }, [isOpen, connectorSlug, fetchAuthUrl])
 
   const fetchAuthUrl = async () => {
     setIsLoading(true)
@@ -60,7 +60,7 @@ export function OAuthModal({
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            redirect_uri: window.location.origin + "/connectors/oauth/callback",
+            redirect_uri: `${window.location.origin}/connectors/oauth/callback`,
             scopes: null,
           }),
         },
@@ -122,4 +122,3 @@ export function OAuthModal({
     </Dialog>
   )
 }
-

@@ -9,7 +9,13 @@ import { Bot, Play, Settings } from "lucide-react"
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -36,11 +42,15 @@ interface AgentCatalogProps {
 }
 
 const fetchAgentCatalog = async (): Promise<AgentFramework[]> => {
-  const data = await apiClient.request<{ frameworks?: AgentFramework[] } | AgentFramework[]>(
-    "/api/v1/agents/catalog"
-  )
+  const data = await apiClient.request<
+    { frameworks?: AgentFramework[] } | AgentFramework[]
+  >("/api/v1/agents/catalog")
   // API returns { frameworks: [...], total: ... } or array directly
-  return Array.isArray(data) ? data : (Array.isArray(data.frameworks) ? data.frameworks : [])
+  return Array.isArray(data)
+    ? data
+    : Array.isArray(data.frameworks)
+      ? data.frameworks
+      : []
 }
 
 const executeAgentTask = async (
@@ -77,12 +87,18 @@ const getFrameworkDescription = (framework: string): string => {
 }
 
 export function AgentCatalog({ onAgentSelect }: AgentCatalogProps) {
-  const { data: frameworks, isLoading, error } = useQuery({
+  const {
+    data: frameworks,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["agentCatalog"],
     queryFn: fetchAgentCatalog,
   })
 
-  const [selectedFramework, setSelectedFramework] = useState<string | null>(null)
+  const [selectedFramework, setSelectedFramework] = useState<string | null>(
+    null,
+  )
   const [isExecuteDialogOpen, setIsExecuteDialogOpen] = useState(false)
   const [taskType, setTaskType] = useState("")
   const [inputData, setInputData] = useState("")
@@ -107,7 +123,11 @@ export function AgentCatalog({ onAgentSelect }: AgentCatalogProps) {
         }
       }
 
-      const result = await executeAgentTask(taskType, parsedInputData, selectedFramework)
+      const result = await executeAgentTask(
+        taskType,
+        parsedInputData,
+        selectedFramework,
+      )
       showSuccessToast("Agent task started", `Task ID: ${result.task_id}`)
       setIsExecuteDialogOpen(false)
       setTaskType("")
@@ -170,12 +190,16 @@ export function AgentCatalog({ onAgentSelect }: AgentCatalogProps) {
           <h3 className="text-lg font-semibold mb-4">Available Frameworks</h3>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {enabledFrameworks.map((framework) => (
-              <Card key={framework.framework} className="hover:shadow-md transition-shadow">
+              <Card
+                key={framework.framework}
+                className="hover:shadow-md transition-shadow"
+              >
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Bot className="h-5 w-5" />
-                      {framework.framework.charAt(0).toUpperCase() + framework.framework.slice(1)}
+                      {framework.framework.charAt(0).toUpperCase() +
+                        framework.framework.slice(1)}
                     </CardTitle>
                     <Badge variant="default">Enabled</Badge>
                   </div>
@@ -185,7 +209,10 @@ export function AgentCatalog({ onAgentSelect }: AgentCatalogProps) {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <Dialog
-                    open={isExecuteDialogOpen && selectedFramework === framework.framework}
+                    open={
+                      isExecuteDialogOpen &&
+                      selectedFramework === framework.framework
+                    }
                     onOpenChange={(open) => {
                       setIsExecuteDialogOpen(open)
                       if (!open) {
@@ -208,10 +235,14 @@ export function AgentCatalog({ onAgentSelect }: AgentCatalogProps) {
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>
-                          Execute {framework.framework.charAt(0).toUpperCase() + framework.framework.slice(1)} Agent
+                          Execute{" "}
+                          {framework.framework.charAt(0).toUpperCase() +
+                            framework.framework.slice(1)}{" "}
+                          Agent
                         </DialogTitle>
                         <DialogDescription>
-                          Configure and execute an agent task using this framework
+                          Configure and execute an agent task using this
+                          framework
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
@@ -225,7 +256,9 @@ export function AgentCatalog({ onAgentSelect }: AgentCatalogProps) {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="input-data">Input Data (JSON or plain text)</Label>
+                          <Label htmlFor="input-data">
+                            Input Data (JSON or plain text)
+                          </Label>
                           <Textarea
                             id="input-data"
                             placeholder='{"prompt": "Your task description", "context": {...}}'
@@ -273,7 +306,8 @@ export function AgentCatalog({ onAgentSelect }: AgentCatalogProps) {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Bot className="h-5 w-5" />
-                      {framework.framework.charAt(0).toUpperCase() + framework.framework.slice(1)}
+                      {framework.framework.charAt(0).toUpperCase() +
+                        framework.framework.slice(1)}
                     </CardTitle>
                     <Badge variant="secondary">Disabled</Badge>
                   </div>
@@ -304,4 +338,3 @@ export function AgentCatalog({ onAgentSelect }: AgentCatalogProps) {
     </div>
   )
 }
-

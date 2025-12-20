@@ -26,4 +26,3 @@
 # Configuration files
 /.env.example @synthralos-devops-team
 /ENV_TEMPLATE.md @synthralos-devops-team
-

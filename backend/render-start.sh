@@ -78,4 +78,3 @@ python -m uvicorn app.main:app \
     echo "Consider upgrading to Standard plan (2GB) for better reliability"
     exit $EXIT_CODE
 }
-

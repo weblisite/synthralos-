@@ -1,4 +1,17 @@
-import { Bot, Code, Database, Globe, Home, MessageSquare, Monitor, Plug, ScrollText, Search, Users, Workflow } from "lucide-react"
+import {
+  Bot,
+  Code,
+  Database,
+  Globe,
+  Home,
+  MessageSquare,
+  Monitor,
+  Plug,
+  ScrollText,
+  Search,
+  Users,
+  Workflow,
+} from "lucide-react"
 import * as React from "react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
@@ -32,9 +45,9 @@ export function AppSidebar() {
 
   // Debug logging
   React.useEffect(() => {
-    console.log('[AppSidebar] Current user:', currentUser)
-    console.log('[AppSidebar] User is null/undefined:', !currentUser)
-    console.log('[AppSidebar] Is user loading:', isUserLoading)
+    console.log("[AppSidebar] Current user:", currentUser)
+    console.log("[AppSidebar] User is null/undefined:", !currentUser)
+    console.log("[AppSidebar] Is user loading:", isUserLoading)
   }, [currentUser, isUserLoading])
 
   const items = currentUser?.is_superuser

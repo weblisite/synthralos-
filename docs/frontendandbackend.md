@@ -230,7 +230,7 @@ All backend endpoints listed above are called by frontend components.
 #### RAG Service (`backend/app/rag/service.py`)
 - ✅ **`_execute_query` method**: Now uses ChromaDB for vector queries with database fallback
   - **Status:** Fully implemented with ChromaDB integration
-  - **Implementation:** 
+  - **Implementation:**
     - Uses ChromaDB `HttpClient` for vector similarity search with SentenceTransformer embeddings
     - Falls back to database keyword search (`ILIKE`) if ChromaDB is unavailable
     - Syncs documents to ChromaDB collections when added to RAG indexes
@@ -375,4 +375,3 @@ All backend endpoints listed above are called by frontend components.
 3. Add frontend integration for unused backend endpoints
 4. Test all integrations end-to-end
 5. Update documentation
-

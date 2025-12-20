@@ -4,13 +4,13 @@
  * Displays a table of workflow executions with filtering, sorting, and actions.
  */
 
-import { type ColumnDef } from "@tanstack/react-table"
+import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
 import { Play, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/Common/DataTable"
 import {
   Dialog,
   DialogContent,
@@ -40,7 +40,10 @@ interface ExecutionHistoryProps {
   limit?: number
 }
 
-export function ExecutionHistory({ workflowId, limit = 100 }: ExecutionHistoryProps) {
+export function ExecutionHistory({
+  workflowId,
+  limit = 100,
+}: ExecutionHistoryProps) {
   const [executions, setExecutions] = useState<Execution[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -74,20 +77,20 @@ export function ExecutionHistory({ workflowId, limit = 100 }: ExecutionHistoryPr
 
       // Ensure limit is a valid integer and convert to number
       const validLimit = Math.max(1, Math.min(1000, Number(limit) || 100))
-      
+
       // Build URL with proper query parameters
       const baseUrl = workflowId
         ? `/api/v1/workflows/by-workflow/${workflowId}/executions`
         : `/api/v1/workflows/executions`
-      
+
       // Use URLSearchParams for proper encoding
       const params = new URLSearchParams({
         limit: String(validLimit),
-        skip: '0'
+        skip: "0",
       })
-      
+
       const url = `${baseUrl}?${params.toString()}`
-      
+
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -100,13 +103,17 @@ export function ExecutionHistory({ workflowId, limit = 100 }: ExecutionHistoryPr
         // Handle backend validation errors (array format)
         let errorMessage = `Failed to fetch executions: ${response.status}`
         if (Array.isArray(errorData.detail)) {
-          errorMessage = errorData.detail.map((err: any) => 
-            `${err.loc?.join('.') || 'field'}: ${err.msg || 'validation error'}`
-          ).join(', ')
+          errorMessage = errorData.detail
+            .map(
+              (err: any) =>
+                `${err.loc?.join(".") || "field"}: ${err.msg || "validation error"}`,
+            )
+            .join(", ")
         } else if (errorData.detail) {
-          errorMessage = typeof errorData.detail === 'string' 
-            ? errorData.detail 
-            : JSON.stringify(errorData.detail)
+          errorMessage =
+            typeof errorData.detail === "string"
+              ? errorData.detail
+              : JSON.stringify(errorData.detail)
         }
         console.error("[ExecutionHistory] API error:", {
           status: response.status,
@@ -186,9 +193,7 @@ export function ExecutionHistory({ workflowId, limit = 100 }: ExecutionHistoryPr
       waiting_for_signal: "secondary",
     }
 
-    return (
-      <Badge variant={variants[status] || "secondary"}>{status}</Badge>
-    )
+    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>
   }
 
   const formatDuration = (ms: number | undefined) => {
@@ -256,9 +261,7 @@ export function ExecutionHistory({ workflowId, limit = 100 }: ExecutionHistoryPr
       header: "Retries",
       cell: ({ row }) => {
         const count = row.original.retry_count
-        return (
-          <div className={count > 0 ? "text-orange-600" : ""}>{count}</div>
-        )
+        return <div className={count > 0 ? "text-orange-600" : ""}>{count}</div>
       },
     },
     {
@@ -347,4 +350,3 @@ export function ExecutionHistory({ workflowId, limit = 100 }: ExecutionHistoryPr
     </div>
   )
 }
-

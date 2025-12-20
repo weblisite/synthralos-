@@ -11,9 +11,10 @@ from pathlib import Path
 # Add the backend directory to the Python path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from sqlmodel import Session, select
+
 from app.core.db import engine
 from app.models import Connector
-from sqlmodel import Session, select
 
 
 def migrate_connectors():
@@ -21,7 +22,7 @@ def migrate_connectors():
     with Session(engine) as session:
         # Get all connectors
         connectors = session.exec(select(Connector)).all()
-        
+
         updated_count = 0
         for connector in connectors:
             # Check if connector already has RBAC fields set
@@ -31,10 +32,10 @@ def migrate_connectors():
                 connector.created_by = None  # Platform connectors have no creator
                 session.add(connector)
                 updated_count += 1
-        
+
         session.commit()
         print(f"✅ Updated {updated_count} connector(s) to be platform connectors")
-        
+
         # Verify migration
         platform_count = session.exec(
             select(Connector).where(Connector.is_platform == True)
@@ -46,4 +47,3 @@ if __name__ == "__main__":
     print("Starting connector RBAC migration...")
     migrate_connectors()
     print("Migration completed!")
-

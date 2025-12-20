@@ -203,4 +203,3 @@ If we didn't use OpenAPI, we'd have to:
 - `docs/VITE_API_URL_EXPLANATION.md` - How OpenAPI SDK constructs URLs
 - `docs/FRONTEND_BACKEND_INTERACTION.md` - Full communication flow
 - `frontend/README.md` - How to regenerate SDK
-

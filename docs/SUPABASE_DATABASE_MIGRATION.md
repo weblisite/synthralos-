@@ -180,4 +180,3 @@ If you encounter issues:
 2. Verify environment variables are set correctly
 3. Check backend logs for connection errors
 4. Ensure migrations have run successfully
-

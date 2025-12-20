@@ -143,4 +143,3 @@ sudo apt-get install -y \
 **For Production:** Install Tesseract in Docker image (Option 1) to ensure reliable fallback OCR capability.
 
 **For Development:** Install locally or ignore the warning if using cloud OCR engines.
-

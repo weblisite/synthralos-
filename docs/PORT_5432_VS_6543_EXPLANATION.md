@@ -103,4 +103,3 @@ SUPABASE_DB_URL=postgresql://postgres.project:password@aws-0-region.pooler.supab
 4. **Better for serverless** - Optimized for environments like Render
 
 **For Render deployments, always use port 6543 (pooler) to avoid connection issues.**
-

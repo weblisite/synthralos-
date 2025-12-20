@@ -32,19 +32,19 @@ def register_connector_direct(
 ) -> dict[str, Any]:
     """
     Register a connector directly using the ConnectorRegistry.
-    
+
     Args:
         session: Database session
         manifest_path: Path to manifest JSON file
         dry_run: If True, validate but don't register
-        
+
     Returns:
         Registration result dictionary
     """
     # Load manifest
-    with open(manifest_path, "r") as f:
+    with open(manifest_path) as f:
         manifest = json.load(f)
-    
+
     if dry_run:
         # Just validate
         registry = default_connector_registry
@@ -54,17 +54,17 @@ def register_connector_direct(
             "slug": manifest.get("slug"),
             "name": manifest.get("name"),
         }
-    
+
     # Register
     registry = default_connector_registry
-    
+
     try:
         connector_version = registry.register_connector(
             session=session,
             manifest=manifest,
             wheel_url=None,
         )
-        
+
         return {
             "status": "registered",
             "id": str(connector_version.id),
@@ -97,64 +97,64 @@ def register_all_connectors(
 ) -> dict[str, Any]:
     """
     Register all connectors from manifest files.
-    
+
     Args:
         manifests_dir: Directory containing manifest JSON files
         dry_run: If True, validate but don't register
         connector_slug: Optional single connector slug to register
         category: Optional category filter
-        
+
     Returns:
         Summary dictionary with registration results
     """
     # Get all manifest files
     manifest_files = list(manifests_dir.glob("*.json"))
-    
+
     if connector_slug:
         # Filter to specific connector
-        manifest_files = [
-            f for f in manifest_files if f.stem == connector_slug
-        ]
+        manifest_files = [f for f in manifest_files if f.stem == connector_slug]
         if not manifest_files:
             return {
                 "error": f"Connector '{connector_slug}' not found in manifests directory",
             }
-    
+
     # Filter by category if specified
     if category:
         filtered_files = []
         for manifest_file in manifest_files:
-            with open(manifest_file, "r") as f:
+            with open(manifest_file) as f:
                 manifest = json.load(f)
                 if manifest.get("category") == category:
                     filtered_files.append(manifest_file)
         manifest_files = filtered_files
-    
+
     if not manifest_files:
         return {
             "error": "No manifest files found matching criteria",
         }
-    
-    print(f"{'Validating' if dry_run else 'Registering'} {len(manifest_files)} connector(s)...\n")
-    
+
+    print(
+        f"{'Validating' if dry_run else 'Registering'} {len(manifest_files)} connector(s)...\n"
+    )
+
     results = {
         "registered": [],
         "skipped": [],
         "errors": [],
         "total": len(manifest_files),
     }
-    
+
     # Use database session
     with Session(engine) as session:
         for manifest_file in sorted(manifest_files):
             slug = manifest_file.stem
-            
+
             try:
                 # Load manifest to get name
-                with open(manifest_file, "r") as f:
+                with open(manifest_file) as f:
                     manifest = json.load(f)
                     name = manifest.get("name", slug)
-                
+
                 # Check if connector already exists
                 if not dry_run:
                     try:
@@ -162,49 +162,55 @@ def register_all_connectors(
                             session=session,
                             slug=slug,
                         )
-                        results["skipped"].append({
-                            "slug": slug,
-                            "name": name,
-                            "reason": f"Already registered (version {existing.version})",
-                        })
+                        results["skipped"].append(
+                            {
+                                "slug": slug,
+                                "name": name,
+                                "reason": f"Already registered (version {existing.version})",
+                            }
+                        )
                         print(f"⏭️  Skipped {name} ({slug}) - already registered")
                         continue
                     except Exception:
                         # Connector doesn't exist, proceed with registration
                         pass
-                
+
                 # Register connector
                 result = register_connector_direct(
                     session=session,
                     manifest_path=manifest_file,
                     dry_run=dry_run,
                 )
-                
+
                 if result["status"] == "error":
                     results["errors"].append(result)
-                    print(f"❌ Error: {name} ({slug}) - {result.get('error', 'Unknown error')}")
+                    print(
+                        f"❌ Error: {name} ({slug}) - {result.get('error', 'Unknown error')}"
+                    )
                 elif result["status"] == "validated":
                     results["registered"].append(result)
                     print(f"✅ Validated: {name} ({slug})")
                 else:
                     results["registered"].append(result)
-                    print(f"✅ Registered: {name} ({slug}) v{result.get('version', 'N/A')}")
-                
+                    print(
+                        f"✅ Registered: {name} ({slug}) v{result.get('version', 'N/A')}"
+                    )
+
                 # Commit after each registration
                 if not dry_run:
                     session.commit()
-                    
+
             except Exception as e:
                 error_result = {
                     "slug": slug,
-                    "name": name if 'name' in locals() else slug,
+                    "name": name if "name" in locals() else slug,
                     "error": str(e),
                 }
                 results["errors"].append(error_result)
                 print(f"❌ Exception: {slug} - {str(e)}")
                 if not dry_run:
                     session.rollback()
-    
+
     return results
 
 
@@ -217,18 +223,18 @@ def main():
 Examples:
   # Dry run (validate all manifests)
   python scripts/register_connectors.py --dry-run
-  
+
   # Register all connectors
   python scripts/register_connectors.py
-  
+
   # Register single connector
   python scripts/register_connectors.py --connector-slug gmail
-  
+
   # Register by category
   python scripts/register_connectors.py --category "Communication & Collaboration"
         """,
     )
-    
+
     parser.add_argument(
         "--manifests-dir",
         type=str,
@@ -252,19 +258,21 @@ Examples:
         default=None,
         help="Register only connectors in a specific category",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Determine manifests directory
     if args.manifests_dir:
         manifests_dir = Path(args.manifests_dir)
     else:
-        manifests_dir = Path(__file__).parent.parent / "app" / "connectors" / "manifests"
-    
+        manifests_dir = (
+            Path(__file__).parent.parent / "app" / "connectors" / "manifests"
+        )
+
     if not manifests_dir.exists():
         print(f"Error: Manifests directory not found: {manifests_dir}")
         sys.exit(1)
-    
+
     # Register connectors
     try:
         results = register_all_connectors(
@@ -273,39 +281,45 @@ Examples:
             connector_slug=args.connector_slug,
             category=args.category,
         )
-        
+
         if "error" in results:
             print(f"\n❌ Error: {results['error']}")
             sys.exit(1)
-        
+
         # Print summary
         print(f"\n{'='*60}")
-        print(f"Summary:")
+        print("Summary:")
         print(f"  Total: {results['total']}")
-        print(f"  {'Validated' if args.dry_run else 'Registered'}: {len(results['registered'])}")
+        print(
+            f"  {'Validated' if args.dry_run else 'Registered'}: {len(results['registered'])}"
+        )
         print(f"  Skipped: {len(results['skipped'])}")
         print(f"  Errors: {len(results['errors'])}")
         print(f"{'='*60}")
-        
+
         if results["errors"]:
-            print(f"\nErrors:")
+            print("\nErrors:")
             for error in results["errors"]:
-                print(f"  - {error.get('name', error.get('slug'))}: {error.get('error')}")
+                print(
+                    f"  - {error.get('name', error.get('slug'))}: {error.get('error')}"
+                )
             sys.exit(1)
-        
+
         if not args.dry_run:
-            print(f"\n✅ Successfully registered {len(results['registered'])} connector(s)")
-        
+            print(
+                f"\n✅ Successfully registered {len(results['registered'])} connector(s)"
+            )
+
     except KeyboardInterrupt:
         print("\n\n⚠️  Registration interrupted by user")
         sys.exit(1)
     except Exception as e:
         print(f"\n❌ Fatal error: {str(e)}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-

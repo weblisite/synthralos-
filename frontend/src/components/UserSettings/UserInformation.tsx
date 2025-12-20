@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import type { UserUpdateMe } from "@/client"
-import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -19,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiClient } from "@/lib/apiClient"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
@@ -50,8 +50,7 @@ const UserInformation = () => {
   }
 
   const mutation = useMutation({
-    mutationFn: (data: UserUpdateMe) =>
-      apiClient.users.updateMe(data),
+    mutationFn: (data: UserUpdateMe) => apiClient.users.updateMe(data),
     onSuccess: () => {
       showSuccessToast("User updated successfully")
       toggleEditMode()

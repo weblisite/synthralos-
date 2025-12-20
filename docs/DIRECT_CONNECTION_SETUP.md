@@ -1,7 +1,7 @@
 # Direct Connection Setup (IPv4 Compatible)
 
-**Date:** December 17, 2025  
-**Connection Type:** Direct Connection with IPv4 compatibility  
+**Date:** December 17, 2025
+**Connection Type:** Direct Connection with IPv4 compatibility
 **Status:** ✅ Ready for Render deployment
 
 ## Overview
@@ -41,9 +41,9 @@ postgresql://postgres:synthralos-@db.lorefpaifkembnzmlodm.supabase.co:5432/postg
 
 ## Benefits of Direct Connection
 
-✅ **Persistent Connections:** Ideal for long-lived connections  
-✅ **IPv4 Compatible:** Works reliably on Render  
-✅ **Lower Latency:** Direct connection without pooler overhead  
+✅ **Persistent Connections:** Ideal for long-lived connections
+✅ **IPv4 Compatible:** Works reliably on Render
+✅ **Lower Latency:** Direct connection without pooler overhead
 ✅ **Simpler:** Standard PostgreSQL connection format
 
 ## Verification
@@ -97,7 +97,6 @@ After updating the connection string in Render:
 postgresql://postgres:synthralos-@db.lorefpaifkembnzmlodm.supabase.co:5432/postgres
 ```
 
-**Status:** ✅ Ready for Render deployment  
-**IPv4:** ✅ Enabled  
+**Status:** ✅ Ready for Render deployment
+**IPv4:** ✅ Enabled
 **Type:** Direct Connection
-

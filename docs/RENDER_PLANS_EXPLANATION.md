@@ -99,4 +99,3 @@ After upgrading the runtime plan:
 - `docs/RENDER_MEMORY_OPTIMIZATION.md` - Memory optimization strategies
 - `docs/RENDER_DEPLOYMENT.md` - Full deployment guide
 - `render.yaml` - Blueprint configuration file
-

@@ -151,4 +151,3 @@ When you commit with `pyproject.toml` changes:
 - [Automated uv.lock Management](./AUTOMATED_UV_LOCK.md) - How the automation works
 - [UV Lock Explanation](./UV_LOCK_EXPLANATION.md) - Understanding pyproject.toml vs uv.lock
 - [Development Guide](../development.md) - General development workflow
-

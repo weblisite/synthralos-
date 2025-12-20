@@ -69,4 +69,3 @@ The following files have been created/updated to prepare SynthralOS for deployme
 - Detailed guide: `RENDER_DEPLOYMENT.md`
 - Quick reference: `README_RENDER.md`
 - Environment template: `.env.example`
-

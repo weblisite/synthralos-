@@ -74,4 +74,3 @@ Then copy the MCP command and execute it in Cursor.
 - Alembic tracks migrations in `alembic_version` table
 - Supabase tracks migrations in its own system
 - Always review generated SQL before applying
-

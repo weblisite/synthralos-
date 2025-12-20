@@ -4,8 +4,6 @@ Integration tests for Chat API endpoints
 Tests chat message processing and WebSocket connections.
 """
 
-import json
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -88,4 +86,3 @@ class TestChatAPI:
         )
 
         assert response.status_code == 401  # Unauthorized
-

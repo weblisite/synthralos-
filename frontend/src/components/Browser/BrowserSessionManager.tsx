@@ -4,14 +4,15 @@
  * Manages browser automation sessions and actions.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Monitor, Play, X, Eye, Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import { Eye, Loader2, Monitor, Play, X } from "lucide-react"
+import { useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { DataTable } from "@/components/Common/DataTable"
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
   SelectContent,
@@ -29,9 +29,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import type { ColumnDef } from "@tanstack/react-table"
 
 interface BrowserSession {
   id: string
@@ -97,11 +97,7 @@ const columns: ColumnDef<BrowserSession>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status = row.original.status
-      return (
-        <Badge className={getStatusColor(status)}>
-          {status}
-        </Badge>
-      )
+      return <Badge className={getStatusColor(status)}>{status}</Badge>
     },
   },
   {
@@ -179,7 +175,9 @@ function SessionActionsCell({ session }: { session: BrowserSession }) {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <Label>Status</Label>
-                <Badge className={getStatusColor(session.status)}>{session.status}</Badge>
+                <Badge className={getStatusColor(session.status)}>
+                  {session.status}
+                </Badge>
               </div>
               <div>
                 <Label>Browser Tool</Label>
@@ -226,7 +224,10 @@ export function BrowserSessionManager() {
     mutationFn: () => createBrowserSession(selectedBrowserTool),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["browserSessions"] })
-      showSuccessToast("Browser Session Created", "Session started successfully")
+      showSuccessToast(
+        "Browser Session Created",
+        "Session started successfully",
+      )
       setIsCreateDialogOpen(false)
       setSelectedBrowserTool("playwright")
     },
@@ -270,15 +271,26 @@ export function BrowserSessionManager() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="browser-tool">Browser Tool</Label>
-                <Select value={selectedBrowserTool} onValueChange={setSelectedBrowserTool}>
+                <Select
+                  value={selectedBrowserTool}
+                  onValueChange={setSelectedBrowserTool}
+                >
                   <SelectTrigger id="browser-tool">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="playwright">Playwright (JS-heavy pages)</SelectItem>
-                    <SelectItem value="puppeteer">Puppeteer (Headless Chrome)</SelectItem>
-                    <SelectItem value="browserbase">Browserbase (Fleet-scale)</SelectItem>
-                    <SelectItem value="undetected_chromedriver">Undetected ChromeDriver (Anti-bot)</SelectItem>
+                    <SelectItem value="playwright">
+                      Playwright (JS-heavy pages)
+                    </SelectItem>
+                    <SelectItem value="puppeteer">
+                      Puppeteer (Headless Chrome)
+                    </SelectItem>
+                    <SelectItem value="browserbase">
+                      Browserbase (Fleet-scale)
+                    </SelectItem>
+                    <SelectItem value="undetected_chromedriver">
+                      Undetected ChromeDriver (Anti-bot)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -309,7 +321,8 @@ export function BrowserSessionManager() {
             <div className="text-center">
               <Monitor className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-sm text-muted-foreground mb-4">
-                No browser sessions found. Create your first session to get started.
+                No browser sessions found. Create your first session to get
+                started.
               </p>
               <Button onClick={() => setIsCreateDialogOpen(true)}>
                 <Play className="h-4 w-4 mr-2" />
@@ -322,4 +335,3 @@ export function BrowserSessionManager() {
     </div>
   )
 }
-

@@ -93,4 +93,3 @@ After frontend deploys, update backend:
 ## Support
 
 See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for detailed documentation.
-

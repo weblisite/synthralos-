@@ -4,14 +4,16 @@
  * Manages OCR jobs and results.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { FileText, Upload, Eye, Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import { Eye, FileText, Loader2, Upload } from "lucide-react"
+import { useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
+import { FileUpload } from "@/components/Storage/FileUpload"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { DataTable } from "@/components/Common/DataTable"
 import {
   Dialog,
   DialogContent,
@@ -23,8 +25,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -32,10 +32,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { apiClient } from "@/lib/apiClient"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
-import { FileUpload } from "@/components/Storage/FileUpload"
-import type { ColumnDef } from "@tanstack/react-table"
+import { apiClient } from "@/lib/apiClient"
 
 interface OCRJob {
   id: string
@@ -91,20 +91,14 @@ const columns: ColumnDef<OCRJob>[] = [
   {
     accessorKey: "engine",
     header: "Engine",
-    cell: ({ row }) => (
-      <Badge variant="outline">{row.original.engine}</Badge>
-    ),
+    cell: ({ row }) => <Badge variant="outline">{row.original.engine}</Badge>,
   },
   {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
       const status = row.original.status
-      return (
-        <Badge className={getStatusColor(status)}>
-          {status}
-        </Badge>
-      )
+      return <Badge className={getStatusColor(status)}>{status}</Badge>
     },
   },
   {
@@ -146,15 +140,15 @@ const columns: ColumnDef<OCRJob>[] = [
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>OCR Job Details</DialogTitle>
-              <DialogDescription>
-                Job ID: {job.id}
-              </DialogDescription>
+              <DialogDescription>Job ID: {job.id}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label>Status</Label>
-                  <Badge className={getStatusColor(job.status)}>{job.status}</Badge>
+                  <Badge className={getStatusColor(job.status)}>
+                    {job.status}
+                  </Badge>
                 </div>
                 <div>
                   <Label>Engine</Label>
@@ -261,7 +255,8 @@ export function OCRJobManager() {
             <DialogHeader>
               <DialogTitle>Create OCR Job</DialogTitle>
               <DialogDescription>
-                Extract text from a document using OCR. Upload a file or provide a URL.
+                Extract text from a document using OCR. Upload a file or provide
+                a URL.
               </DialogDescription>
             </DialogHeader>
             <Tabs defaultValue="upload" className="w-full">
@@ -295,18 +290,31 @@ export function OCRJobManager() {
                 )}
                 <div>
                   <Label htmlFor="engine-upload">OCR Engine (Optional)</Label>
-                  <Select value={selectedEngine} onValueChange={setSelectedEngine}>
+                  <Select
+                    value={selectedEngine}
+                    onValueChange={setSelectedEngine}
+                  >
                     <SelectTrigger id="engine-upload">
                       <SelectValue placeholder="Auto-select" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Auto-select</SelectItem>
                       <SelectItem value="doctr">DocTR (Tables)</SelectItem>
-                      <SelectItem value="easyocr">EasyOCR (Handwriting)</SelectItem>
-                      <SelectItem value="paddleocr">PaddleOCR (Low-latency)</SelectItem>
-                      <SelectItem value="tesseract">Tesseract (Fallback)</SelectItem>
-                      <SelectItem value="google_vision">Google Vision API</SelectItem>
-                      <SelectItem value="omniparser">Omniparser (Structured)</SelectItem>
+                      <SelectItem value="easyocr">
+                        EasyOCR (Handwriting)
+                      </SelectItem>
+                      <SelectItem value="paddleocr">
+                        PaddleOCR (Low-latency)
+                      </SelectItem>
+                      <SelectItem value="tesseract">
+                        Tesseract (Fallback)
+                      </SelectItem>
+                      <SelectItem value="google_vision">
+                        Google Vision API
+                      </SelectItem>
+                      <SelectItem value="omniparser">
+                        Omniparser (Structured)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -323,18 +331,31 @@ export function OCRJobManager() {
                 </div>
                 <div>
                   <Label htmlFor="engine-url">OCR Engine (Optional)</Label>
-                  <Select value={selectedEngine} onValueChange={setSelectedEngine}>
+                  <Select
+                    value={selectedEngine}
+                    onValueChange={setSelectedEngine}
+                  >
                     <SelectTrigger id="engine-url">
                       <SelectValue placeholder="Auto-select" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Auto-select</SelectItem>
                       <SelectItem value="doctr">DocTR (Tables)</SelectItem>
-                      <SelectItem value="easyocr">EasyOCR (Handwriting)</SelectItem>
-                      <SelectItem value="paddleocr">PaddleOCR (Low-latency)</SelectItem>
-                      <SelectItem value="tesseract">Tesseract (Fallback)</SelectItem>
-                      <SelectItem value="google_vision">Google Vision API</SelectItem>
-                      <SelectItem value="omniparser">Omniparser (Structured)</SelectItem>
+                      <SelectItem value="easyocr">
+                        EasyOCR (Handwriting)
+                      </SelectItem>
+                      <SelectItem value="paddleocr">
+                        PaddleOCR (Low-latency)
+                      </SelectItem>
+                      <SelectItem value="tesseract">
+                        Tesseract (Fallback)
+                      </SelectItem>
+                      <SelectItem value="google_vision">
+                        Google Vision API
+                      </SelectItem>
+                      <SelectItem value="omniparser">
+                        Omniparser (Structured)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -379,4 +400,3 @@ export function OCRJobManager() {
     </div>
   )
 }
-

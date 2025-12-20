@@ -13,8 +13,8 @@ Based on the API endpoints available and the PRD requirements, here are the func
 ## Missing Functionalities ❌
 
 ### 1. **Category Filtering** 🔴 HIGH PRIORITY
-**Status:** API supports it, UI missing  
-**API Endpoint:** `GET /api/v1/connectors/list?category=Communication%20%26%20Collaboration`  
+**Status:** API supports it, UI missing
+**API Endpoint:** `GET /api/v1/connectors/list?category=Communication%20%26%20Collaboration`
 **What's Missing:**
 - Category filter dropdown/buttons in the UI
 - Visual category badges/chips
@@ -33,8 +33,8 @@ Based on the API endpoints available and the PRD requirements, here are the func
 ---
 
 ### 2. **Status Filtering** 🟡 MEDIUM PRIORITY
-**Status:** API supports it, UI missing  
-**API Endpoint:** `GET /api/v1/connectors/list?status_filter=beta`  
+**Status:** API supports it, UI missing
+**API Endpoint:** `GET /api/v1/connectors/list?status_filter=beta`
 **What's Missing:**
 - Status filter dropdown (draft, beta, stable, deprecated)
 - Visual status indicators in the table
@@ -47,7 +47,7 @@ Status: [All] [Beta] [Stable] [Deprecated]
 ---
 
 ### 3. **Authorization Status Display** 🔴 HIGH PRIORITY
-**Status:** Partially implemented  
+**Status:** Partially implemented
 **What's Missing:**
 - Show authorization status in the table (Authorized ✅ / Not Authorized ❌)
 - Check if user has authorized the connector before showing "Authorize" button
@@ -68,8 +68,8 @@ Status: [All] [Beta] [Stable] [Deprecated]
 ---
 
 ### 4. **Rotate Credentials** 🟡 MEDIUM PRIORITY
-**Status:** API exists, UI missing  
-**API Endpoint:** `POST /api/v1/connectors/{slug}/rotate`  
+**Status:** API exists, UI missing
+**API Endpoint:** `POST /api/v1/connectors/{slug}/rotate`
 **What's Missing:**
 - "Rotate Credentials" button in connector details modal
 - Confirmation dialog before rotation
@@ -88,8 +88,8 @@ In connector details modal:
 ---
 
 ### 5. **Refresh Tokens** 🟡 MEDIUM PRIORITY
-**Status:** API exists, UI missing  
-**API Endpoint:** `POST /api/v1/connectors/{slug}/refresh`  
+**Status:** API exists, UI missing
+**API Endpoint:** `POST /api/v1/connectors/{slug}/refresh`
 **What's Missing:**
 - "Refresh Tokens" button in connector details modal
 - Automatic token refresh status indicator
@@ -105,7 +105,7 @@ Token Status: ✅ Valid (expires in 2 hours)
 ---
 
 ### 6. **Disconnect/Revoke Authorization** 🔴 HIGH PRIORITY
-**Status:** API missing, UI missing  
+**Status:** API missing, UI missing
 **What's Missing:**
 - "Disconnect" or "Revoke Authorization" button
 - Confirmation dialog
@@ -128,7 +128,7 @@ Authorization Status: ✅ Authorized
 ---
 
 ### 7. **View Connector Usage** 🟢 LOW PRIORITY
-**Status:** Not implemented  
+**Status:** Not implemented
 **What's Missing:**
 - Show where connectors are used (workflows, agents)
 - List of workflows using this connector
@@ -150,8 +150,8 @@ Usage:
 ---
 
 ### 8. **Enable/Disable Connector** 🟡 MEDIUM PRIORITY
-**Status:** API exists, UI missing  
-**API Endpoint:** `PATCH /api/v1/connectors/{slug}/status`  
+**Status:** API exists, UI missing
+**API Endpoint:** `PATCH /api/v1/connectors/{slug}/status`
 **What's Missing:**
 - Toggle to enable/disable connector
 - Visual indicator of enabled/disabled status
@@ -170,8 +170,8 @@ Status: [Enabled] [Disabled]
 ---
 
 ### 9. **View Connector Versions** 🟢 LOW PRIORITY
-**Status:** API exists, UI missing  
-**API Endpoint:** `GET /api/v1/connectors/{slug}/versions`  
+**Status:** API exists, UI missing
+**API Endpoint:** `GET /api/v1/connectors/{slug}/versions`
 **What's Missing:**
 - Version history in connector details modal
 - Ability to switch between versions
@@ -189,7 +189,7 @@ Versions:
 ---
 
 ### 10. **Bulk Operations** 🟢 LOW PRIORITY
-**Status:** Not implemented  
+**Status:** Not implemented
 **What's Missing:**
 - Select multiple connectors
 - Bulk authorize
@@ -204,7 +204,7 @@ Versions:
 ---
 
 ### 11. **Search Enhancement** 🟡 MEDIUM PRIORITY
-**Status:** Basic search exists  
+**Status:** Basic search exists
 **What's Missing:**
 - Search by category
 - Search by status
@@ -219,7 +219,7 @@ Search: [________________] [Category: All ▼] [Status: All ▼] [Auth: All ▼]
 ---
 
 ### 12. **Connector Statistics** 🟢 LOW PRIORITY
-**Status:** Not implemented  
+**Status:** Not implemented
 **What's Missing:**
 - Total connectors count
 - Authorized connectors count
@@ -237,7 +237,7 @@ Statistics:
 ---
 
 ### 13. **Quick Actions Menu** 🟡 MEDIUM PRIORITY
-**Status:** Not implemented  
+**Status:** Not implemented
 **What's Missing:**
 - Dropdown menu with quick actions per connector
 - Actions: View, Authorize, Test, Rotate, Disconnect, Disable
@@ -257,7 +257,7 @@ Statistics:
 ---
 
 ### 14. **Connector Health Status** 🟢 LOW PRIORITY
-**Status:** Not implemented  
+**Status:** Not implemented
 **What's Missing:**
 - Health check for connectors
 - API availability status
@@ -274,7 +274,7 @@ Last Success: 2 hours ago
 ---
 
 ### 15. **Export/Import Connectors** 🟢 LOW PRIORITY
-**Status:** Not implemented  
+**Status:** Not implemented
 **What's Missing:**
 - Export connector configurations
 - Import connector configurations
@@ -347,4 +347,3 @@ The most critical missing features are:
 3. **Disconnect functionality** - Security requirement
 
 These should be prioritized for implementation.
-

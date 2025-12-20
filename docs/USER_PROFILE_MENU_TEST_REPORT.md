@@ -170,4 +170,3 @@ Need to verify:
 - Is the API call succeeding?
 - Is user data being returned?
 - Is there a rendering issue with SidebarFooter?
-

@@ -11,9 +11,17 @@ Endpoints for RAG (Retrieval-Augmented Generation) operations:
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, UploadFile, File, status
+from fastapi import (
+    APIRouter,
+    Body,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import RAGIndex, RAGQuery, RAGSwitchLog
@@ -22,7 +30,6 @@ from app.rag.service import (
     RAGServiceError,
     default_rag_service,
 )
-
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
@@ -34,12 +41,14 @@ router = APIRouter(prefix="/rag", tags=["rag"])
 
 class RAGIndexCreate(BaseModel):
     """Request model for creating a RAG index."""
+
     name: str = Field(max_length=255)
     vector_db_type: str = Field(max_length=50, default="chromadb")
 
 
 class RAGIndexPublic(BaseModel):
     """Public RAG index model."""
+
     id: uuid.UUID
     name: str
     vector_db_type: str
@@ -52,6 +61,7 @@ class RAGIndexPublic(BaseModel):
 
 class RAGQueryRequest(BaseModel):
     """Request model for RAG query."""
+
     index_id: uuid.UUID
     query_text: str = Field(max_length=5000)
     top_k: int = Field(default=5, ge=1, le=100)
@@ -60,6 +70,7 @@ class RAGQueryRequest(BaseModel):
 
 class RAGQueryResponse(BaseModel):
     """Response model for RAG query."""
+
     query_id: str
     vector_db: str
     results: dict[str, Any]
@@ -68,12 +79,14 @@ class RAGQueryResponse(BaseModel):
 
 class RAGSwitchEvaluateRequest(BaseModel):
     """Request model for evaluating RAG routing."""
+
     index_id: uuid.UUID
     query_requirements: dict[str, Any] = Field(default_factory=dict)
 
 
 class RAGSwitchEvaluateResponse(BaseModel):
     """Response model for RAG routing evaluation."""
+
     selected_vector_db: str
     routing_reason: str
     index_statistics: dict[str, Any]
@@ -82,6 +95,7 @@ class RAGSwitchEvaluateResponse(BaseModel):
 
 class RAGDocumentAddRequest(BaseModel):
     """Request model for adding a document to a RAG index."""
+
     index_id: uuid.UUID
     content: str = Field(max_length=100000)
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -90,6 +104,7 @@ class RAGDocumentAddRequest(BaseModel):
 
 class RAGDocumentAddResponse(BaseModel):
     """Response model for adding a document."""
+
     document_id: str
     index_id: str
 
@@ -99,7 +114,9 @@ class RAGDocumentAddResponse(BaseModel):
 # ============================================================================
 
 
-@router.post("/index", response_model=RAGIndexPublic, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/index", response_model=RAGIndexPublic, status_code=status.HTTP_201_CREATED
+)
 def create_index(
     *,
     session: SessionDep,
@@ -145,14 +162,14 @@ def get_index(
     Get a RAG index by ID.
     """
     index = default_rag_service.get_index(session=session, index_id=index_id)
-    
+
     # Check ownership
     if index.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions",
         )
-    
+
     return index
 
 
@@ -165,7 +182,7 @@ def query_index(
 ) -> Any:
     """
     Query a RAG index.
-    
+
     Automatically routes to the appropriate vector database based on:
     - Dataset size
     - Query requirements
@@ -173,13 +190,13 @@ def query_index(
     """
     # Verify index exists and user has access
     index = default_rag_service.get_index(session=session, index_id=query_in.index_id)
-    
+
     if index.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions",
         )
-    
+
     try:
         result = default_rag_service.query(
             session=session,
@@ -210,19 +227,21 @@ def evaluate_routing(
 ) -> Any:
     """
     Evaluate routing decision for a RAG query without executing it.
-    
+
     Useful for understanding which vector database would be selected
     for a given query and index.
     """
     # Verify index exists and user has access
-    index = default_rag_service.get_index(session=session, index_id=evaluate_in.index_id)
-    
+    index = default_rag_service.get_index(
+        session=session, index_id=evaluate_in.index_id
+    )
+
     if index.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions",
         )
-    
+
     try:
         evaluation = default_rag_service.evaluate_routing(
             session=session,
@@ -242,7 +261,11 @@ def evaluate_routing(
         )
 
 
-@router.post("/document/upload", response_model=RAGDocumentAddResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/document/upload",
+    response_model=RAGDocumentAddResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_document(
     *,
     session: SessionDep,
@@ -254,34 +277,34 @@ async def upload_document(
 ) -> Any:
     """
     Upload a file and add it to a RAG index.
-    
+
     Uploads file to Supabase Storage, then adds it to the RAG index.
     """
     from app.services.storage import default_storage_service
-    
+
     if not default_storage_service.is_available:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Storage service is not available. Check Supabase configuration.",
         )
-    
+
     # Verify index exists and user has access
     index = default_rag_service.get_index(session=session, index_id=index_id)
-    
+
     if index.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions",
         )
-    
+
     try:
         # Read file data
         file_data = await file.read()
-        
+
         # Generate storage path: rag-files/{user_id}/{index_id}/{filename}
         storage_path = f"{current_user.id}/{index_id}/{file.filename}"
         bucket = "rag-files"
-        
+
         # Upload to Supabase Storage
         upload_result = default_storage_service.upload_file(
             bucket=bucket,
@@ -295,13 +318,13 @@ async def upload_document(
                 "uploaded_by": current_user.email,
             },
         )
-        
+
         # Add storage info to metadata
         if not metadata:
             metadata = {}
         metadata["storage_bucket"] = bucket
         metadata["storage_path"] = storage_path
-        
+
         # Add document from storage
         document = default_rag_service.add_document_from_storage(
             session=session,
@@ -311,7 +334,7 @@ async def upload_document(
             metadata=metadata,
             embedding=embedding,
         )
-        
+
         return {
             "document_id": str(document.id),
             "index_id": str(document.index_id),
@@ -333,7 +356,11 @@ async def upload_document(
         )
 
 
-@router.post("/document", response_model=RAGDocumentAddResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/document",
+    response_model=RAGDocumentAddResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def add_document(
     *,
     session: SessionDep,
@@ -344,14 +371,16 @@ def add_document(
     Add a document to a RAG index (from text content).
     """
     # Verify index exists and user has access
-    index = default_rag_service.get_index(session=session, index_id=document_in.index_id)
-    
+    index = default_rag_service.get_index(
+        session=session, index_id=document_in.index_id
+    )
+
     if index.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions",
         )
-    
+
     try:
         document = default_rag_service.add_document(
             session=session,
@@ -387,11 +416,11 @@ def get_routing_logs(
 ) -> Any:
     """
     Get routing decision logs.
-    
+
     Returns logs of routing decisions made for RAG queries.
     """
     statement = select(RAGSwitchLog)
-    
+
     # Filter by index_id if provided (via query_id -> query -> index_id)
     if index_id:
         # Get queries for this index
@@ -399,7 +428,7 @@ def get_routing_logs(
             select(RAGQuery).where(RAGQuery.index_id == index_id)
         ).all()
         query_ids = [q.id for q in queries]
-        
+
         # Verify user owns the index
         index = session.get(RAGIndex, index_id)
         if not index:
@@ -412,13 +441,13 @@ def get_routing_logs(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough permissions",
             )
-        
+
         if query_ids:
             statement = statement.where(RAGSwitchLog.query_id.in_(query_ids))
         else:
             # No queries for this index, return empty
             return []
-    
+
     # Filter by query_id if provided
     if query_id:
         # Verify user owns the query's index
@@ -435,7 +464,7 @@ def get_routing_logs(
                 detail="Not enough permissions",
             )
         statement = statement.where(RAGSwitchLog.query_id == query_id)
-    
+
     # If no filters, only show logs for user's indexes
     if not index_id and not query_id:
         # Get all user's indexes
@@ -444,27 +473,27 @@ def get_routing_logs(
             owner_id=current_user.id,
         )
         user_index_ids = [idx.id for idx in user_indexes]
-        
+
         if user_index_ids:
             # Get queries for user's indexes
             queries = session.exec(
                 select(RAGQuery).where(RAGQuery.index_id.in_(user_index_ids))
             ).all()
             query_ids = [q.id for q in queries]
-            
+
             if query_ids:
                 statement = statement.where(RAGSwitchLog.query_id.in_(query_ids))
             else:
                 return []
         else:
             return []
-    
+
     # Order by created_at descending
     statement = statement.order_by(RAGSwitchLog.created_at.desc())
-    
+
     # Apply pagination
     logs = session.exec(statement.offset(skip).limit(limit)).all()
-    
+
     return [
         {
             "id": str(log.id),
@@ -492,7 +521,7 @@ def get_query(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="RAG query not found",
         )
-    
+
     # Verify user owns the query's index
     index = session.get(RAGIndex, query.index_id)
     if index and index.owner_id != current_user.id:
@@ -500,7 +529,7 @@ def get_query(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions",
         )
-    
+
     return {
         "id": str(query.id),
         "index_id": str(query.index_id),
@@ -520,15 +549,15 @@ def validate_agent0_prompt(
 ) -> Any:
     """
     Validate an Agent0 prompt for RAG usage.
-    
+
     Agent0 is a belief/goal reactive agent framework that can use RAG
     for context retrieval. This endpoint validates that a prompt is
     suitable for Agent0 execution with RAG.
-    
+
     Request Body:
     - prompt: Agent0 prompt to validate
     - context: Optional context dictionary
-    
+
     Returns:
     - Validation result with suggestions
     """
@@ -538,36 +567,52 @@ def validate_agent0_prompt(
         "warnings": [],
         "suggestions": [],
     }
-    
+
     # Check prompt length
     if len(prompt) < 10:
         validation_result["is_valid"] = False
-        validation_result["warnings"].append("Prompt is too short (minimum 10 characters)")
-    
+        validation_result["warnings"].append(
+            "Prompt is too short (minimum 10 characters)"
+        )
+
     if len(prompt) > 10000:
-        validation_result["warnings"].append("Prompt is very long (over 10k characters)")
-        validation_result["suggestions"].append("Consider breaking into smaller prompts")
-    
+        validation_result["warnings"].append(
+            "Prompt is very long (over 10k characters)"
+        )
+        validation_result["suggestions"].append(
+            "Consider breaking into smaller prompts"
+        )
+
     # Check for RAG-related keywords
-    rag_keywords = ["retrieve", "search", "find", "query", "context", "knowledge", "information"]
+    rag_keywords = [
+        "retrieve",
+        "search",
+        "find",
+        "query",
+        "context",
+        "knowledge",
+        "information",
+    ]
     has_rag_intent = any(keyword in prompt.lower() for keyword in rag_keywords)
-    
+
     if not has_rag_intent:
         validation_result["suggestions"].append(
             "Prompt doesn't seem to require RAG. Consider if RAG is necessary."
         )
-    
+
     # Check for Agent0-specific patterns
     agent0_patterns = ["goal", "belief", "plan", "action", "state"]
     has_agent0_patterns = any(pattern in prompt.lower() for pattern in agent0_patterns)
-    
+
     if not has_agent0_patterns:
         validation_result["suggestions"].append(
             "Prompt may not be optimized for Agent0. Consider adding goal/belief context."
         )
-    
+
     return {
-        "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,  # Truncate for response
+        "prompt": prompt[:100] + "..."
+        if len(prompt) > 100
+        else prompt,  # Truncate for response
         "validation": validation_result,
         "recommended_index_type": "chromadb" if len(prompt) < 1000 else "milvus",
     }
@@ -583,17 +628,17 @@ def start_finetune_job(
 ) -> Any:
     """
     Start a RAG fine-tuning job.
-    
+
     Request Body:
     - index_id: RAG index ID to fine-tune
     - config: Fine-tuning configuration
     - dataset_urls: List of dataset URLs for training
-    
+
     Returns:
     - Fine-tuning job details
     """
-    from app.models import RAGFinetuneJob, RAGFinetuneDataset
-    
+    from app.models import RAGFinetuneDataset, RAGFinetuneJob
+
     # Verify user owns the index
     index = session.get(RAGIndex, index_id)
     if not index:
@@ -601,13 +646,13 @@ def start_finetune_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="RAG index not found",
         )
-    
+
     if index.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions",
         )
-    
+
     # Create fine-tuning job
     job = RAGFinetuneJob(
         index_id=index_id,
@@ -617,7 +662,7 @@ def start_finetune_job(
     session.add(job)
     session.commit()
     session.refresh(job)
-    
+
     # Create dataset records
     datasets = []
     for dataset_url in dataset_urls:
@@ -627,12 +672,12 @@ def start_finetune_job(
         )
         session.add(dataset)
         datasets.append(dataset)
-    
+
     session.commit()
-    
+
     # TODO: Start actual fine-tuning process (background task)
     # For now, this is a placeholder that creates the job record
-    
+
     return {
         "id": str(job.id),
         "index_id": str(index_id),
@@ -641,4 +686,3 @@ def start_finetune_job(
         "dataset_count": len(datasets),
         "started_at": job.started_at.isoformat(),
     }
-

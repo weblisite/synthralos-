@@ -7,10 +7,11 @@ API endpoints for web scraping operations.
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import BaseModel, HttpUrl
+
 from app.api.deps import CurrentUser, SessionDep
-from app.scraping.service import ScrapingService, ScrapingServiceError, JobNotFoundError
+from app.scraping.service import JobNotFoundError, ScrapingService, ScrapingServiceError
 
 router = APIRouter(prefix="/scraping", tags=["scraping"])
 
@@ -65,17 +66,17 @@ def create_scrape_job(
 ) -> ScrapeJobResponse:
     """
     Create a new scraping job for a single URL.
-    
+
     Args:
         request: Scrape request with URL and optional parameters
         current_user: Current authenticated user
         db: Database session
-        
+
     Returns:
         ScrapeJobResponse with job details
     """
     scraping_service = ScrapingService()
-    
+
     try:
         job = scraping_service.create_job(
             session=session,
@@ -85,7 +86,7 @@ def create_scrape_job(
             scrape_requirements=request.scrape_requirements,
             auto_select_proxy=request.auto_select_proxy,
         )
-        
+
         return ScrapeJobResponse(
             id=str(job.id),
             url=job.url,
@@ -112,17 +113,17 @@ def create_crawl_jobs(
 ) -> list[ScrapeJobResponse]:
     """
     Create multiple scraping jobs for multi-page crawling.
-    
+
     Args:
         request: Crawl request with list of URLs
         current_user: Current authenticated user
         db: Database session
-        
+
     Returns:
         List of ScrapeJobResponse with job details
     """
     scraping_service = ScrapingService()
-    
+
     try:
         jobs = scraping_service.crawl_multiple_pages(
             session=session,
@@ -131,7 +132,7 @@ def create_crawl_jobs(
             proxy_id=request.proxy_id,
             scrape_requirements=request.scrape_requirements,
         )
-        
+
         return [
             ScrapeJobResponse(
                 id=str(job.id),
@@ -161,17 +162,17 @@ def get_scrape_status(
 ) -> ScrapeStatusResponse:
     """
     Get the status of a scraping job and its result if available.
-    
+
     Args:
         job_id: Scraping job ID
         current_user: Current authenticated user
         db: Database session
-        
+
     Returns:
         ScrapeStatusResponse with job status and result
     """
     scraping_service = ScrapingService()
-    
+
     try:
         job_uuid = uuid.UUID(job_id)
     except ValueError:
@@ -179,11 +180,11 @@ def get_scrape_status(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid job ID: {job_id}",
         )
-    
+
     try:
         job = scraping_service.get_job(session=session, job_id=job_uuid)
         result = scraping_service.get_job_result(session=session, job_id=job_uuid)
-        
+
         job_response = ScrapeJobResponse(
             id=str(job.id),
             url=job.url,
@@ -195,7 +196,7 @@ def get_scrape_status(
             error_message=job.error_message,
             result=job.result,
         )
-        
+
         result_response = None
         if result:
             result_response = ScrapeResultResponse(
@@ -206,7 +207,7 @@ def get_scrape_status(
                 result_metadata=result.result_metadata,
                 created_at=result.created_at.isoformat(),
             )
-        
+
         return ScrapeStatusResponse(
             job=job_response,
             result=result_response,
@@ -231,17 +232,17 @@ def process_scrape_job(
 ) -> ScrapeResultResponse:
     """
     Process a scraping job (execute the scraping).
-    
+
     Args:
         job_id: Scraping job ID
         current_user: Current authenticated user
         db: Database session
-        
+
     Returns:
         ScrapeResultResponse with scraping result
     """
     scraping_service = ScrapingService()
-    
+
     try:
         job_uuid = uuid.UUID(job_id)
     except ValueError:
@@ -249,10 +250,10 @@ def process_scrape_job(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid job ID: {job_id}",
         )
-    
+
     try:
         result = scraping_service.process_job(session=session, job_id=job_uuid)
-        
+
         return ScrapeResultResponse(
             id=str(result.id),
             job_id=str(result.job_id),
@@ -284,19 +285,19 @@ def list_scrape_jobs(
 ) -> list[ScrapeJobResponse]:
     """
     List scraping jobs with optional status filter.
-    
+
     Args:
         status: Optional status filter (running, completed, failed)
         skip: Skip count for pagination
         limit: Limit count for pagination
         current_user: Current authenticated user
         db: Database session
-        
+
     Returns:
         List of ScrapeJobResponse
     """
     scraping_service = ScrapingService()
-    
+
     try:
         jobs = scraping_service.list_jobs(
             session=session,
@@ -304,7 +305,7 @@ def list_scrape_jobs(
             skip=skip,
             limit=limit,
         )
-        
+
         return [
             ScrapeJobResponse(
                 id=str(job.id),
@@ -331,31 +332,38 @@ def monitor_page_changes(
     session: SessionDep,
     current_user: CurrentUser,
     url: str = Body(...),
-    check_interval_seconds: int = Body(3600, ge=60, le=86400),  # Default 1 hour, min 1 min, max 24 hours
-    selector: str | None = Body(None),  # Optional CSS selector to monitor specific element
-    notification_webhook: str | None = Body(None),  # Optional webhook URL for notifications
+    check_interval_seconds: int = Body(
+        3600, ge=60, le=86400
+    ),  # Default 1 hour, min 1 min, max 24 hours
+    selector: str | None = Body(
+        None
+    ),  # Optional CSS selector to monitor specific element
+    notification_webhook: str | None = Body(
+        None
+    ),  # Optional webhook URL for notifications
 ) -> Any:
     """
     Monitor a page for changes.
-    
+
     Creates a change detection record and schedules periodic checks.
-    
+
     Request Body:
     - url: URL to monitor
     - check_interval_seconds: Interval between checks (60-86400 seconds)
     - selector: Optional CSS selector to monitor specific element
     - notification_webhook: Optional webhook URL for change notifications
-    
+
     Returns:
     - Change detection record
     """
-    from app.models import ChangeDetection
     import hashlib
-    
+
+    from app.models import ChangeDetection
+
     # Create initial change detection record
     # First, scrape the page to get baseline content
     scraping_service = ScrapingService()
-    
+
     try:
         # Create a scrape job to get initial content
         scrape_job = scraping_service.create_job(
@@ -364,26 +372,26 @@ def monitor_page_changes(
             engine="beautifulsoup",  # Use simple engine for change detection
             scrape_requirements={"simple_html": True},
         )
-        
+
         # Process the job to get content
         result = scraping_service.process_job(session=session, job_id=scrape_job.id)
-        
+
         if not result:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to get initial page content",
             )
-        
+
         # Extract content (use selector if provided)
         content = result.content
         if selector and result.html:
             # TODO: Parse HTML and extract content by selector
             # For now, use full content
             content = result.content
-        
+
         # Calculate content hash
         content_hash = hashlib.sha256(content.encode()).hexdigest()
-        
+
         # Create change detection record
         change_detection = ChangeDetection(
             url=url,
@@ -394,10 +402,10 @@ def monitor_page_changes(
         session.add(change_detection)
         session.commit()
         session.refresh(change_detection)
-        
+
         # TODO: Schedule periodic checks (would use a scheduler service)
         # For now, this creates the record and returns it
-        
+
         return {
             "id": str(change_detection.id),
             "url": url,
@@ -408,10 +416,9 @@ def monitor_page_changes(
             "created_at": change_detection.detected_at.isoformat(),
             "note": "Change detection monitoring started. Periodic checks will be scheduled.",
         }
-        
+
     except ScrapingServiceError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to initialize change detection: {str(e)}",
         )
-

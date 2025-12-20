@@ -95,4 +95,3 @@ The fix implemented using `window.location.href = "/login"` successfully:
 - Route protection (`beforeLoad` hook) correctly checks for session and redirects
 - Full page reload ensures all state is cleared properly
 - No race conditions or cached state issues observed
-

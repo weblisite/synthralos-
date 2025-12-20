@@ -40,7 +40,7 @@ def init_all_connectors(
     """Initialize all connectors from manifest files (admin only)."""
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin only")
-    
+
     # Run registration script logic here
     ...
 ```
@@ -69,5 +69,3 @@ SELECT slug, name, status, is_platform FROM connector LIMIT 10;
 - Each connector gets a version record in `connectorversion` table
 - The registration script skips connectors that already exist
 - All connectors are marked with status from manifest (draft, beta, stable)
-
-

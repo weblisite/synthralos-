@@ -5,8 +5,8 @@
 When deploying to Render, you may encounter this error:
 
 ```
-sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection is bad: 
-connection to server at "2600:1f1c:f9:4d08:5ce0:1deb:c0df:c81c", port 5432 failed: 
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection is bad:
+connection to server at "2600:1f1c:f9:4d08:5ce0:1deb:c0df:c81c", port 5432 failed:
 Network is unreachable
 ```
 
@@ -77,4 +77,3 @@ If you must use direct connection, you can try adding `?options=-c%20ipv4_only=1
 - [ ] Hostname contains `pooler.supabase.com`
 - [ ] Port is `6543` (not `5432`)
 - [ ] Password is correctly URL-encoded if it contains special characters
-

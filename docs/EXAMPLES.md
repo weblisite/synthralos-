@@ -1110,4 +1110,3 @@ A complete workflow that monitors product prices and sends alerts.
 ---
 
 For more information, see the [API Documentation](../backend/openapi.json) and [PRD](./PRD.md).
-

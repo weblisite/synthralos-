@@ -172,4 +172,3 @@ Both work identically, but using `apiClient` provides:
 - Consistent interface across platform
 - Easy migration path to OpenAPI SDK when endpoint is added to schema
 - Centralized error handling and authentication
-

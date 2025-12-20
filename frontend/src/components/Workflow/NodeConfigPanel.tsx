@@ -7,6 +7,7 @@
 import type { Node } from "@xyflow/react"
 import { X } from "lucide-react"
 import { useMemo } from "react"
+import { MonacoEditor } from "@/components/Common/MonacoEditor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { MonacoEditor } from "@/components/Common/MonacoEditor"
 
 interface NodeConfig {
   trigger_type?: string
@@ -56,7 +56,10 @@ export function NodeConfigPanel({
   onClose,
   onUpdate,
 }: NodeConfigPanelProps) {
-  const config: NodeConfig = useMemo(() => (node?.data?.config || {}) as NodeConfig, [node])
+  const config: NodeConfig = useMemo(
+    () => (node?.data?.config || {}) as NodeConfig,
+    [node],
+  )
 
   if (!node) {
     return null

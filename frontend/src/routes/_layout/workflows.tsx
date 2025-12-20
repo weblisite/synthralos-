@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { WorkflowBuilder } from "@/components/Workflow/WorkflowBuilder"
-import { apiClient } from "@/lib/apiClient"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiClient } from "@/lib/apiClient"
 
 export const Route = createFileRoute("/_layout/workflows")({
   component: WorkflowsPage,
@@ -74,7 +74,7 @@ function WorkflowsPage() {
     if (isSaving) {
       return
     }
-    
+
     if (!workflowName.trim()) {
       showErrorToast("Workflow name is required")
       return
@@ -115,22 +115,25 @@ function WorkflowsPage() {
         }
       }
 
-      const workflow = await apiClient.request<{ id: string }>("/api/v1/workflows", {
-        method: "POST",
-        body: JSON.stringify({
-          name: workflowName,
-          description: workflowDescription || null,
-          trigger_config: triggerConfig,
-          graph_config: graphConfig,
-        }),
-      })
-      
+      const workflow = await apiClient.request<{ id: string }>(
+        "/api/v1/workflows",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            name: workflowName,
+            description: workflowDescription || null,
+            trigger_config: triggerConfig,
+            graph_config: graphConfig,
+          }),
+        },
+      )
+
       setWorkflowId(workflow.id)
-      
+
       // Show prominent success notification
       showSuccessToast(
         `Workflow "${workflowName}" has been saved successfully!`,
-        "✅ Workflow Saved"
+        "✅ Workflow Saved",
       )
 
       // Reset form after a short delay to allow toast to show
@@ -188,7 +191,7 @@ function WorkflowsPage() {
         {
           method: "POST",
           body: JSON.stringify(triggerData),
-        }
+        },
       )
       showSuccessToast(`Workflow execution started: ${execution.execution_id}`)
 
@@ -199,12 +202,7 @@ function WorkflowsPage() {
         error instanceof Error ? error.message : "Failed to run workflow",
       )
     }
-  }, [
-    workflowId,
-    nodes,
-    showErrorToast,
-    showSuccessToast,
-  ])
+  }, [workflowId, nodes, showErrorToast, showSuccessToast])
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">

@@ -57,7 +57,7 @@ class ConnectorNode:
     def execute(self, state):
         # Get connector from registry
         connector = registry.get_connector(self.connector_slug)
-        
+
         # Invoke action
         result = connector_loader.invoke_action(
             connector_version=connector,
@@ -65,7 +65,7 @@ class ConnectorNode:
             input_data=self.input_data,
             credentials=self.get_credentials()
         )
-        
+
         return result
 ```
 
@@ -91,7 +91,7 @@ class ConnectorNode:
 **Example Agent Task:**
 ```
 User: "Send an email to john@synthralos.ai with subject 'Meeting'"
-Agent: 
+Agent:
   1. Identifies need for Gmail connector
   2. Checks if Gmail is authorized
   3. If not authorized, prompts user: "NeedConnector(gmail)"
@@ -105,12 +105,12 @@ class AgentRouter:
     def run_task(self, task):
         # Agent framework discovers available tools
         tools = self.get_available_tools()  # Includes connectors
-        
+
         # Agent decides to use connector
         if agent_needs_connector:
             connector_tool = self.get_connector_tool("gmail", "send_email")
             result = agent.execute_with_tool(connector_tool, task)
-        
+
         return result
 ```
 
@@ -138,7 +138,7 @@ User: "/connect gmail"
 System: "Redirecting to Gmail authorization..."
 
 User: "Send an email to team@synthralos.ai"
-System: 
+System:
   1. Detects email intent
   2. Uses Gmail connector
   3. Sends email
@@ -153,7 +153,7 @@ class ChatProcessor:
         if message.startswith("/connect"):
             connector_slug = message.split()[1]
             return self.initiate_oauth(connector_slug)
-        
+
         # Detect intent
         if self.detects_email_intent(message):
             connector = self.get_connector("gmail")
@@ -200,10 +200,10 @@ def invoke_connector_action(
 ):
     # Get connector
     connector_version = registry.get_connector(slug)
-    
+
     # Get user's OAuth tokens
     tokens = oauth_service.get_tokens(slug, current_user.id)
-    
+
     # Invoke action
     result = connector_loader.invoke_action(
         connector_version=connector_version,
@@ -211,7 +211,7 @@ def invoke_connector_action(
         input_data=input_data,
         credentials=tokens
     )
-    
+
     return result
 ```
 
@@ -251,10 +251,10 @@ class ConnectorWebhookService:
     def handle_webhook(self, connector_slug, payload, signature):
         # Validate signature
         self.validate_signature(connector_slug, payload, signature)
-        
+
         # Map to workflow signal
         signal = self.map_to_signal(connector_slug, payload)
-        
+
         # Emit signal to workflow engine
         workflow_engine.emit_signal(signal)
 ```
@@ -479,13 +479,13 @@ def execute_node(node):
         connector_slug = node.config.connector_slug
         action_id = node.config.action_id
         input_data = node.config.input_data
-        
+
         # Get connector
         connector = registry.get_connector(connector_slug)
-        
+
         # Get user's tokens
         tokens = oauth_service.get_tokens(connector_slug, user_id)
-        
+
         # Invoke action
         result = loader.invoke_action(
             connector_version=connector,
@@ -493,7 +493,7 @@ def execute_node(node):
             input_data=input_data,
             credentials=tokens
         )
-        
+
         return result
 ```
 
@@ -535,15 +535,15 @@ def execute_node(node):
 def run_task(task):
     # Agent discovers tools
     tools = get_available_tools()  # Includes connectors
-    
+
     # Agent decides to use connector
     if agent_needs_email:
         connector_tool = get_connector_tool("gmail", "send_email")
-        
+
         # Check authorization
         if not is_authorized("gmail", user_id):
             return {"need_connector": "gmail"}
-        
+
         # Invoke
         result = connector_tool.invoke(task.extracted_params)
         return {"result": result}
@@ -585,20 +585,20 @@ def run_task(task):
 def handle_webhook(slug, payload, signature):
     # Validate
     webhook_service.validate_signature(slug, payload, signature)
-    
+
     # Map to signal
     signal = webhook_service.map_to_signal(slug, payload)
-    
+
     # Emit to workflow engine
     workflow_engine.emit_signal(signal)
-    
+
     return {"success": True}
 
 # Workflow Engine
 def on_signal_received(signal):
     # Find workflows listening to signal
     workflows = get_workflows_by_signal(signal.name)
-    
+
     # Start executions
     for workflow in workflows:
         start_execution(workflow.id, trigger_data=signal.data)
@@ -678,7 +678,7 @@ System: [Invokes Gmail connector] "Email sent!"
 
 ### 4. Frontend Component Integration
 
-**Files**: 
+**Files**:
 - `frontend/src/components/Connectors/ConnectorCatalog.tsx`
 - `frontend/src/components/Workflow/WorkflowBuilder.tsx`
 - `frontend/src/components/Chat/`
@@ -822,4 +822,3 @@ All connectors use **OAuth for security**, **Nango for unified management**, and
 - [Nango Integration](./NANGO_INTEGRATION.md) - OAuth management
 - [API Documentation](../backend/app/api/routes/connectors.py) - API reference
 - [Workflow Examples](./EXAMPLES.md) - Example workflows
-

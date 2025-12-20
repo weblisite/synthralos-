@@ -160,8 +160,8 @@ Content-Type: application/json
 **Only for development/testing:**
 
 ```sql
-UPDATE "user" 
-SET is_superuser = true 
+UPDATE "user"
+SET is_superuser = true
 WHERE email = 'admin@synthralos.ai';
 ```
 
@@ -250,7 +250,7 @@ const items = currentUser?.is_superuser
 ```typescript
 function Admin() {
   const { user: currentUser } = useAuth()
-  
+
   // Check if user is admin
   if (!currentUser?.is_superuser) {
     return (
@@ -260,7 +260,7 @@ function Admin() {
       </div>
     )
   }
-  
+
   // Admin panel content
 }
 ```
@@ -346,4 +346,3 @@ if (user?.is_superuser) {
 ---
 
 **Key Point:** Admins are **superusers** - they have access to everything regular users have, **plus** admin-only features. They don't lose access to regular features when they become admins.
-

@@ -103,4 +103,3 @@ If you see errors:
 - Restart both servers after updating `.env` files
 - Check browser console for errors
 - Verify Supabase project is active and accessible
-

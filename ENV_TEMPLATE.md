@@ -185,4 +185,3 @@ These are used by agent frameworks and RAG services:
 - **Production**: Change all `changethis` values and generate secure random keys before deploying.
 - **Docker**: When running in Docker Compose, most variables are automatically set from the `.env` file.
 - **Frontend**: Frontend-specific variables (like `VITE_WS_URL`) should be prefixed with `VITE_` for Vite to expose them.
-

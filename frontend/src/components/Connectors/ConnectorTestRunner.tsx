@@ -4,12 +4,18 @@
  * Allows testing connector actions and triggers.
  */
 
+import { Loader2, Play } from "lucide-react"
 import { useState } from "react"
-import { Play, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { MonacoEditor } from "@/components/Common/MonacoEditor"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -56,7 +62,7 @@ export function ConnectorTestRunner({
       let parsedInput
       try {
         parsedInput = JSON.parse(inputData)
-      } catch (e) {
+      } catch (_e) {
         showErrorToast("Invalid JSON in input data")
         return
       }
@@ -83,12 +89,12 @@ export function ConnectorTestRunner({
         setResult(data)
       } else if (testType === "trigger" && selectedTrigger) {
         // Trigger testing would require webhook simulation
-        showErrorToast("Trigger testing requires webhook simulation (not implemented)")
+        showErrorToast(
+          "Trigger testing requires webhook simulation (not implemented)",
+        )
       }
     } catch (error) {
-      showErrorToast(
-        error instanceof Error ? error.message : "Test failed",
-      )
+      showErrorToast(error instanceof Error ? error.message : "Test failed")
     } finally {
       setIsRunning(false)
     }
@@ -105,7 +111,10 @@ export function ConnectorTestRunner({
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label>Test Type</Label>
-          <Select value={testType} onValueChange={(v) => setTestType(v as "action" | "trigger")}>
+          <Select
+            value={testType}
+            onValueChange={(v) => setTestType(v as "action" | "trigger")}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -165,7 +174,11 @@ export function ConnectorTestRunner({
 
         <Button
           onClick={handleTest}
-          disabled={isRunning || (testType === "action" && !selectedAction) || (testType === "trigger" && !selectedTrigger)}
+          disabled={
+            isRunning ||
+            (testType === "action" && !selectedAction) ||
+            (testType === "trigger" && !selectedTrigger)
+          }
           className="w-full"
         >
           {isRunning ? (
@@ -193,4 +206,3 @@ export function ConnectorTestRunner({
     </Card>
   )
 }
-

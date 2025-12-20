@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
-import { Footer } from "@/components/Common/Footer"
 import { AgUIProvider } from "@/components/Chat/AgUIProvider"
+import { Footer } from "@/components/Common/Footer"
 import AppSidebar from "@/components/Sidebar/AppSidebar"
 import {
   SidebarInset,

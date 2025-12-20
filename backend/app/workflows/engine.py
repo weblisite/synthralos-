@@ -20,23 +20,26 @@ from app.workflows.state import ExecutionState, NodeExecutionResult, WorkflowSta
 
 class WorkflowEngineError(Exception):
     """Base exception for workflow engine errors."""
+
     pass
 
 
 class WorkflowNotFoundError(WorkflowEngineError):
     """Workflow not found."""
+
     pass
 
 
 class ExecutionNotFoundError(WorkflowEngineError):
     """Execution not found."""
+
     pass
 
 
 class WorkflowEngine:
     """
     Core workflow execution engine.
-    
+
     Manages workflow execution lifecycle:
     - Creating executions
     - Executing nodes
@@ -44,7 +47,7 @@ class WorkflowEngine:
     - Handling errors
     - Supporting pause/resume
     """
-    
+
     def __init__(
         self,
         retry_manager: RetryManager | None = None,
@@ -53,7 +56,7 @@ class WorkflowEngine:
     ):
         """
         Initialize the workflow engine.
-        
+
         Args:
             retry_manager: Retry manager instance (defaults to default_retry_manager)
             signal_handler: Signal handler instance (defaults to default_signal_handler)
@@ -62,7 +65,7 @@ class WorkflowEngine:
         self.retry_manager = retry_manager or default_retry_manager
         self.signal_handler = signal_handler or default_signal_handler
         self.self_healing_service = self_healing_service or default_self_healing_service
-    
+
     def create_execution(
         self,
         session: Session,
@@ -71,12 +74,12 @@ class WorkflowEngine:
     ) -> WorkflowExecution:
         """
         Create a new workflow execution.
-        
+
         Args:
             session: Database session
             workflow_id: ID of the workflow to execute
             trigger_data: Initial data for the workflow
-            
+
         Returns:
             WorkflowExecution instance
         """
@@ -84,10 +87,10 @@ class WorkflowEngine:
         workflow = session.get(Workflow, workflow_id)
         if not workflow:
             raise WorkflowNotFoundError(f"Workflow {workflow_id} not found")
-        
+
         # Generate execution ID
         execution_id = f"exec-{uuid.uuid4().hex[:12]}"
-        
+
         # Create execution record
         execution = WorkflowExecution(
             workflow_id=workflow_id,
@@ -108,11 +111,11 @@ class WorkflowEngine:
                 "retry_count": 0,
             },
         )
-        
+
         session.add(execution)
         session.commit()
         session.refresh(execution)
-        
+
         # Log execution start
         self._log_execution(
             session,
@@ -121,9 +124,9 @@ class WorkflowEngine:
             "info",
             f"Workflow execution started: {execution_id}",
         )
-        
+
         return execution
-    
+
     def get_execution_state(
         self,
         session: Session,
@@ -131,20 +134,20 @@ class WorkflowEngine:
     ) -> ExecutionState:
         """
         Get execution state from database.
-        
+
         Args:
             session: Database session
             execution_id: Execution ID
-            
+
         Returns:
             ExecutionState instance
         """
         execution = session.get(WorkflowExecution, execution_id)
         if not execution:
             raise ExecutionNotFoundError(f"Execution {execution_id} not found")
-        
+
         return ExecutionState.from_dict(execution.execution_state)
-    
+
     def save_execution_state(
         self,
         session: Session,
@@ -153,7 +156,7 @@ class WorkflowEngine:
     ) -> None:
         """
         Save execution state to database.
-        
+
         Args:
             session: Database session
             execution_id: Execution ID
@@ -162,17 +165,17 @@ class WorkflowEngine:
         execution = session.get(WorkflowExecution, execution_id)
         if not execution:
             raise ExecutionNotFoundError(f"Execution {execution_id} not found")
-        
+
         # Update execution record
         execution.status = state.status
         execution.current_node_id = state.current_node_id
         execution.execution_state = state.to_dict()
         execution.error_message = state.error_message
         execution.retry_count = state.retry_count
-        
+
         session.add(execution)
         session.commit()
-    
+
     def get_workflow_state(
         self,
         session: Session,
@@ -181,30 +184,32 @@ class WorkflowEngine:
     ) -> WorkflowState:
         """
         Get workflow state (nodes and graph configuration).
-        
+
         Args:
             session: Database session
             workflow_id: Workflow ID
             version: Specific version (uses workflow version if None)
-            
+
         Returns:
             WorkflowState instance
         """
         workflow = session.get(Workflow, workflow_id)
         if not workflow:
             raise WorkflowNotFoundError(f"Workflow {workflow_id} not found")
-        
+
         # Use specified version or workflow's current version
         target_version = version or workflow.version
-        
+
         # Get nodes for this workflow
-        nodes_query = select(WorkflowNode).where(WorkflowNode.workflow_id == workflow_id)
+        nodes_query = select(WorkflowNode).where(
+            WorkflowNode.workflow_id == workflow_id
+        )
         nodes = session.exec(nodes_query).all()
-        
+
         # Build node dictionary
         node_dict = {}
         entry_node_id = None
-        
+
         for node in nodes:
             node_dict[node.node_id] = {
                 "node_type": node.node_type,
@@ -212,15 +217,17 @@ class WorkflowEngine:
                 "position_x": node.position_x,
                 "position_y": node.position_y,
             }
-            
+
             # Find entry node (first trigger node or first node)
-            if entry_node_id is None and (node.node_type == "trigger" or not entry_node_id):
+            if entry_node_id is None and (
+                node.node_type == "trigger" or not entry_node_id
+            ):
                 entry_node_id = node.node_id
-        
+
         # Extract edges from graph_config
         edges = []
         graph_config = workflow.graph_config or {}
-        
+
         # Support both LangGraph format and simple edge format
         if "edges" in graph_config:
             edges = graph_config["edges"]
@@ -234,15 +241,16 @@ class WorkflowEngine:
                             edges.append({"from": node_id, "to": next_node})
                     elif isinstance(next_nodes, str):
                         edges.append({"from": node_id, "to": next_nodes})
-        
+
         return WorkflowState(
             workflow_id=workflow_id,
             version=target_version,
             nodes=node_dict,
             edges=edges,
-            entry_node_id=entry_node_id or (list(node_dict.keys())[0] if node_dict else None),
+            entry_node_id=entry_node_id
+            or (list(node_dict.keys())[0] if node_dict else None),
         )
-    
+
     def execute_node(
         self,
         session: Session,
@@ -253,22 +261,22 @@ class WorkflowEngine:
     ) -> NodeExecutionResult:
         """
         Execute a single workflow node.
-        
+
         This is a placeholder that will be extended with actual node execution logic.
         For now, it just records the execution.
-        
+
         Args:
             session: Database session
             execution_id: Execution ID
             node_id: Node ID to execute
             node_config: Node configuration
             input_data: Input data for the node
-            
+
         Returns:
             NodeExecutionResult
         """
         started_at = datetime.utcnow()
-        
+
         # Log node execution start
         self._log_execution(
             session,
@@ -277,7 +285,7 @@ class WorkflowEngine:
             "info",
             f"Executing node: {node_id}",
         )
-        
+
         try:
             # TODO: Actual node execution will be implemented in Phase 1.5 (LangGraph integration)
             # For now, simulate successful execution
@@ -287,10 +295,10 @@ class WorkflowEngine:
                 "node_type": node_config.get("node_type", "unknown"),
                 "input_received": True,
             }
-            
+
             completed_at = datetime.utcnow()
             duration_ms = int((completed_at - started_at).total_seconds() * 1000)
-            
+
             result = NodeExecutionResult(
                 node_id=node_id,
                 status="success",
@@ -299,7 +307,7 @@ class WorkflowEngine:
                 completed_at=completed_at,
                 duration_ms=duration_ms,
             )
-            
+
             # Log success
             self._log_execution(
                 session,
@@ -308,13 +316,13 @@ class WorkflowEngine:
                 "info",
                 f"Node {node_id} completed successfully",
             )
-            
+
             return result
-            
+
         except Exception as e:
             completed_at = datetime.utcnow()
             duration_ms = int((completed_at - started_at).total_seconds() * 1000)
-            
+
             # Attempt self-healing before marking as failed
             healing_result = self.self_healing_service.heal_task(
                 error=e,
@@ -325,10 +333,12 @@ class WorkflowEngine:
                 },
                 context={
                     "execution_id": str(execution_id),
-                    "workflow_id": str(execution_id),  # Will be updated with actual workflow_id
+                    "workflow_id": str(
+                        execution_id
+                    ),  # Will be updated with actual workflow_id
                 },
             )
-            
+
             if healing_result.get("success"):
                 # Log healing success
                 self._log_execution(
@@ -338,27 +348,31 @@ class WorkflowEngine:
                     "info",
                     f"Node {node_id} healed using {healing_result.get('fix_type', 'unknown')}",
                 )
-                
+
                 # Try executing with healed task
                 try:
                     healed_task = healing_result.get("healed_task", {})
                     healed_node_config = healed_task.get("node_config", node_config)
                     healed_input_data = healed_task.get("input_data", input_data)
-                    
+
                     # Retry execution with healed configuration
                     # Note: This is a simplified retry - full implementation would re-execute the node
                     output = {
                         "status": "success",
                         "node_id": node_id,
-                        "node_type": healed_node_config.get("node_type", node_config.get("node_type", "unknown")),
+                        "node_type": healed_node_config.get(
+                            "node_type", node_config.get("node_type", "unknown")
+                        ),
                         "input_received": True,
                         "healed": True,
                         "healing_type": healing_result.get("fix_type"),
                     }
-                    
+
                     completed_at = datetime.utcnow()
-                    duration_ms = int((completed_at - started_at).total_seconds() * 1000)
-                    
+                    duration_ms = int(
+                        (completed_at - started_at).total_seconds() * 1000
+                    )
+
                     result = NodeExecutionResult(
                         node_id=node_id,
                         status="success",
@@ -367,7 +381,7 @@ class WorkflowEngine:
                         completed_at=completed_at,
                         duration_ms=duration_ms,
                     )
-                    
+
                     # Log success after healing
                     self._log_execution(
                         session,
@@ -376,9 +390,9 @@ class WorkflowEngine:
                         "info",
                         f"Node {node_id} completed successfully after healing",
                     )
-                    
+
                     return result
-                    
+
                 except Exception as retry_error:
                     # Healing didn't work, proceed with failure
                     self._log_execution(
@@ -388,7 +402,7 @@ class WorkflowEngine:
                         "warning",
                         f"Node {node_id} healing attempt failed: {str(retry_error)}",
                     )
-            
+
             # If healing failed or wasn't attempted, mark as failed
             result = NodeExecutionResult(
                 node_id=node_id,
@@ -399,7 +413,7 @@ class WorkflowEngine:
                 completed_at=completed_at,
                 duration_ms=duration_ms,
             )
-            
+
             # Log error
             self._log_execution(
                 session,
@@ -408,9 +422,9 @@ class WorkflowEngine:
                 "error",
                 f"Node {node_id} failed: {str(e)}",
             )
-            
+
             return result
-    
+
     def pause_execution(
         self,
         session: Session,
@@ -420,7 +434,7 @@ class WorkflowEngine:
         state = self.get_execution_state(session, execution_id)
         state.status = "paused"
         self.save_execution_state(session, execution_id, state)
-        
+
         self._log_execution(
             session,
             execution_id,
@@ -428,7 +442,7 @@ class WorkflowEngine:
             "info",
             "Execution paused",
         )
-    
+
     def resume_execution(
         self,
         session: Session,
@@ -437,11 +451,13 @@ class WorkflowEngine:
         """Resume a paused execution."""
         state = self.get_execution_state(session, execution_id)
         if state.status not in ("paused", "waiting_for_signal"):
-            raise WorkflowEngineError(f"Execution {execution_id} is not paused or waiting for signal")
-        
+            raise WorkflowEngineError(
+                f"Execution {execution_id} is not paused or waiting for signal"
+            )
+
         state.status = "running"
         self.save_execution_state(session, execution_id, state)
-        
+
         self._log_execution(
             session,
             execution_id,
@@ -449,7 +465,7 @@ class WorkflowEngine:
             "info",
             "Execution resumed",
         )
-    
+
     def terminate_execution(
         self,
         session: Session,
@@ -459,17 +475,19 @@ class WorkflowEngine:
         """Terminate a running or paused execution."""
         state = self.get_execution_state(session, execution_id)
         if state.status not in ("running", "paused", "waiting_for_signal"):
-            raise WorkflowEngineError(f"Execution {execution_id} cannot be terminated (status: {state.status})")
-        
+            raise WorkflowEngineError(
+                f"Execution {execution_id} cannot be terminated (status: {state.status})"
+            )
+
         # Mark as failed with termination reason
         state.status = "failed"
         if reason:
             state.error_message = reason
         else:
             state.error_message = "Execution terminated by user"
-        
+
         self.save_execution_state(session, execution_id, state)
-        
+
         # Update execution record
         execution = session.get(WorkflowExecution, execution_id)
         if execution:
@@ -477,7 +495,7 @@ class WorkflowEngine:
             execution.completed_at = datetime.utcnow()
             execution.error_message = state.error_message
             session.add(execution)
-        
+
         self._log_execution(
             session,
             execution_id,
@@ -485,7 +503,7 @@ class WorkflowEngine:
             "warning",
             f"Execution terminated: {state.error_message}",
         )
-    
+
     def wait_for_signal(
         self,
         session: Session,
@@ -494,7 +512,7 @@ class WorkflowEngine:
     ) -> None:
         """
         Mark execution as waiting for a signal.
-        
+
         Args:
             session: Database session
             execution_id: Execution ID
@@ -503,7 +521,7 @@ class WorkflowEngine:
         state = self.get_execution_state(session, execution_id)
         state.status = "waiting_for_signal"
         self.save_execution_state(session, execution_id, state)
-        
+
         self._log_execution(
             session,
             execution_id,
@@ -511,7 +529,7 @@ class WorkflowEngine:
             "info",
             f"Execution waiting for signal: {signal_type}",
         )
-    
+
     def process_signal(
         self,
         session: Session,
@@ -521,7 +539,7 @@ class WorkflowEngine:
     ) -> None:
         """
         Process a signal and resume execution if waiting.
-        
+
         Args:
             session: Database session
             execution_id: Execution ID
@@ -535,7 +553,7 @@ class WorkflowEngine:
             signal_type,
             signal_data,
         )
-        
+
         # Check if execution is waiting for this signal
         state = self.get_execution_state(session, execution_id)
         if state.status == "waiting_for_signal":
@@ -544,7 +562,7 @@ class WorkflowEngine:
             # Add signal data to execution data
             state.execution_data[f"signal_{signal_type}"] = signal_data
             self.save_execution_state(session, execution_id, state)
-            
+
             self._log_execution(
                 session,
                 execution_id,
@@ -552,10 +570,10 @@ class WorkflowEngine:
                 "info",
                 f"Signal received and processed: {signal_type}",
             )
-        
+
         # Mark signal as processed
         self.signal_handler.mark_signal_processed(session, signal.id)
-    
+
     def complete_execution(
         self,
         session: Session,
@@ -567,14 +585,14 @@ class WorkflowEngine:
         state.status = "completed"
         if final_data:
             state.execution_data.update(final_data)
-        
+
         execution = session.get(WorkflowExecution, execution_id)
         if execution:
             execution.completed_at = datetime.utcnow()
             session.add(execution)
-        
+
         self.save_execution_state(session, execution_id, state)
-        
+
         self._log_execution(
             session,
             execution_id,
@@ -582,7 +600,7 @@ class WorkflowEngine:
             "info",
             "Workflow execution completed",
         )
-    
+
     def fail_execution(
         self,
         session: Session,
@@ -592,7 +610,7 @@ class WorkflowEngine:
     ) -> None:
         """
         Mark execution as failed, optionally scheduling a retry.
-        
+
         Args:
             session: Database session
             execution_id: Execution ID
@@ -601,12 +619,14 @@ class WorkflowEngine:
         """
         state = self.get_execution_state(session, execution_id)
         execution = session.get(WorkflowExecution, execution_id)
-        
+
         if not execution:
             raise ExecutionNotFoundError(f"Execution {execution_id} not found")
-        
+
         # Check if we should retry
-        if schedule_retry and self.retry_manager.should_retry_execution(state.retry_count):
+        if schedule_retry and self.retry_manager.should_retry_execution(
+            state.retry_count
+        ):
             # Schedule retry
             state.retry_count += 1
             state.status = "failed"
@@ -615,13 +635,13 @@ class WorkflowEngine:
                 state.retry_count - 1,  # retry_count is already incremented
                 datetime.utcnow(),
             )
-            
+
             execution.retry_count = state.retry_count
             execution.next_retry_at = state.next_retry_at
             execution.error_message = error_message
-            
+
             self.save_execution_state(session, execution_id, state)
-            
+
             retry_info = self.retry_manager.get_retry_info(state.retry_count - 1)
             self._log_execution(
                 session,
@@ -634,12 +654,12 @@ class WorkflowEngine:
             # Final failure - no more retries
             state.status = "failed"
             state.error_message = error_message
-            
+
             execution.completed_at = datetime.utcnow()
             execution.error_message = error_message
-            
+
             self.save_execution_state(session, execution_id, state)
-            
+
             self._log_execution(
                 session,
                 execution_id,
@@ -647,7 +667,7 @@ class WorkflowEngine:
                 "error",
                 f"Workflow execution failed permanently: {error_message}",
             )
-    
+
     def _log_execution(
         self,
         session: Session,
@@ -666,4 +686,3 @@ class WorkflowEngine:
         )
         session.add(log)
         session.commit()
-

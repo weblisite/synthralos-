@@ -10,13 +10,11 @@ Endpoints for code execution and tool registry:
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlmodel import Session
 
 from app.api.deps import CurrentUser, SessionDep
 from app.code.registry import (
-    CodeToolRegistryError,
     InvalidToolError,
     InvalidVersionError,
     ToolNotFoundError,
@@ -29,7 +27,7 @@ from app.code.service import (
     RuntimeNotAvailableError,
     default_code_execution_service,
 )
-from app.models import CodeExecution, CodeSandbox, CodeToolRegistry
+from app.models import CodeExecution, CodeSandbox
 
 router = APIRouter(prefix="/code", tags=["code"])
 
@@ -37,16 +35,28 @@ router = APIRouter(prefix="/code", tags=["code"])
 # Request/Response Models
 class ExecuteCodeRequest(BaseModel):
     """Request model for code execution."""
+
     code: str = Field(..., description="Code to execute")
-    language: str = Field(..., description="Programming language (python, javascript, typescript, bash)")
-    runtime: str | None = Field(None, description="Optional runtime name (auto-selected if not provided)")
-    input_data: dict[str, Any] | None = Field(None, description="Optional input data dictionary")
-    requirements: dict[str, Any] | None = Field(None, description="Optional requirements dictionary")
-    timeout_seconds: int = Field(300, ge=1, le=3600, description="Execution timeout in seconds")
+    language: str = Field(
+        ..., description="Programming language (python, javascript, typescript, bash)"
+    )
+    runtime: str | None = Field(
+        None, description="Optional runtime name (auto-selected if not provided)"
+    )
+    input_data: dict[str, Any] | None = Field(
+        None, description="Optional input data dictionary"
+    )
+    requirements: dict[str, Any] | None = Field(
+        None, description="Optional requirements dictionary"
+    )
+    timeout_seconds: int = Field(
+        300, ge=1, le=3600, description="Execution timeout in seconds"
+    )
 
 
 class ExecuteCodeResponse(BaseModel):
     """Response model for code execution."""
+
     id: str
     runtime: str
     language: str
@@ -62,18 +72,26 @@ class ExecuteCodeResponse(BaseModel):
 
 class RegisterToolRequest(BaseModel):
     """Request model for tool registration."""
+
     tool_id: str = Field(..., description="Unique tool identifier")
     name: str = Field(..., description="Tool name")
     version: str = Field(..., description="SemVer version string (e.g., 1.0.0)")
     code: str = Field(..., description="Tool code")
-    runtime: str = Field(..., description="Runtime name (e2b, wasmedge, bacalhau, etc.)")
+    runtime: str = Field(
+        ..., description="Runtime name (e2b, wasmedge, bacalhau, etc.)"
+    )
     description: str | None = Field(None, description="Optional tool description")
-    input_schema: dict[str, Any] | None = Field(None, description="Optional input schema (Pydantic or Zod)")
-    output_schema: dict[str, Any] | None = Field(None, description="Optional output schema (Pydantic or Zod)")
+    input_schema: dict[str, Any] | None = Field(
+        None, description="Optional input schema (Pydantic or Zod)"
+    )
+    output_schema: dict[str, Any] | None = Field(
+        None, description="Optional output schema (Pydantic or Zod)"
+    )
 
 
 class ToolResponse(BaseModel):
     """Response model for code tool."""
+
     id: str
     tool_id: str
     name: str
@@ -88,13 +106,17 @@ class ToolResponse(BaseModel):
 
 class SandboxRequest(BaseModel):
     """Request model for sandbox creation."""
+
     name: str = Field(..., description="Sandbox name")
     runtime: str = Field(..., description="Runtime name")
-    config: dict[str, Any] | None = Field(None, description="Optional sandbox configuration")
+    config: dict[str, Any] | None = Field(
+        None, description="Optional sandbox configuration"
+    )
 
 
 class SandboxResponse(BaseModel):
     """Response model for sandbox."""
+
     id: str
     name: str
     runtime: str
@@ -110,10 +132,10 @@ def execute_code(
 ) -> ExecuteCodeResponse:
     """
     Execute code in a secure sandbox environment.
-    
+
     Creates a code execution and runs it using the specified runtime.
     Supports multiple runtimes: E2B, WasmEdge, Bacalhau, Cline Node, MCP Server.
-    
+
     Request Body:
     - code: Code to execute
     - language: Programming language
@@ -121,12 +143,12 @@ def execute_code(
     - input_data: Optional input data dictionary
     - requirements: Optional requirements dictionary
     - timeout_seconds: Execution timeout (default: 300 seconds)
-    
+
     Returns:
     - Execution details with output data or error message
     """
     code_service = default_code_execution_service
-    
+
     try:
         # Create execution
         execution = code_service.create_execution(
@@ -138,10 +160,10 @@ def execute_code(
             requirements=request.requirements,
             timeout_seconds=request.timeout_seconds,
         )
-        
+
         # Execute code
         execution = code_service.execute_code(session, str(execution.id))
-        
+
         return ExecuteCodeResponse(
             id=str(execution.id),
             runtime=execution.runtime,
@@ -153,7 +175,9 @@ def execute_code(
             output_data=execution.output_data,
             error_message=execution.error_message,
             started_at=execution.started_at.isoformat(),
-            completed_at=execution.completed_at.isoformat() if execution.completed_at else None,
+            completed_at=execution.completed_at.isoformat()
+            if execution.completed_at
+            else None,
         )
     except RuntimeNotAvailableError as e:
         raise HTTPException(
@@ -180,10 +204,10 @@ def get_execution_status(
 ) -> ExecuteCodeResponse:
     """
     Get code execution status.
-    
+
     Path Parameters:
     - execution_id: Execution ID
-    
+
     Returns:
     - Execution details with current status
     """
@@ -194,14 +218,14 @@ def get_execution_status(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid execution ID: {execution_id}",
         )
-    
+
     execution = session.get(CodeExecution, execution_uuid)
     if not execution:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Code execution {execution_id} not found",
         )
-    
+
     return ExecuteCodeResponse(
         id=str(execution.id),
         runtime=execution.runtime,
@@ -213,7 +237,9 @@ def get_execution_status(
         output_data=execution.output_data,
         error_message=execution.error_message,
         started_at=execution.started_at.isoformat(),
-        completed_at=execution.completed_at.isoformat() if execution.completed_at else None,
+        completed_at=execution.completed_at.isoformat()
+        if execution.completed_at
+        else None,
     )
 
 
@@ -225,10 +251,10 @@ def register_tool(
 ) -> ToolResponse:
     """
     Register a new code tool or new version of existing tool.
-    
+
     Tools can be registered with input/output schemas for validation.
     Supports Pydantic schemas for Python tools and Zod schemas for JavaScript/TypeScript tools.
-    
+
     Request Body:
     - tool_id: Unique tool identifier
     - name: Tool name
@@ -238,12 +264,12 @@ def register_tool(
     - description: Optional tool description
     - input_schema: Optional input schema (Pydantic or Zod)
     - output_schema: Optional output schema (Pydantic or Zod)
-    
+
     Returns:
     - Registered tool details
     """
     registry = default_code_tool_registry
-    
+
     try:
         tool = registry.register_tool(
             session=session,
@@ -257,7 +283,7 @@ def register_tool(
             output_schema=request.output_schema,
             owner_id=current_user.id,
         )
-        
+
         return ToolResponse(
             id=str(tool.id),
             tool_id=tool.tool_id,
@@ -299,19 +325,19 @@ def list_tools(
 ) -> dict[str, Any]:
     """
     List registered code tools.
-    
+
     Query Parameters:
     - runtime: Optional filter by runtime
     - owner_id: Optional filter by owner ID
     - include_deprecated: Include deprecated tools (default: false)
     - limit: Maximum number of tools to return (1-1000)
     - offset: Number of tools to skip
-    
+
     Returns:
     - List of tools with metadata
     """
     registry = default_code_tool_registry
-    
+
     owner_uuid = None
     if owner_id:
         try:
@@ -321,17 +347,17 @@ def list_tools(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid owner ID: {owner_id}",
             )
-    
+
     tools = registry.list_tools(
         session=session,
         runtime=runtime,
         owner_id=owner_uuid,
         include_deprecated=include_deprecated,
     )
-    
+
     # Apply pagination
-    paginated_tools = tools[offset:offset + limit]
-    
+    paginated_tools = tools[offset : offset + limit]
+
     return {
         "tools": [
             {
@@ -359,29 +385,31 @@ def get_tool(
     tool_id: str,
     session: SessionDep,
     current_user: CurrentUser,
-    version: str | None = Query(None, description="Tool version (uses latest if not provided)"),
+    version: str | None = Query(
+        None, description="Tool version (uses latest if not provided)"
+    ),
 ) -> dict[str, Any]:
     """
     Get code tool details.
-    
+
     Path Parameters:
     - tool_id: Tool ID
-    
+
     Query Parameters:
     - version: Optional version string (uses latest if not provided)
-    
+
     Returns:
     - Tool details including code and schemas
     """
     registry = default_code_tool_registry
-    
+
     try:
         tool = registry.get_tool(
             session=session,
             tool_id=tool_id,
             version=version,
         )
-        
+
         return {
             "id": str(tool.id),
             "tool_id": tool.tool_id,
@@ -412,21 +440,21 @@ def get_tool_versions(
 ) -> dict[str, Any]:
     """
     Get all versions of a tool.
-    
+
     Path Parameters:
     - tool_id: Tool ID
-    
+
     Returns:
     - List of all tool versions
     """
     registry = default_code_tool_registry
-    
+
     try:
         versions = registry.get_tool_versions(
             session=session,
             tool_id=tool_id,
         )
-        
+
         return {
             "tool_id": tool_id,
             "versions": [
@@ -454,35 +482,37 @@ def deprecate_tool(
     tool_id: str,
     session: SessionDep,
     current_user: CurrentUser,
-    version: str | None = Query(None, description="Tool version (deprecates all versions if not provided)"),
+    version: str | None = Query(
+        None, description="Tool version (deprecates all versions if not provided)"
+    ),
 ) -> ToolResponse:
     """
     Deprecate a tool or specific version.
-    
+
     Path Parameters:
     - tool_id: Tool ID
-    
+
     Query Parameters:
     - version: Optional version (deprecates all versions if not provided)
-    
+
     Returns:
     - Updated tool details
     """
     registry = default_code_tool_registry
-    
+
     try:
         tool = registry.deprecate_tool(
             session=session,
             tool_id=tool_id,
             version=version,
         )
-        
+
         if not tool:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Tool '{tool_id}' not found",
             )
-        
+
         return ToolResponse(
             id=str(tool.id),
             tool_id=tool.tool_id,
@@ -512,26 +542,26 @@ def list_sandboxes(
 ) -> list[SandboxResponse]:
     """
     List code sandboxes for the current user.
-    
+
     Query Parameters:
     - runtime: Optional filter by runtime
     - limit: Maximum number of sandboxes to return (1-1000)
     - offset: Number of sandboxes to skip
-    
+
     Returns:
     - List of sandboxes
     """
     from sqlmodel import select
-    
+
     query = select(CodeSandbox).where(CodeSandbox.owner_id == current_user.id)
-    
+
     if runtime:
         query = query.where(CodeSandbox.runtime == runtime)
-    
+
     query = query.order_by(CodeSandbox.created_at.desc()).limit(limit).offset(offset)
-    
+
     sandboxes = session.exec(query).all()
-    
+
     return [
         SandboxResponse(
             id=str(sandbox.id),
@@ -552,19 +582,19 @@ def create_sandbox(
 ) -> SandboxResponse:
     """
     Create a persistent code sandbox environment.
-    
+
     Sandboxes allow for persistent state across multiple code executions.
-    
+
     Request Body:
     - name: Sandbox name
     - runtime: Runtime name
     - config: Optional sandbox configuration
-    
+
     Returns:
     - Sandbox details
     """
     code_service = default_code_execution_service
-    
+
     try:
         sandbox = code_service.create_sandbox(
             session=session,
@@ -573,7 +603,7 @@ def create_sandbox(
             config=request.config,
             owner_id=current_user.id,
         )
-        
+
         return SandboxResponse(
             id=str(sandbox.id),
             name=sandbox.name,
@@ -597,20 +627,20 @@ def execute_in_sandbox(
 ) -> ExecuteCodeResponse:
     """
     Execute code in a persistent sandbox environment.
-    
+
     Path Parameters:
     - sandbox_id: Sandbox ID
-    
+
     Request Body:
     - code: Code to execute
     - language: Programming language
     - input_data: Optional input data dictionary
-    
+
     Returns:
     - Execution details
     """
     code_service = default_code_execution_service
-    
+
     try:
         execution = code_service.execute_in_sandbox(
             session=session,
@@ -619,7 +649,7 @@ def execute_in_sandbox(
             language=request.language,
             input_data=request.input_data,
         )
-        
+
         return ExecuteCodeResponse(
             id=str(execution.id),
             runtime=execution.runtime,
@@ -631,11 +661,12 @@ def execute_in_sandbox(
             output_data=execution.output_data,
             error_message=execution.error_message,
             started_at=execution.started_at.isoformat(),
-            completed_at=execution.completed_at.isoformat() if execution.completed_at else None,
+            completed_at=execution.completed_at.isoformat()
+            if execution.completed_at
+            else None,
         )
     except CodeExecutionError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
-

@@ -11,15 +11,15 @@ Tests core workflow engine functionality including:
 
 import uuid
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from sqlmodel import Session, create_engine, SQLModel
+from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
-from app.models import Workflow, WorkflowExecution, WorkflowNode
+from app.models import Workflow, WorkflowExecution
 from app.workflows.engine import WorkflowEngine, WorkflowNotFoundError
-from app.workflows.state import ExecutionState, NodeExecutionResult, WorkflowState
+from app.workflows.state import ExecutionState, NodeExecutionResult
 
 
 @pytest.fixture
@@ -92,18 +92,12 @@ class TestWorkflowEngine:
         assert execution.workflow_id == sample_workflow.id
         assert execution.status == "running"
 
-    def test_create_execution_workflow_not_found(
-        self, workflow_engine, db_session
-    ):
+    def test_create_execution_workflow_not_found(self, workflow_engine, db_session):
         """Test creating execution for non-existent workflow."""
         with pytest.raises(WorkflowNotFoundError):
-            workflow_engine.create_execution(
-                db_session, uuid.uuid4(), {}
-            )
+            workflow_engine.create_execution(db_session, uuid.uuid4(), {})
 
-    def test_get_execution_state(
-        self, workflow_engine, db_session, sample_workflow
-    ):
+    def test_get_execution_state(self, workflow_engine, db_session, sample_workflow):
         """Test getting execution state."""
         execution_id = workflow_engine.create_execution(
             db_session, sample_workflow.id, {}
@@ -165,11 +159,13 @@ class TestWorkflowEngine:
         )
 
         with patch.object(
-            workflow_engine, "execute_node", return_value=NodeExecutionResult(
+            workflow_engine,
+            "execute_node",
+            return_value=NodeExecutionResult(
                 node_id="node-2",
                 status="completed",
                 output_data={"result": 42},
-            )
+            ),
         ):
             workflow_engine.execute_workflow(db_session, execution_id)
 
@@ -177,9 +173,7 @@ class TestWorkflowEngine:
             # Note: In a real scenario, the execution might still be running
             # This test verifies the execution was started
 
-    def test_pause_execution(
-        self, workflow_engine, db_session, sample_workflow
-    ):
+    def test_pause_execution(self, workflow_engine, db_session, sample_workflow):
         """Test pausing a workflow execution."""
         execution_id = workflow_engine.create_execution(
             db_session, sample_workflow.id, {}
@@ -190,9 +184,7 @@ class TestWorkflowEngine:
         execution = db_session.get(WorkflowExecution, execution_id)
         assert execution.status == "paused"
 
-    def test_resume_execution(
-        self, workflow_engine, db_session, sample_workflow
-    ):
+    def test_resume_execution(self, workflow_engine, db_session, sample_workflow):
         """Test resuming a paused workflow execution."""
         execution_id = workflow_engine.create_execution(
             db_session, sample_workflow.id, {}
@@ -204,9 +196,7 @@ class TestWorkflowEngine:
         execution = db_session.get(WorkflowExecution, execution_id)
         assert execution.status == "running"
 
-    def test_signal_execution(
-        self, workflow_engine, db_session, sample_workflow
-    ):
+    def test_signal_execution(self, workflow_engine, db_session, sample_workflow):
         """Test sending a signal to a workflow execution."""
         execution_id = workflow_engine.create_execution(
             db_session, sample_workflow.id, {}
@@ -217,4 +207,3 @@ class TestWorkflowEngine:
 
         # Verify signal was queued (implementation dependent)
         # This test verifies the method doesn't raise an exception
-

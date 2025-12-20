@@ -4,7 +4,6 @@ Integration tests for Agent API endpoints
 Tests agent task execution and status checking.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -108,4 +107,3 @@ class TestAgentExecution:
         )
 
         assert response.status_code == 404
-

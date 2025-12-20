@@ -1,6 +1,6 @@
 # Render Environment Variable Setup - Step by Step
 
-**Issue:** Database connection failing on Render  
+**Issue:** Database connection failing on Render
 **Solution:** Update `SUPABASE_DB_URL` with URL-encoded password
 
 ## Step-by-Step Instructions
@@ -41,7 +41,7 @@ postgresql://postgres.lorefpaifkembnzmlodm:%5Bsynthralos-%5D@aws-1-us-west-1.poo
      ```
      postgresql://postgres.lorefpaifkembnzmlodm:%5Bsynthralos-%5D@aws-1-us-west-1.pooler.supabase.com:5432/postgres
      ```
-   - **Important:** 
+   - **Important:**
      - Do NOT add quotes around it
      - Do NOT add spaces before or after
      - Copy the ENTIRE string including `postgresql://` at the start
@@ -147,4 +147,3 @@ postgresql://postgres.lorefpaifkembnzmlodm:%5Bsynthralos-%5D@aws-1-us-west-1.poo
 
 **Where to Update:**
 - Render Dashboard → `synthralos-backend` → Environment → `SUPABASE_DB_URL`
-

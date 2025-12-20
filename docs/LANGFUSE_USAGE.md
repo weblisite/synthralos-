@@ -313,16 +313,16 @@ def execute_agent_task(task_id, user_id, prompt):
             "task_type": "research"
         }
     )
-    
+
     # Planning step
     planning_span = default_langfuse_client.span(
         trace_id=trace.id,
         name="planning",
         metadata={"step": 1}
     )
-    
+
     planning_response = llm_call("Plan the research...")
-    
+
     default_langfuse_client.generation(
         trace_id=trace.id,
         name="planning_llm",
@@ -331,16 +331,16 @@ def execute_agent_task(task_id, user_id, prompt):
         output_data=planning_response,
         metadata={"step": "planning"}
     )
-    
+
     # Execution step
     execution_span = default_langfuse_client.span(
         trace_id=trace.id,
         name="execution",
         metadata={"step": 2}
     )
-    
+
     execution_response = llm_call("Execute research...")
-    
+
     default_langfuse_client.generation(
         trace_id=trace.id,
         name="execution_llm",
@@ -349,7 +349,7 @@ def execute_agent_task(task_id, user_id, prompt):
         output_data=execution_response,
         metadata={"step": "execution"}
     )
-    
+
     # Score the result
     default_langfuse_client.score(
         trace_id=trace.id,
@@ -357,7 +357,7 @@ def execute_agent_task(task_id, user_id, prompt):
         value=0.9,
         comment="High quality research output"
     )
-    
+
     return execution_response
 ```
 
@@ -387,4 +387,3 @@ LANGFUSE_HOST=https://cloud.langfuse.com  # Optional
 - `docs/OBSERVABILITY_SETUP.md` - How to set up Langfuse
 - `backend/app/observability/langfuse.py` - Langfuse client implementation
 - `docs/FRONTEND_BACKEND_INTERACTION.md` - Platform architecture
-

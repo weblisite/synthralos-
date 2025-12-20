@@ -383,4 +383,3 @@ All services are designed to be non-blocking:
 - `docs/FRONTEND_BACKEND_INTERACTION.md` - How services communicate
 - `docs/RENDER_DEPLOYMENT.md` - Render deployment guide
 - `ENV_TEMPLATE.md` - Environment variable template
-

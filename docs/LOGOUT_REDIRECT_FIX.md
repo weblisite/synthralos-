@@ -210,4 +210,3 @@ The logout redirect issue has been fixed by:
 3. Improving route protection with `replace: true`
 
 **Result:** Users are now properly redirected to the login page after logout, and the dashboard is no longer accessible without authentication.
-

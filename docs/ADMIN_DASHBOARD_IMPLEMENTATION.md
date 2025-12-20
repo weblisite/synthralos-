@@ -333,7 +333,7 @@ Response:
 ```typescript
 function Admin() {
   const { user: currentUser } = useAuth()
-  
+
   // Check if user is admin
   if (!currentUser?.is_superuser) {
     return (
@@ -343,7 +343,7 @@ function Admin() {
       </div>
     )
   }
-  
+
   // Admin panel content
 }
 ```
@@ -536,4 +536,3 @@ backend/app/api/routes/
 4. Add optional admin features (system health, audit logs, etc.)
 
 The foundation is solid and the implemented features work well. The missing pieces are primarily backend endpoints and data visualization.
-

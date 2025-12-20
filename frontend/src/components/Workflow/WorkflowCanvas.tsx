@@ -114,7 +114,7 @@ export function WorkflowCanvas({
           display: none !important;
         }
       `}</style>
-      <div className="w-full h-full" style={{ width: '100%', height: '100%' }}>
+      <div className="w-full h-full" style={{ width: "100%", height: "100%" }}>
         <ReactFlow
           nodes={initialNodes}
           edges={initialEdges}

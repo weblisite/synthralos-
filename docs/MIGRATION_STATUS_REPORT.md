@@ -1,16 +1,16 @@
 # Database Migration Status Report
 
-**Generated:** 2025-01-15  
-**Database:** Supabase PostgreSQL  
+**Generated:** 2025-01-15
+**Database:** Supabase PostgreSQL
 **Current Alembic Version:** `1a31ce608336`
 
 ---
 
 ## Executive Summary
 
-✅ **All Required Migrations Applied** - All tables exist in Supabase  
-⚠️ **Alembic Version Tracking Out of Sync** - Latest migration not marked as applied  
-✅ **All Tables Verified** - 38 tables confirmed in Supabase  
+✅ **All Required Migrations Applied** - All tables exist in Supabase
+⚠️ **Alembic Version Tracking Out of Sync** - Latest migration not marked as applied
+✅ **All Tables Verified** - 38 tables confirmed in Supabase
 ✅ **RBAC Columns Present** - Connector table has `owner_id`, `is_platform`, `created_by`
 
 **Action Required:** Update Alembic version tracking (optional)
@@ -29,7 +29,7 @@
 | `1a31ce608336` | Add cascade delete relationships | ✅ Applied | Supabase Migration |
 | `c4cd6f5a4f64` | Add all PRD models | ✅ Applied* | Supabase Migration |
 
-**Current Alembic Version in Database:** `1a31ce608336`  
+**Current Alembic Version in Database:** `1a31ce608336`
 **Latest Migration in Codebase:** `c4cd6f5a4f64`
 
 \* Migration `c4cd6f5a4f64` was applied via Supabase migrations, but Alembic version table wasn't updated.
@@ -255,7 +255,6 @@ alembic upgrade head
 
 ---
 
-**Report Generated:** 2025-01-15  
-**Verified By:** Supabase MCP + Codebase Review  
+**Report Generated:** 2025-01-15
+**Verified By:** Supabase MCP + Codebase Review
 **Status:** All migrations applied, version tracking can be synced
-

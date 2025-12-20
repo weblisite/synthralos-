@@ -1,8 +1,8 @@
 # SynthralOS - Comprehensive Product Requirements Document
 
-**Version:** 1.0  
-**Last Updated:** 2025-01-15  
-**Owner:** Engineering Team  
+**Version:** 1.0
+**Last Updated:** 2025-01-15
+**Owner:** Engineering Team
 **Status:** Active Development
 
 ---
@@ -1240,4 +1240,3 @@ LANGFUSE_KEY=...
 ---
 
 **End of PRD**
-

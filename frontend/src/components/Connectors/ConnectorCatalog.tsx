@@ -4,13 +4,12 @@
  * Displays a catalog of available connectors with search, filtering, and registration.
  */
 
-import { type ColumnDef } from "@tanstack/react-table"
+import type { ColumnDef } from "@tanstack/react-table"
 import { ExternalLink, Plus, Search, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/Common/DataTable"
-import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -19,12 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -32,14 +26,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useConnections } from "@/hooks/useConnections"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import { ConnectorWizard } from "./ConnectorWizard"
-import { OAuthModal } from "./OAuthModal"
-import { ConnectorTestRunner } from "./ConnectorTestRunner"
 import { ConnectButton } from "./ConnectButton"
 import { ConnectionStatus } from "./ConnectionStatus"
-import { useConnections } from "@/hooks/useConnections"
+import { ConnectorTestRunner } from "./ConnectorTestRunner"
+import { ConnectorWizard } from "./ConnectorWizard"
+import { OAuthModal } from "./OAuthModal"
 
 interface Connector {
   id: string
@@ -63,18 +58,16 @@ export function ConnectorCatalog() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [activeTab, setActiveTab] = useState<"platform" | "custom">("platform")
-  const [selectedConnector, setSelectedConnector] = useState<Connector | null>(null)
+  const [selectedConnector, setSelectedConnector] = useState<Connector | null>(
+    null,
+  )
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [isOAuthModalOpen, setIsOAuthModalOpen] = useState(false)
   const [connectorDetails, setConnectorDetails] = useState<any>(null)
   const { showErrorToast } = useCustomToast()
-  
+
   // Use Nango connections hook
-  const { 
-    isConnected, 
-    disconnect, 
-    getConnectionStatus
-  } = useConnections()
+  const { isConnected, disconnect, getConnectionStatus } = useConnections()
 
   const fetchConnectors = useCallback(async () => {
     setIsLoading(true)
@@ -85,11 +78,11 @@ export function ConnectorCatalog() {
       }
       params.append("include_custom", "true")
 
-      const data = await apiClient.request<{ connectors?: Connector[] } | Connector[]>(
-        `/api/v1/connectors/list?${params}`
-      )
+      const data = await apiClient.request<
+        { connectors?: Connector[] } | Connector[]
+      >(`/api/v1/connectors/list?${params}`)
       // Handle both old array format and new object format
-      const connectorsList = Array.isArray(data) ? data : (data.connectors || [])
+      const connectorsList = Array.isArray(data) ? data : data.connectors || []
       setConnectors(connectorsList)
     } catch (error) {
       showErrorToast(
@@ -100,29 +93,35 @@ export function ConnectorCatalog() {
     }
   }, [showErrorToast, selectedCategory])
 
-  const fetchConnectorDetails = useCallback(async (slug: string) => {
-    try {
-      const details = await apiClient.request(`/api/v1/connectors/${slug}`)
-      setConnectorDetails(details)
-    } catch (error) {
-      showErrorToast("Failed to fetch connector details")
-    }
-  }, [showErrorToast])
-
+  const fetchConnectorDetails = useCallback(
+    async (slug: string) => {
+      try {
+        const details = await apiClient.request(`/api/v1/connectors/${slug}`)
+        setConnectorDetails(details)
+      } catch (_error) {
+        showErrorToast("Failed to fetch connector details")
+      }
+    },
+    [showErrorToast],
+  )
 
   useEffect(() => {
     fetchConnectors()
-  }, [fetchConnectors, selectedCategory])
-  
+  }, [fetchConnectors])
+
   // Refresh connections when component mounts or connectors change
   useEffect(() => {
     // Connections are automatically fetched by useConnections hook
     // This effect ensures we refresh when connectors list changes
-  }, [connectors])
+  }, [])
 
   // Get unique categories
   const categories = Array.from(
-    new Set(connectors.map((c) => c.category).filter((cat): cat is string => Boolean(cat)))
+    new Set(
+      connectors
+        .map((c) => c.category)
+        .filter((cat): cat is string => Boolean(cat)),
+    ),
   ).sort()
 
   const filteredConnectors = connectors.filter((connector) => {
@@ -160,7 +159,6 @@ export function ConnectorCatalog() {
     return <Badge variant={variants[status] || "secondary"}>{status}</Badge>
   }
 
-
   const columns: ColumnDef<Connector>[] = [
     {
       accessorKey: "name",
@@ -170,7 +168,9 @@ export function ConnectorCatalog() {
         return (
           <div>
             <div className="font-semibold">{connector.name}</div>
-            <div className="text-sm text-muted-foreground">{connector.slug}</div>
+            <div className="text-sm text-muted-foreground">
+              {connector.slug}
+            </div>
           </div>
         )
       },
@@ -212,8 +212,14 @@ export function ConnectorCatalog() {
       cell: ({ row }) => {
         const connector = row.original
         const connection = getConnectionStatus(connector.id)
-        const status = connection?.status || 'disconnected'
-        return <ConnectionStatus status={status as 'connected' | 'disconnected' | 'pending' | 'error'} />
+        const status = connection?.status || "disconnected"
+        return (
+          <ConnectionStatus
+            status={
+              status as "connected" | "disconnected" | "pending" | "error"
+            }
+          />
+        )
       },
     },
     {
@@ -224,9 +230,11 @@ export function ConnectorCatalog() {
         const connection = getConnectionStatus(connector.id)
         const isConn = isConnected(connector.id)
         // Check if connector has Nango enabled (from connector list or details)
-        const connectorData = connectors.find(c => c.id === connector.id)
-        const hasNango = connectorData?.nango_enabled || connectorDetails?.manifest?.nango?.enabled
-        
+        const connectorData = connectors.find((c) => c.id === connector.id)
+        const hasNango =
+          connectorData?.nango_enabled ||
+          connectorDetails?.manifest?.nango?.enabled
+
         return (
           <div className="flex items-center gap-2">
             <Button
@@ -240,16 +248,16 @@ export function ConnectorCatalog() {
               <ExternalLink className="h-4 w-4 mr-2" />
               View
             </Button>
-            {hasNango && (
-              isConn ? (
+            {hasNango &&
+              (isConn ? (
                 <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => {
                     if (connection) {
-                      disconnect({ 
-                        connectorId: connector.id, 
-                        connectionId: connection.id 
+                      disconnect({
+                        connectorId: connector.id,
+                        connectionId: connection.id,
                       })
                     }
                   }}
@@ -266,8 +274,7 @@ export function ConnectorCatalog() {
                   }}
                   className="text-sm"
                 />
-              )
-            )}
+              ))}
           </div>
         )
       },
@@ -301,7 +308,8 @@ export function ConnectorCatalog() {
             <DialogHeader>
               <DialogTitle>Register Custom Connector</DialogTitle>
               <DialogDescription>
-                Register your own custom connector by providing its manifest and wheel URL
+                Register your own custom connector by providing its manifest and
+                wheel URL
               </DialogDescription>
             </DialogHeader>
             <ConnectorWizard
@@ -315,15 +323,21 @@ export function ConnectorCatalog() {
         </Dialog>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "platform" | "custom")}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "platform" | "custom")}
+      >
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="platform">Platform Connectors</TabsTrigger>
             <TabsTrigger value="custom">My Custom Connectors</TabsTrigger>
           </TabsList>
-          
+
           <div className="flex items-center gap-2">
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
@@ -336,7 +350,7 @@ export function ConnectorCatalog() {
                 ))}
               </SelectContent>
             </Select>
-            
+
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -357,7 +371,9 @@ export function ConnectorCatalog() {
           {customConnectors.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <p>You haven't created any custom connectors yet.</p>
-              <p className="text-sm mt-2">Click "Register Custom Connector" to create one.</p>
+              <p className="text-sm mt-2">
+                Click "Register Custom Connector" to create one.
+              </p>
             </div>
           ) : (
             <DataTable columns={columns} data={customConnectors} />
@@ -386,7 +402,8 @@ export function ConnectorCatalog() {
                   <strong>Slug:</strong> {selectedConnector.slug}
                 </div>
                 <div>
-                  <strong>Status:</strong> {getStatusBadge(selectedConnector.status)}
+                  <strong>Status:</strong>{" "}
+                  {getStatusBadge(selectedConnector.status)}
                 </div>
                 {selectedConnector.latest_version && (
                   <div>
@@ -406,31 +423,47 @@ export function ConnectorCatalog() {
                     <div>
                       <strong>Categories:</strong>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {connectorDetails.manifest.categories.map((cat: string) => (
-                          <Badge key={cat} variant="outline">
-                            {cat}
-                          </Badge>
-                        ))}
+                        {connectorDetails.manifest.categories.map(
+                          (cat: string) => (
+                            <Badge key={cat} variant="outline">
+                              {cat}
+                            </Badge>
+                          ),
+                        )}
                       </div>
                     </div>
                   )}
               </div>
 
-              {(connectorDetails?.manifest?.oauth || connectorDetails?.manifest?.nango?.enabled) && (
+              {(connectorDetails?.manifest?.oauth ||
+                connectorDetails?.manifest?.nango?.enabled) && (
                 <div className="space-y-2">
                   <h3 className="font-semibold">Connection</h3>
                   {isConnected(selectedConnector.id) ? (
                     <div className="space-y-2">
                       <ConnectionStatus status="connected" />
                       {(() => {
-                        const connection = getConnectionStatus(selectedConnector.id)
-                        return connection?.connected_at && (
-                          <p className="text-sm text-muted-foreground">
-                            Connected: {new Date(connection.connected_at).toLocaleDateString()}
-                            {connection.last_synced_at && (
-                              <> • Last synced: {new Date(connection.last_synced_at).toLocaleDateString()}</>
-                            )}
-                          </p>
+                        const connection = getConnectionStatus(
+                          selectedConnector.id,
+                        )
+                        return (
+                          connection?.connected_at && (
+                            <p className="text-sm text-muted-foreground">
+                              Connected:{" "}
+                              {new Date(
+                                connection.connected_at,
+                              ).toLocaleDateString()}
+                              {connection.last_synced_at && (
+                                <>
+                                  {" "}
+                                  • Last synced:{" "}
+                                  {new Date(
+                                    connection.last_synced_at,
+                                  ).toLocaleDateString()}
+                                </>
+                              )}
+                            </p>
+                          )
                         )
                       })()}
                       <div className="flex gap-2">
@@ -446,11 +479,13 @@ export function ConnectorCatalog() {
                         <Button
                           variant="destructive"
                           onClick={() => {
-                            const connection = getConnectionStatus(selectedConnector.id)
+                            const connection = getConnectionStatus(
+                              selectedConnector.id,
+                            )
                             if (connection) {
-                              disconnect({ 
-                                connectorId: selectedConnector.id, 
-                                connectionId: connection.id 
+                              disconnect({
+                                connectorId: selectedConnector.id,
+                                connectionId: connection.id,
                               })
                               fetchConnectorDetails(selectedConnector.slug)
                             }
@@ -513,4 +548,3 @@ export function ConnectorCatalog() {
     </div>
   )
 }
-

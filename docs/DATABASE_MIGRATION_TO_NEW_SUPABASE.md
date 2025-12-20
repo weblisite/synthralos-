@@ -42,8 +42,8 @@ Check that all tables were created:
 list_tables with schemas: ["public"]
 
 # Or using SQL
-SELECT table_name FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
 ORDER BY table_name;
 ```
 
@@ -77,4 +77,3 @@ The migrations will run in this order:
 2. Update frontend `.env` to use new Supabase project
 3. Test all functionality to ensure everything works
 4. (Optional) Drop unused `item` table if desired
-

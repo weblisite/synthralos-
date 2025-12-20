@@ -4,14 +4,21 @@
  * Manages RAG indexes, documents, and queries.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Database, FileText, Plus, Search, Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import { Database, FileText, Loader2, Plus, Search } from "lucide-react"
+import { useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DataTable } from "@/components/Common/DataTable"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -23,10 +30,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -34,10 +37,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
 import { supabase } from "@/lib/supabase"
-import type { ColumnDef } from "@tanstack/react-table"
 
 interface RAGIndex {
   id: string
@@ -59,7 +65,10 @@ const fetchRAGIndexes = async (): Promise<RAGIndex[]> => {
   return apiClient.request<RAGIndex[]>("/api/v1/rag/indexes")
 }
 
-const createRAGIndex = async (name: string, vectorDbType: string): Promise<RAGIndex> => {
+const createRAGIndex = async (
+  name: string,
+  vectorDbType: string,
+): Promise<RAGIndex> => {
   return apiClient.request<RAGIndex>("/api/v1/rag/index", {
     method: "POST",
     body: JSON.stringify({
@@ -133,9 +142,7 @@ const indexColumns: ColumnDef<RAGIndex>[] = [
   {
     accessorKey: "name",
     header: "Name",
-    cell: ({ row }) => (
-      <div className="font-semibold">{row.original.name}</div>
-    ),
+    cell: ({ row }) => <div className="font-semibold">{row.original.name}</div>,
   },
   {
     accessorKey: "vector_db_type",
@@ -179,7 +186,10 @@ export function RAGIndexManager() {
     mutationFn: () => createRAGIndex(newIndexName, newIndexVectorDb),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ragIndexes"] })
-      showSuccessToast("RAG Index Created", `${newIndexName} created successfully`)
+      showSuccessToast(
+        "RAG Index Created",
+        `${newIndexName} created successfully`,
+      )
       setIsCreateDialogOpen(false)
       setNewIndexName("")
       setNewIndexVectorDb("chromadb")
@@ -228,12 +238,21 @@ export function RAGIndexManager() {
   })
 
   const uploadDocumentMutation = useMutation({
-    mutationFn: async ({ file, metadata }: { file: File; metadata: Record<string, any> }) => {
+    mutationFn: async ({
+      file,
+      metadata,
+    }: {
+      file: File
+      metadata: Record<string, any>
+    }) => {
       if (!selectedIndex) throw new Error("No index selected")
       return uploadDocumentToIndex(selectedIndex.id, file, metadata)
     },
     onSuccess: () => {
-      showSuccessToast("Document uploaded", "Document uploaded and added to index successfully")
+      showSuccessToast(
+        "Document uploaded",
+        "Document uploaded and added to index successfully",
+      )
       setIsAddDocDialogOpen(false)
       setDocumentMetadata("")
     },
@@ -286,7 +305,10 @@ export function RAGIndexManager() {
               </div>
               <div>
                 <Label htmlFor="vector-db">Vector Database</Label>
-                <Select value={newIndexVectorDb} onValueChange={setNewIndexVectorDb}>
+                <Select
+                  value={newIndexVectorDb}
+                  onValueChange={setNewIndexVectorDb}
+                >
                   <SelectTrigger id="vector-db">
                     <SelectValue />
                   </SelectTrigger>
@@ -315,7 +337,7 @@ export function RAGIndexManager() {
       {indexes && indexes.length > 0 ? (
         <>
           <DataTable columns={indexColumns} data={indexes} />
-          
+
           {selectedIndex && (
             <Card>
               <CardHeader>
@@ -327,7 +349,10 @@ export function RAGIndexManager() {
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Dialog open={isQueryDialogOpen} onOpenChange={setIsQueryDialogOpen}>
+                    <Dialog
+                      open={isQueryDialogOpen}
+                      onOpenChange={setIsQueryDialogOpen}
+                    >
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm">
                           <Search className="h-4 w-4 mr-2" />
@@ -354,10 +379,14 @@ export function RAGIndexManager() {
                           </div>
                           <Button
                             onClick={() => queryMutation.mutate()}
-                            disabled={!queryText.trim() || queryMutation.isPending}
+                            disabled={
+                              !queryText.trim() || queryMutation.isPending
+                            }
                             className="w-full"
                           >
-                            {queryMutation.isPending ? "Querying..." : "Execute Query"}
+                            {queryMutation.isPending
+                              ? "Querying..."
+                              : "Execute Query"}
                           </Button>
                           {queryResult && (
                             <div className="space-y-2">
@@ -366,7 +395,11 @@ export function RAGIndexManager() {
                                 <Label>Results</Label>
                                 <ScrollArea className="h-60 rounded-md border p-4 mt-2">
                                   <pre className="text-xs">
-                                    {JSON.stringify(queryResult.results, null, 2)}
+                                    {JSON.stringify(
+                                      queryResult.results,
+                                      null,
+                                      2,
+                                    )}
                                   </pre>
                                 </ScrollArea>
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -379,7 +412,10 @@ export function RAGIndexManager() {
                       </DialogContent>
                     </Dialog>
 
-                    <Dialog open={isAddDocDialogOpen} onOpenChange={setIsAddDocDialogOpen}>
+                    <Dialog
+                      open={isAddDocDialogOpen}
+                      onOpenChange={setIsAddDocDialogOpen}
+                    >
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm">
                           <FileText className="h-4 w-4 mr-2" />
@@ -395,12 +431,16 @@ export function RAGIndexManager() {
                         </DialogHeader>
                         <Tabs defaultValue="upload" className="w-full">
                           <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="upload">Upload File</TabsTrigger>
+                            <TabsTrigger value="upload">
+                              Upload File
+                            </TabsTrigger>
                             <TabsTrigger value="text">Text Content</TabsTrigger>
                           </TabsList>
                           <TabsContent value="upload" className="space-y-4">
                             <div>
-                              <Label htmlFor="file-upload-rag">Upload Document File</Label>
+                              <Label htmlFor="file-upload-rag">
+                                Upload Document File
+                              </Label>
                               <Input
                                 id="file-upload-rag"
                                 type="file"
@@ -408,12 +448,15 @@ export function RAGIndexManager() {
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0]
                                   if (!file) return
-                                  
+
                                   if (file.size > 100 * 1024 * 1024) {
-                                    showErrorToast("File too large", "Maximum size is 100MB")
+                                    showErrorToast(
+                                      "File too large",
+                                      "Maximum size is 100MB",
+                                    )
                                     return
                                   }
-                                  
+
                                   let metadata = {}
                                   if (documentMetadata.trim()) {
                                     try {
@@ -422,22 +465,30 @@ export function RAGIndexManager() {
                                       metadata = { note: documentMetadata }
                                     }
                                   }
-                                  
-                                  uploadDocumentMutation.mutate({ file, metadata })
+
+                                  uploadDocumentMutation.mutate({
+                                    file,
+                                    metadata,
+                                  })
                                 }}
                                 className="cursor-pointer"
                               />
                               <p className="text-xs text-muted-foreground mt-2">
-                                Supported formats: .txt, .md, .pdf, .doc, .docx (max 100MB)
+                                Supported formats: .txt, .md, .pdf, .doc, .docx
+                                (max 100MB)
                               </p>
                             </div>
                             <div>
-                              <Label htmlFor="doc-metadata-upload">Metadata (JSON, optional)</Label>
+                              <Label htmlFor="doc-metadata-upload">
+                                Metadata (JSON, optional)
+                              </Label>
                               <Textarea
                                 id="doc-metadata-upload"
                                 placeholder='{"source": "url", "author": "name", ...}'
                                 value={documentMetadata}
-                                onChange={(e) => setDocumentMetadata(e.target.value)}
+                                onChange={(e) =>
+                                  setDocumentMetadata(e.target.value)
+                                }
                                 rows={4}
                                 className="font-mono text-sm"
                               />
@@ -451,32 +502,45 @@ export function RAGIndexManager() {
                           </TabsContent>
                           <TabsContent value="text" className="space-y-4">
                             <div>
-                              <Label htmlFor="doc-content">Document Content</Label>
+                              <Label htmlFor="doc-content">
+                                Document Content
+                              </Label>
                               <Textarea
                                 id="doc-content"
                                 placeholder="Enter document content..."
                                 value={documentContent}
-                                onChange={(e) => setDocumentContent(e.target.value)}
+                                onChange={(e) =>
+                                  setDocumentContent(e.target.value)
+                                }
                                 rows={8}
                               />
                             </div>
                             <div>
-                              <Label htmlFor="doc-metadata-text">Metadata (JSON, optional)</Label>
+                              <Label htmlFor="doc-metadata-text">
+                                Metadata (JSON, optional)
+                              </Label>
                               <Textarea
                                 id="doc-metadata-text"
                                 placeholder='{"source": "url", "author": "name", ...}'
                                 value={documentMetadata}
-                                onChange={(e) => setDocumentMetadata(e.target.value)}
+                                onChange={(e) =>
+                                  setDocumentMetadata(e.target.value)
+                                }
                                 rows={4}
                                 className="font-mono text-sm"
                               />
                             </div>
                             <Button
                               onClick={() => addDocumentMutation.mutate()}
-                              disabled={!documentContent.trim() || addDocumentMutation.isPending}
+                              disabled={
+                                !documentContent.trim() ||
+                                addDocumentMutation.isPending
+                              }
                               className="w-full"
                             >
-                              {addDocumentMutation.isPending ? "Adding..." : "Add Document"}
+                              {addDocumentMutation.isPending
+                                ? "Adding..."
+                                : "Add Document"}
                             </Button>
                           </TabsContent>
                         </Tabs>
@@ -532,4 +596,3 @@ export function RAGIndexManager() {
     </div>
   )
 }
-

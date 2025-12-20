@@ -15,7 +15,7 @@ We've implemented **two layers** of automation:
 
 ### 1. Pre-commit Hook (Local)
 
-**Location**: `.pre-commit-config.yaml` → `check-uv-lock` hook  
+**Location**: `.pre-commit-config.yaml` → `check-uv-lock` hook
 **Script**: `backend/scripts/check-uv-lock.sh`
 
 **What it does**:
@@ -99,7 +99,7 @@ Error: uv.lock is out of sync with pyproject.toml
    ```bash
    git log --oneline -1
    # Shows: "Add new-package"
-   
+
    git show --name-only HEAD
    # Shows: backend/pyproject.toml, backend/uv.lock
    ```
@@ -148,14 +148,13 @@ If CI fails with "uv.lock is out of sync":
 
 ## Benefits
 
-✅ **Prevents missing packages** - Catches issues before they reach production  
-✅ **Automatic** - No manual steps required  
-✅ **Fast feedback** - Pre-commit hook runs instantly  
-✅ **CI safety net** - GitHub Actions catches if hook is bypassed  
+✅ **Prevents missing packages** - Catches issues before they reach production
+✅ **Automatic** - No manual steps required
+✅ **Fast feedback** - Pre-commit hook runs instantly
+✅ **CI safety net** - GitHub Actions catches if hook is bypassed
 ✅ **Reproducible builds** - Ensures `uv.lock` is always in sync
 
 ## Related Documentation
 
 - [UV Lock Explanation](./UV_LOCK_EXPLANATION.md) - How `pyproject.toml` and `uv.lock` work together
 - [Development Guide](../development.md) - General development workflow
-

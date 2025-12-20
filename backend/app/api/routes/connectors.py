@@ -1157,6 +1157,20 @@ async def connect_connector(
             provider_key=provider_key,
         )
 
+        # Track connector connection initiation in PostHog
+        from app.observability.posthog import default_posthog_client
+
+        default_posthog_client.capture(
+            distinct_id=str(current_user.id),
+            event="connector_connection_initiated",
+            properties={
+                "connector_id": str(connector.id),
+                "connector_slug": connector.slug,
+                "connection_id": str(connection.id),
+                "has_instance_id": bool(instance_id),
+            },
+        )
+
         return {
             "oauth_url": oauth_data["oauth_url"],
             "connection_id": str(connection.id),
@@ -1230,6 +1244,19 @@ async def nango_oauth_callback(
         connection.last_error = None
         connection.error_count = 0
         session.commit()
+
+        # Track successful connector connection in PostHog
+        from app.observability.posthog import default_posthog_client
+
+        default_posthog_client.capture(
+            distinct_id=str(connection.user_id),
+            event="connector_connected",
+            properties={
+                "connector_id": str(connection.connector_id),
+                "connector_slug": connector.slug,
+                "connection_id": str(connection.id),
+            },
+        )
 
         return {
             "success": True,
@@ -1417,6 +1444,19 @@ async def disconnect_connector(
     connection.status = "disconnected"
     connection.disconnected_at = datetime.utcnow()
     session.commit()
+
+    # Track connector disconnection in PostHog
+    from app.observability.posthog import default_posthog_client
+
+    default_posthog_client.capture(
+        distinct_id=str(current_user.id),
+        event="connector_disconnected",
+        properties={
+            "connector_id": str(connector.id),
+            "connector_slug": connector.slug,
+            "connection_id": str(connection.id),
+        },
+    )
 
     return {
         "success": True,

@@ -1,7 +1,7 @@
 # Connectors Frontend Test Report
 
-**Date**: 2025-01-15  
-**Tester**: Browser Automation  
+**Date**: 2025-01-15
+**Tester**: Browser Automation
 **Status**: In Progress
 
 ## Test Summary
@@ -152,7 +152,7 @@ if (Array.isArray(data)) {
 
 **Impact**: Connectors cannot be loaded in frontend.
 
-**Recommendation**: 
+**Recommendation**:
 1. Verify Supabase token format matches backend expectations
 2. Check `backend/app/api/deps.py` for token validation logic
 3. Ensure token is passed correctly in Authorization header
@@ -263,4 +263,3 @@ if (Array.isArray(data)) {
 4. Agent connector tool discovery needs backend verification
 
 **Recommendation**: Fix authentication token format to enable full connector functionality testing.
-

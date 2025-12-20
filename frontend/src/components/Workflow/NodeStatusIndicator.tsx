@@ -11,9 +11,7 @@ interface NodeStatusIndicatorProps {
   status: "idle" | "running" | "completed" | "failed" | "paused"
 }
 
-export function NodeStatusIndicator({
-  status,
-}: NodeStatusIndicatorProps) {
+export function NodeStatusIndicator({ status }: NodeStatusIndicatorProps) {
   if (status === "idle") {
     return null
   }

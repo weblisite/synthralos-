@@ -23,7 +23,7 @@ def upgrade() -> None:
     bind = op.get_bind()
     inspector = inspect(bind)
     table_exists = 'user_connector_connection' in inspector.get_table_names()
-    
+
     if not table_exists:
         # Create user_connector_connection table
         op.create_table(
@@ -44,12 +44,12 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(['user_id'], ['user.id'], ondelete='CASCADE'),
             sa.ForeignKeyConstraint(['connector_id'], ['connector.id'], ondelete='CASCADE'),
         )
-    
+
     # Get existing indexes to avoid duplicates
     existing_indexes = []
     if table_exists:
         existing_indexes = [idx['name'] for idx in inspector.get_indexes('user_connector_connection')]
-    
+
     # Create indexes only if they don't exist
     if 'ix_user_connector_connection_user_id' not in existing_indexes:
         op.create_index('ix_user_connector_connection_user_id', 'user_connector_connection', ['user_id'])
@@ -71,8 +71,6 @@ def downgrade() -> None:
     op.drop_index('ix_user_connector_connection_nango_connection_id', table_name='user_connector_connection')
     op.drop_index('ix_user_connector_connection_connector_id', table_name='user_connector_connection')
     op.drop_index('ix_user_connector_connection_user_id', table_name='user_connector_connection')
-    
+
     # Drop table
     op.drop_table('user_connector_connection')
-
-

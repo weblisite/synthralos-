@@ -68,7 +68,7 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:17
@@ -167,4 +167,3 @@ jobs:
           tags: synthralos-frontend:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
-

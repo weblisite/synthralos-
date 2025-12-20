@@ -4,14 +4,29 @@
  * Manages OSINT streams, signals, and alerts.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Search, Plus, Play, Pause, Eye, AlertCircle, Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import {
+  AlertCircle,
+  Eye,
+  Loader2,
+  Pause,
+  Play,
+  Plus,
+  Search,
+} from "lucide-react"
+import { useState } from "react"
+import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DataTable } from "@/components/Common/DataTable"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -22,8 +37,6 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -31,10 +44,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import type { ColumnDef } from "@tanstack/react-table"
 
 interface OSINTStream {
   id: string
@@ -67,7 +81,9 @@ interface OSINTAlert {
 }
 
 const fetchOSINTStreams = async (): Promise<OSINTStream[]> => {
-  const data = await apiClient.request<{ streams: OSINTStream[] }>("/api/v1/osint/streams")
+  const data = await apiClient.request<{ streams: OSINTStream[] }>(
+    "/api/v1/osint/streams",
+  )
   return data.streams || []
 }
 
@@ -103,20 +119,22 @@ const executeStream = async (streamId: string): Promise<OSINTSignal[]> => {
     `/api/v1/osint/streams/${streamId}/execute`,
     {
       method: "POST",
-    }
+    },
   )
   return data.signals || []
 }
 
 const fetchStreamSignals = async (streamId: string): Promise<OSINTSignal[]> => {
   const data = await apiClient.request<{ signals: OSINTSignal[] }>(
-    `/api/v1/osint/streams/${streamId}/signals?limit=100`
+    `/api/v1/osint/streams/${streamId}/signals?limit=100`,
   )
   return data.signals || []
 }
 
 const fetchAlerts = async (): Promise<OSINTAlert[]> => {
-  const data = await apiClient.request<{ alerts: OSINTAlert[] }>("/api/v1/osint/alerts?limit=100")
+  const data = await apiClient.request<{ alerts: OSINTAlert[] }>(
+    "/api/v1/osint/alerts?limit=100",
+  )
   return data.alerts || []
 }
 
@@ -145,9 +163,7 @@ const streamColumns: ColumnDef<OSINTStream>[] = [
   {
     accessorKey: "platform",
     header: "Platform",
-    cell: ({ row }) => (
-      <Badge variant="outline">{row.original.platform}</Badge>
-    ),
+    cell: ({ row }) => <Badge variant="outline">{row.original.platform}</Badge>,
   },
   {
     accessorKey: "keywords",
@@ -171,14 +187,18 @@ const streamColumns: ColumnDef<OSINTStream>[] = [
     accessorKey: "engine",
     header: "Engine",
     cell: ({ row }) => (
-      <span className="text-sm text-muted-foreground">{row.original.engine}</span>
+      <span className="text-sm text-muted-foreground">
+        {row.original.engine}
+      </span>
     ),
   },
   {
     accessorKey: "is_active",
     header: "Status",
     cell: ({ row }) => (
-      <Badge className={row.original.is_active ? "bg-green-500" : "bg-gray-500"}>
+      <Badge
+        className={row.original.is_active ? "bg-green-500" : "bg-gray-500"}
+      >
         {row.original.is_active ? "Active" : "Inactive"}
       </Badge>
     ),
@@ -270,7 +290,12 @@ function StreamActionsCell({ stream }: { stream: OSINTStream }) {
           Activate
         </Button>
       )}
-      <Button variant="outline" size="sm" onClick={handleExecute} disabled={isLoadingSignals}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleExecute}
+        disabled={isLoadingSignals}
+      >
         {isLoadingSignals ? (
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
         ) : (
@@ -289,7 +314,8 @@ function StreamActionsCell({ stream }: { stream: OSINTStream }) {
           <DialogHeader>
             <DialogTitle>Stream Signals</DialogTitle>
             <DialogDescription>
-              Platform: {stream.platform} | Keywords: {stream.keywords.join(", ")}
+              Platform: {stream.platform} | Keywords:{" "}
+              {stream.keywords.join(", ")}
             </DialogDescription>
           </DialogHeader>
           {isLoadingSignals ? (
@@ -302,7 +328,9 @@ function StreamActionsCell({ stream }: { stream: OSINTStream }) {
                     <Card key={signal.id}>
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm">{signal.source}</CardTitle>
+                          <CardTitle className="text-sm">
+                            {signal.source}
+                          </CardTitle>
                           {signal.sentiment_score !== null && (
                             <Badge variant="outline">
                               Sentiment: {signal.sentiment_score.toFixed(2)}
@@ -310,7 +338,9 @@ function StreamActionsCell({ stream }: { stream: OSINTStream }) {
                           )}
                         </div>
                         {signal.author && (
-                          <CardDescription>Author: {signal.author}</CardDescription>
+                          <CardDescription>
+                            Author: {signal.author}
+                          </CardDescription>
                         )}
                       </CardHeader>
                       <CardContent>
@@ -543,23 +573,34 @@ export function OSINTStreamManager() {
               </div>
               <div>
                 <Label htmlFor="engine">Engine (Optional)</Label>
-                <Select value={selectedEngine} onValueChange={setSelectedEngine}>
+                <Select
+                  value={selectedEngine}
+                  onValueChange={setSelectedEngine}
+                >
                   <SelectTrigger id="engine">
                     <SelectValue placeholder="Auto-select" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Auto-select</SelectItem>
-                    <SelectItem value="twint">Twint (Twitter scraping)</SelectItem>
+                    <SelectItem value="twint">
+                      Twint (Twitter scraping)
+                    </SelectItem>
                     <SelectItem value="tweepy">Tweepy (Twitter API)</SelectItem>
-                    <SelectItem value="social_listener">Social-Listener (Multi-platform)</SelectItem>
-                    <SelectItem value="newscatcher">NewsCatcher (News aggregation)</SelectItem>
+                    <SelectItem value="social_listener">
+                      Social-Listener (Multi-platform)
+                    </SelectItem>
+                    <SelectItem value="newscatcher">
+                      NewsCatcher (News aggregation)
+                    </SelectItem>
                     <SelectItem value="huginn">Huginn (Automation)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <Button
                 onClick={() => createStreamMutation.mutate()}
-                disabled={!keywordsInput.trim() || createStreamMutation.isPending}
+                disabled={
+                  !keywordsInput.trim() || createStreamMutation.isPending
+                }
                 className="w-full"
               >
                 {createStreamMutation.isPending ? (
@@ -598,7 +639,8 @@ export function OSINTStreamManager() {
                 <div className="text-center">
                   <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-sm text-muted-foreground mb-4">
-                    No OSINT streams found. Create your first stream to get started.
+                    No OSINT streams found. Create your first stream to get
+                    started.
                   </p>
                   <Button onClick={() => setIsCreateDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
@@ -630,4 +672,3 @@ export function OSINTStreamManager() {
     </div>
   )
 }
-

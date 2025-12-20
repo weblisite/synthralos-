@@ -17,10 +17,10 @@ import { useConnections } from '@/hooks/useConnections';
 ```typescript
 export function ConnectorCatalog() {
   // ... existing state ...
-  
+
   // Add connections hook
   const { connections, isConnected, connect, disconnect, getConnectionStatus } = useConnections();
-  
+
   // ... rest of component
 }
 ```
@@ -48,7 +48,7 @@ const columns: ColumnDef<Connector>[] = [
       const connector = row.original;
       const connection = getConnectionStatus(connector.id);
       const isConn = isConnected(connector.id);
-      
+
       return (
         <div className="flex items-center gap-2">
           {isConn ? (
@@ -67,9 +67,9 @@ const columns: ColumnDef<Connector>[] = [
                 size="sm"
                 onClick={() => {
                   if (connection) {
-                    disconnect({ 
-                      connectorId: connector.id, 
-                      connectionId: connection.id 
+                    disconnect({
+                      connectorId: connector.id,
+                      connectionId: connection.id
                     });
                   }
                 }}
@@ -117,9 +117,9 @@ In the connector details dialog, replace OAuth buttons with:
             onClick={() => {
               const connection = getConnectionStatus(selectedConnector.id);
               if (connection) {
-                disconnect({ 
-                  connectorId: selectedConnector.id, 
-                  connectionId: connection.id 
+                disconnect({
+                  connectorId: selectedConnector.id,
+                  connectionId: connection.id
                 });
               }
             }}
@@ -156,5 +156,3 @@ See the updated `ConnectorCatalog.tsx` for full implementation. The key changes 
 2. Replace OAuth buttons with `ConnectButton` component
 3. Show connection status with `ConnectionStatus` component
 4. Use hook's `disconnect` function instead of custom handler
-
-

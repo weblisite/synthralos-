@@ -130,13 +130,13 @@ export function getApiUrl(): string {
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   // Gets Supabase session
   const { data: { session } } = await supabase.auth.getSession()
-  
+
   // Constructs full backend URL
   const url = getApiPath(path) // Uses VITE_API_URL
-  
+
   // Adds Authorization header
   headers.set("Authorization", `Bearer ${session.access_token}`)
-  
+
   // Makes fetch() call
   return fetch(url, { ...options, headers }).then(r => r.json())
 }
@@ -376,4 +376,3 @@ async function apiCall(endpoint: string, options?: RequestInit) {
 5. ✅ **Complementary** - Each serves its purpose without conflict
 
 **The migration fixed apiRequest() to use backend URLs, while OpenAPI SDK was already correct. Both systems now work seamlessly together.**
-

@@ -95,8 +95,8 @@ connector (1) ──< (many) connectorversion
 
 3. **Update connector with latest version:**
    ```sql
-   UPDATE connector 
-   SET latest_version_id = 'version-uuid' 
+   UPDATE connector
+   SET latest_version_id = 'version-uuid'
    WHERE id = 'connector-uuid';
    ```
 
@@ -104,7 +104,7 @@ connector (1) ──< (many) connectorversion
 
 ```sql
 -- Get all connectors with their latest version
-SELECT 
+SELECT
     c.id,
     c.slug,
     c.name,
@@ -137,7 +137,7 @@ WHERE c.is_platform = true;
 ## Current Status
 
 - **Total Connectors**: 99 manifest files
-- **Database Records**: 
+- **Database Records**:
   - `connector` table: 1 row (ActiveCampaign - batch 1 executed)
   - `connectorversion` table: 2 rows (versions for ActiveCampaign)
 - **Remaining**: 98 connectors pending migration (batches 2-10)
@@ -169,5 +169,3 @@ All 99 connectors in **one table**, each with their own row!
 - ✅ No separate tables per connector
 
 This is a **standard relational database design** pattern called **normalization** - storing similar entities in the same table rather than creating separate tables for each entity.
-
-

@@ -20,8 +20,12 @@ import {
   Plug,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { apiClient } from "@/lib/apiClient"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface Connector {
   id: string
@@ -138,26 +142,37 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
     const fetchConnectors = async () => {
       setIsConnectorsLoading(true)
       try {
-        const data = await apiClient.request<{ connectors?: any[]; total_count?: number } | any[]>(
-          `/api/v1/connectors/list?include_custom=true`
-        )
+        const data = await apiClient.request<
+          { connectors?: any[]; total_count?: number } | any[]
+        >(`/api/v1/connectors/list?include_custom=true`)
         console.log("[NodePalette] Raw API response:", data)
-        
+
         // Handle both response formats: array or object with connectors property
-        const connectorsList = Array.isArray(data) ? data : (data.connectors || [])
-        console.log("[NodePalette] Parsed connectors list:", connectorsList.length, "items")
-        
+        const connectorsList = Array.isArray(data)
+          ? data
+          : data.connectors || []
+        console.log(
+          "[NodePalette] Parsed connectors list:",
+          connectorsList.length,
+          "items",
+        )
+
         // Filter out deprecated connectors, show all others (draft, beta, stable)
         const activeConnectors = connectorsList.filter(
           (c: Connector & { status?: string }) =>
-            !c.status || c.status !== "deprecated"
+            !c.status || c.status !== "deprecated",
         )
-        console.log("[NodePalette] Active connectors (non-deprecated):", activeConnectors.length)
-        
+        console.log(
+          "[NodePalette] Active connectors (non-deprecated):",
+          activeConnectors.length,
+        )
+
         // Update connectors immediately to show progress
         setConnectors(activeConnectors)
         setHasFetchedConnectors(true)
-        console.log(`[NodePalette] Successfully loaded ${activeConnectors.length} connectors`)
+        console.log(
+          `[NodePalette] Successfully loaded ${activeConnectors.length} connectors`,
+        )
       } catch (error) {
         console.error("[NodePalette] Failed to fetch connectors:", error)
         // Set empty array on error to show "No connectors available" instead of loading forever
@@ -201,7 +216,9 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
       // For now, use a placeholder that will be updated
       const newNode: Node = {
         id: `${nodeType.type}-${Date.now()}`,
-        type: nodeType.type.startsWith("connector-") ? "connector" : nodeType.type,
+        type: nodeType.type.startsWith("connector-")
+          ? "connector"
+          : nodeType.type,
         position: { x: 0, y: 0 }, // Will be calculated by WorkflowBuilder
         data: {
           label: nodeType.label,
@@ -273,7 +290,10 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
 
         {/* App Connectors Expandable Section */}
         <div className="space-y-2">
-          <Collapsible open={isConnectorsExpanded} onOpenChange={setIsConnectorsExpanded}>
+          <Collapsible
+            open={isConnectorsExpanded}
+            onOpenChange={setIsConnectorsExpanded}
+          >
             <CollapsibleTrigger className="flex items-center gap-2 w-full px-2 py-1 hover:bg-accent rounded-md transition-colors">
               {isConnectorsExpanded ? (
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />

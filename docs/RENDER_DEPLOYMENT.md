@@ -84,7 +84,7 @@ This guide explains how to deploy SynthralOS to Render using the Blueprint confi
 3. **Set Environment Variables**
 
    **Backend Service (`synthralos-backend`):**
-   
+
    Required:
    - `SUPABASE_URL` - Your Supabase project URL
    - `SUPABASE_ANON_KEY` - Your Supabase anon key
@@ -95,15 +95,15 @@ This guide explains how to deploy SynthralOS to Render using the Blueprint confi
      - See `docs/RENDER_IPV6_CONNECTION_FIX.md` for troubleshooting
    - `FRONTEND_HOST` - Will be set after frontend deploys
    - `BACKEND_CORS_ORIGINS` - Will be set after frontend deploys
-   
+
    Optional:
    - `OPENAI_API_KEY` - For OpenAI integrations
    - `ANTHROPIC_API_KEY` - For Anthropic integrations
    - `NANGO_SECRET_KEY` - For OAuth integrations
    - `REDIS_URL` - For caching (if using Redis)
-   
+
    **Frontend Service (`synthralos-frontend`):**
-   
+
    Required:
    - `VITE_API_URL` - Backend URL (set after backend deploys)
    - `VITE_SUPABASE_URL` - Your Supabase project URL
@@ -262,6 +262,5 @@ Render automatically deploys when you push to the connected branch (usually `mai
 
 ---
 
-**Last Updated:** 2025-01-15  
+**Last Updated:** 2025-01-15
 **Status:** Production Ready
-

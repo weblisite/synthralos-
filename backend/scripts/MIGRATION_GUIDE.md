@@ -107,4 +107,3 @@ cat migrations/supabase/add_user_preferences.sql
 
 **Issue:** Migration already applied
 - **Solution:** Check Supabase migrations list before applying
-
