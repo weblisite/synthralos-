@@ -209,14 +209,11 @@ export function WorkflowBuilder({
       <NodePalette onNodeAdd={handleNodeAddWithPosition} />
       <div
         ref={reactFlowWrapper}
-        className={`flex-1 min-h-0 transition-all duration-300 ${
+        className={`flex-1 min-h-0 min-w-0 transition-all duration-300 ${
           showNodeConfig || showExecutionDetails ? "mr-80" : ""
         }`}
         style={{
           height: "100%",
-          width: "100%",
-          minWidth: "100%",
-          minHeight: "100%",
         }}
         role="application"
         onDrop={handleDrop}

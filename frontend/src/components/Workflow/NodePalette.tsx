@@ -245,7 +245,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
   }, [])
 
   return (
-    <div className="w-64 h-full bg-background border-r overflow-y-auto">
+    <div className="w-64 h-full bg-background border-r overflow-y-auto flex-shrink-0">
       <div className="p-4 border-b">
         <h2 className="text-lg font-semibold">Node Palette</h2>
         <p className="text-sm text-muted-foreground">
