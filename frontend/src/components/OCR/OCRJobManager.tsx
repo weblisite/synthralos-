@@ -325,166 +325,94 @@ export function OCRJobManager() {
         </div>
       </div>
       <div className="flex gap-2">
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Upload className="h-4 w-4 mr-2" />
-                New OCR Job
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create OCR Job</DialogTitle>
-                <DialogDescription>
-                  Extract text from a document using OCR. Upload a file or provide
-                  a URL.
-                </DialogDescription>
-              </DialogHeader>
-              <Tabs defaultValue="upload" className="w-full">
-                <TabsList>
-                  <TabsTrigger value="upload">Upload File</TabsTrigger>
-                  <TabsTrigger value="url">From URL</TabsTrigger>
-                </TabsList>
-                <TabsContent value="upload" className="space-y-4">
-                  <div>
-                    <Label>Upload Document</Label>
-                    <FileUpload
-                      onUploadComplete={(url) => {
-                        setUploadedFileUrl(url)
-                        createJobMutation.mutate()
-                      }}
-                    />
-                  </div>
-                  {uploadedFileUrl && (
-                    <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
-                      <p className="text-sm text-green-800 dark:text-green-200">
-                        File uploaded successfully. Creating OCR job...
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <Label htmlFor="engine-upload">OCR Engine (Optional)</Label>
-                    <Select
-                      value={selectedEngine}
-                      onValueChange={setSelectedEngine}
-                    >
-                      <SelectTrigger id="engine-upload">
-                        <SelectValue placeholder="Auto-select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Auto-select</SelectItem>
-                        <SelectItem value="doctr">DocTR (Tables)</SelectItem>
-                        <SelectItem value="easyocr">
-                          EasyOCR (Handwriting)
-                        </SelectItem>
-                        <SelectItem value="paddleocr">
-                          PaddleOCR (Low-latency)
-                        </SelectItem>
-                        <SelectItem value="tesseract">
-                          Tesseract (Fallback)
-                        </SelectItem>
-                        <SelectItem value="google_vision">
-                          Google Vision API
-                        </SelectItem>
-                        <SelectItem value="omniparser">
-                          Omniparser (Structured)
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TabsContent>
-                <TabsContent value="url" className="space-y-4">
-                  <div>
-                    <Label htmlFor="document-url">Document URL</Label>
-                    <Input
-                      id="document-url"
-                      placeholder="https://example.com/document.pdf"
-                      value={documentUrl}
-                      onChange={(e) => setDocumentUrl(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="engine-url">OCR Engine (Optional)</Label>
-                    <Select
-                      value={selectedEngine}
-                      onValueChange={setSelectedEngine}
-                    >
-                      <SelectTrigger id="engine-url">
-                        <SelectValue placeholder="Auto-select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Auto-select</SelectItem>
-                        <SelectItem value="doctr">DocTR (Tables)</SelectItem>
-                        <SelectItem value="easyocr">
-                          EasyOCR (Handwriting)
-                        </SelectItem>
-                        <SelectItem value="paddleocr">
-                          PaddleOCR (Low-latency)
-                        </SelectItem>
-                        <SelectItem value="tesseract">
-                          Tesseract (Fallback)
-                        </SelectItem>
-                        <SelectItem value="google_vision">
-                          Google Vision API
-                        </SelectItem>
-                        <SelectItem value="omniparser">
-                          Omniparser (Structured)
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    onClick={() => createJobMutation.mutate()}
-                    disabled={
-                      !documentUrl.trim() || createJobMutation.isPending
-                    }
-                    className="w-full"
-                  >
-                    {createJobMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      "Create Job"
-                    )}
-                  </Button>
-                </TabsContent>
-              </Tabs>
-            </DialogContent>
-          </Dialog>
-          <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <FileStack className="h-4 w-4 mr-2" />
-                Batch Extract
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Batch OCR Extract</DialogTitle>
-                <DialogDescription>
-                  Extract text from multiple documents at once (max 100 URLs)
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Upload className="h-4 w-4 mr-2" />
+              New OCR Job
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Create OCR Job</DialogTitle>
+              <DialogDescription>
+                Extract text from a document using OCR. Upload a file or provide
+                a URL.
+              </DialogDescription>
+            </DialogHeader>
+            <Tabs defaultValue="upload" className="w-full">
+              <TabsList>
+                <TabsTrigger value="upload">Upload File</TabsTrigger>
+                <TabsTrigger value="url">From URL</TabsTrigger>
+              </TabsList>
+              <TabsContent value="upload" className="space-y-4">
                 <div>
-                  <Label htmlFor="batch-urls">Document URLs (one per line)</Label>
-                  <textarea
-                    id="batch-urls"
-                    className="w-full min-h-32 p-3 border rounded-md font-mono text-sm"
-                    placeholder="https://example.com/doc1.pdf&#10;https://example.com/doc2.pdf&#10;https://example.com/doc3.pdf"
-                    value={batchUrls}
-                    onChange={(e) => setBatchUrls(e.target.value)}
+                  <Label>Upload Document</Label>
+                  <FileUpload
+                    bucket="ocr-documents"
+                    accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp,.gif"
+                    maxSize={50 * 1024 * 1024}
+                    onUploadComplete={(result) => {
+                      setUploadedFileUrl(result.url)
+                      createJobMutation.mutate()
+                    }}
                   />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Enter one URL per line. Maximum 100 URLs per batch.
-                  </p>
+                </div>
+                {uploadedFileUrl && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      File uploaded successfully. Creating OCR job...
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="engine-upload">OCR Engine (Optional)</Label>
+                  <Select
+                    value={selectedEngine}
+                    onValueChange={setSelectedEngine}
+                  >
+                    <SelectTrigger id="engine-upload">
+                      <SelectValue placeholder="Auto-select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Auto-select</SelectItem>
+                      <SelectItem value="doctr">DocTR (Tables)</SelectItem>
+                      <SelectItem value="easyocr">
+                        EasyOCR (Handwriting)
+                      </SelectItem>
+                      <SelectItem value="paddleocr">
+                        PaddleOCR (Low-latency)
+                      </SelectItem>
+                      <SelectItem value="tesseract">
+                        Tesseract (Fallback)
+                      </SelectItem>
+                      <SelectItem value="google_vision">
+                        Google Vision API
+                      </SelectItem>
+                      <SelectItem value="omniparser">
+                        Omniparser (Structured)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+              <TabsContent value="url" className="space-y-4">
+                <div>
+                  <Label htmlFor="document-url">Document URL</Label>
+                  <Input
+                    id="document-url"
+                    placeholder="https://example.com/document.pdf"
+                    value={documentUrl}
+                    onChange={(e) => setDocumentUrl(e.target.value)}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="batch-engine">OCR Engine (Optional)</Label>
-                  <Select value={batchEngine} onValueChange={setBatchEngine}>
-                    <SelectTrigger id="batch-engine">
+                  <Label htmlFor="engine-url">OCR Engine (Optional)</Label>
+                  <Select
+                    value={selectedEngine}
+                    onValueChange={setSelectedEngine}
+                  >
+                    <SelectTrigger id="engine-url">
                       <SelectValue placeholder="Auto-select" />
                     </SelectTrigger>
                     <SelectContent>
@@ -509,26 +437,99 @@ export function OCRJobManager() {
                   </Select>
                 </div>
                 <Button
-                  onClick={() => batchExtractMutation.mutate()}
-                  disabled={!batchUrls.trim() || batchExtractMutation.isPending}
+                  onClick={() => createJobMutation.mutate()}
+                  disabled={!documentUrl.trim() || createJobMutation.isPending}
                   className="w-full"
                 >
-                  {batchExtractMutation.isPending ? (
+                  {createJobMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating Jobs...
+                      Creating...
                     </>
                   ) : (
-                    <>
-                      <FileStack className="h-4 w-4 mr-2" />
-                      Create Batch Jobs
-                    </>
+                    "Create Job"
                   )}
                 </Button>
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <FileStack className="h-4 w-4 mr-2" />
+              Batch Extract
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Batch OCR Extract</DialogTitle>
+              <DialogDescription>
+                Extract text from multiple documents at once (max 100 URLs)
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="batch-urls">Document URLs (one per line)</Label>
+                <textarea
+                  id="batch-urls"
+                  className="w-full min-h-32 p-3 border rounded-md font-mono text-sm"
+                  placeholder="https://example.com/doc1.pdf&#10;https://example.com/doc2.pdf&#10;https://example.com/doc3.pdf"
+                  value={batchUrls}
+                  onChange={(e) => setBatchUrls(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Enter one URL per line. Maximum 100 URLs per batch.
+                </p>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              <div>
+                <Label htmlFor="batch-engine">OCR Engine (Optional)</Label>
+                <Select value={batchEngine} onValueChange={setBatchEngine}>
+                  <SelectTrigger id="batch-engine">
+                    <SelectValue placeholder="Auto-select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Auto-select</SelectItem>
+                    <SelectItem value="doctr">DocTR (Tables)</SelectItem>
+                    <SelectItem value="easyocr">
+                      EasyOCR (Handwriting)
+                    </SelectItem>
+                    <SelectItem value="paddleocr">
+                      PaddleOCR (Low-latency)
+                    </SelectItem>
+                    <SelectItem value="tesseract">
+                      Tesseract (Fallback)
+                    </SelectItem>
+                    <SelectItem value="google_vision">
+                      Google Vision API
+                    </SelectItem>
+                    <SelectItem value="omniparser">
+                      Omniparser (Structured)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={() => batchExtractMutation.mutate()}
+                disabled={!batchUrls.trim() || batchExtractMutation.isPending}
+                className="w-full"
+              >
+                {batchExtractMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating Jobs...
+                  </>
+                ) : (
+                  <>
+                    <FileStack className="h-4 w-4 mr-2" />
+                    Create Batch Jobs
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {jobs && jobs.length > 0 ? (
         <DataTable columns={columns} data={jobs} />
@@ -547,7 +548,7 @@ export function OCRJobManager() {
             </div>
           </CardContent>
         </Card>
-      )
+      )}
     </div>
   )
 }

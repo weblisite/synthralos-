@@ -112,7 +112,13 @@ export function FileUpload({
 
         // Use apiClient for FormData upload - it handles FormData correctly
         return apiClient
-          .request("/api/v1/storage/upload", {
+          .request<{
+            file_id: string
+            path: string
+            url: string
+            size: number
+            content_type: string
+          }>("/api/v1/storage/upload", {
             method: "POST",
             body: formData,
           })

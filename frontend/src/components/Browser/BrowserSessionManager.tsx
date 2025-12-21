@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -30,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
 
@@ -404,7 +406,9 @@ export function BrowserSessionManager() {
                     id="monitor-url"
                     placeholder="https://example.com/page"
                     value={monitorUrl}
-                    onChange={(e) => setMonitorUrl(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setMonitorUrl(e.target.value)
+                    }
                   />
                 </div>
                 <div>
@@ -418,7 +422,9 @@ export function BrowserSessionManager() {
                     max="86400"
                     placeholder="3600"
                     value={monitorInterval}
-                    onChange={(e) => setMonitorInterval(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setMonitorInterval(e.target.value)
+                    }
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Minimum: 60 seconds (1 minute), Maximum: 86400 seconds (24
@@ -433,7 +439,9 @@ export function BrowserSessionManager() {
                     id="monitor-previous"
                     placeholder="Previous page content to compare against"
                     value={monitorPreviousContent}
-                    onChange={(e) => setMonitorPreviousContent(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setMonitorPreviousContent(e.target.value)
+                    }
                     rows={3}
                   />
                   <p className="text-xs text-muted-foreground mt-1">

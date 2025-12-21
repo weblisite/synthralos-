@@ -360,11 +360,6 @@ function getSimpleIconName(slug: string): string {
 }
 
 /**
- * Logo Library Types
- */
-type LogoLibrary = "simple-icons" | "clearbit" | "favicon-io" | "local"
-
-/**
  * Generate logo URLs from Simple Icons library
  */
 function getSimpleIconsUrls(iconName: string): string[] {

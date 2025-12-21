@@ -275,17 +275,19 @@ export function ConnectorCatalog() {
           connectorData?.nango_enabled ||
           connectorDetails?.manifest?.nango?.enabled
 
-        const isDetailsOpen = detailsOpenMap[connector.id] || false
+        const isDetailsOpen = selectedConnector?.id === connector.id
 
         return (
           <div className="flex items-center gap-2">
             <Dialog
               open={isDetailsOpen}
               onOpenChange={(open) => {
-                setDetailsOpenMap((prev) => ({
-                  ...prev,
-                  [connector.id]: open,
-                }))
+                if (!open) {
+                  setSelectedConnector(null)
+                } else {
+                  setSelectedConnector(connector)
+                  fetchConnectorDetails(connector.slug)
+                }
               }}
             >
               <DialogTrigger asChild>
@@ -295,10 +297,6 @@ export function ConnectorCatalog() {
                   onClick={() => {
                     setSelectedConnector(connector)
                     fetchConnectorDetails(connector.slug)
-                    setDetailsOpenMap((prev) => ({
-                      ...prev,
-                      [connector.id]: true,
-                    }))
                   }}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
@@ -316,10 +314,7 @@ export function ConnectorCatalog() {
                   connectorSlug={connector.slug}
                   connectorName={connector.name}
                   onClose={() => {
-                    setDetailsOpenMap((prev) => ({
-                      ...prev,
-                      [connector.id]: false,
-                    }))
+                    setSelectedConnector(null)
                   }}
                 />
               </DialogContent>

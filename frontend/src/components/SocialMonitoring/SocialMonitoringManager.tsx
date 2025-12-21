@@ -84,7 +84,7 @@ interface SocialMonitoringAlert {
 const fetchSocialMonitoringStreams = async (): Promise<
   SocialMonitoringStream[]
 > => {
-  const data = await apiClient.request<{ streams: OSINTStream[] }>(
+  const data = await apiClient.request<{ streams: SocialMonitoringStream[] }>(
     "/api/v1/osint/streams",
   )
   return data.streams || []
@@ -95,7 +95,7 @@ const createSocialMonitoringStream = async (
   keywords: string[],
   engine?: string,
 ): Promise<SocialMonitoringStream> => {
-  return apiClient.request<OSINTStream>("/api/v1/osint/stream", {
+  return apiClient.request<SocialMonitoringStream>("/api/v1/osint/stream", {
     method: "POST",
     body: JSON.stringify({
       platform,
@@ -143,7 +143,7 @@ const updateStreamStatus = async (
 const executeStream = async (
   streamId: string,
 ): Promise<SocialMonitoringSignal[]> => {
-  const data = await apiClient.request<{ signals: OSINTSignal[] }>(
+  const data = await apiClient.request<{ signals: SocialMonitoringSignal[] }>(
     `/api/v1/osint/streams/${streamId}/execute`,
     {
       method: "POST",
@@ -155,14 +155,14 @@ const executeStream = async (
 const fetchStreamSignals = async (
   streamId: string,
 ): Promise<SocialMonitoringSignal[]> => {
-  const data = await apiClient.request<{ signals: OSINTSignal[] }>(
+  const data = await apiClient.request<{ signals: SocialMonitoringSignal[] }>(
     `/api/v1/osint/streams/${streamId}/signals?limit=100`,
   )
   return data.signals || []
 }
 
 const fetchAlerts = async (): Promise<SocialMonitoringAlert[]> => {
-  const data = await apiClient.request<{ alerts: OSINTAlert[] }>(
+  const data = await apiClient.request<{ alerts: SocialMonitoringAlert[] }>(
     "/api/v1/osint/alerts?limit=100",
   )
   return data.alerts || []

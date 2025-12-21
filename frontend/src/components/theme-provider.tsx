@@ -51,24 +51,6 @@ export function ThemeProvider({
     getResolvedTheme(theme),
   )
 
-  const _updateTheme = useCallback((newTheme: Theme) => {
-    const root = window.document.documentElement
-
-    root.classList.remove("light", "dark")
-
-    if (newTheme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light"
-
-      root.classList.add(systemTheme)
-      return
-    }
-
-    root.classList.add(newTheme)
-  }, [])
-
   useEffect(() => {
     // Apply theme immediately on mount and when theme changes
     const root = window.document.documentElement

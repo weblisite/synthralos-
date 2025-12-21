@@ -6,7 +6,7 @@
 
 import type { Edge, Node } from "@xyflow/react"
 import { Copy, Trash2, X } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { MonacoEditor } from "@/components/Common/MonacoEditor"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -83,6 +83,20 @@ export function NodeConfigPanel({
   )
   const [isLoadingScopes, setIsLoadingScopes] = useState(false)
 
+  const handleConfigUpdate = useCallback(
+    (key: string, value: any) => {
+      if (!node) return
+      const updatedConfig = { ...config, [key]: value }
+      onUpdate(node.id, {
+        data: {
+          ...node.data,
+          config: updatedConfig,
+        },
+      })
+    },
+    [node, config, onUpdate],
+  )
+
   // Fetch connector scopes when connector node is selected
   useEffect(() => {
     if (node?.type === "connector" && config.connector_slug) {
@@ -153,16 +167,6 @@ export function NodeConfigPanel({
 
   if (!node) {
     return null
-  }
-
-  const handleConfigUpdate = (key: string, value: any) => {
-    const updatedConfig = { ...config, [key]: value }
-    onUpdate(node.id, {
-      data: {
-        ...node.data,
-        config: updatedConfig,
-      },
-    })
   }
 
   const handleLabelUpdate = (label: string) => {

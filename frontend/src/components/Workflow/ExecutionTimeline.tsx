@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
-import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
 
 interface TimelineEvent {
@@ -90,8 +89,6 @@ export function ExecutionTimeline({
   executionId,
   onClose,
 }: ExecutionTimelineProps) {
-  const { showErrorToast } = useCustomToast()
-
   const {
     data: timeline,
     isLoading,
@@ -104,9 +101,10 @@ export function ExecutionTimeline({
         `/api/v1/workflows/executions/${executionId}/timeline`,
       )
     },
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Poll if execution is still running
-      if (data?.status === "running" || data?.status === "pending") {
+      const data = query.state.data as ExecutionTimeline | undefined
+      if (data && (data.status === "running" || data.status === "pending")) {
         return 2000 // Poll every 2 seconds
       }
       return false
