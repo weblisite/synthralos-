@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app/
 
 # Install system dependencies including Tesseract OCR and EasyOCR dependencies
+# Note: libgl1-mesa-glx was deprecated in Debian Trixie, using libgl1 instead
 RUN apt-get update && \
     apt-get install -y \
         tesseract-ocr \
@@ -15,6 +16,8 @@ RUN apt-get update && \
         libxext6 \
         libxrender-dev \
         libgomp1 \
+        libfontconfig1 \
+        libice6 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
