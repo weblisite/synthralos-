@@ -6,6 +6,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ActivityLogs } from "./ActivityLogs"
+import { ConnectorStats } from "./ConnectorStats"
 import { CostAnalytics } from "./CostAnalytics"
 import { ExecutionHistory } from "./ExecutionHistory"
 import { RetryManagement } from "./RetryManagement"
@@ -24,10 +25,11 @@ export function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="executions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="executions">Executions</TabsTrigger>
           <TabsTrigger value="retries">Retries</TabsTrigger>
           <TabsTrigger value="costs">Costs</TabsTrigger>
+          <TabsTrigger value="connectors">Connectors</TabsTrigger>
           <TabsTrigger value="health">Health</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
@@ -43,6 +45,10 @@ export function AdminDashboard() {
 
         <TabsContent value="costs" className="space-y-4">
           <CostAnalytics />
+        </TabsContent>
+
+        <TabsContent value="connectors" className="space-y-4">
+          <ConnectorStats />
         </TabsContent>
 
         <TabsContent value="health" className="space-y-4">

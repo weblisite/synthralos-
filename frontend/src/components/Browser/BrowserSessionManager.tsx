@@ -7,7 +7,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
-import { Eye, Loader2, Monitor, Play, X } from "lucide-react"
+import { Bell, Eye, Loader2, Monitor, Play, X } from "lucide-react"
 import { useState } from "react"
 import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
@@ -61,6 +61,30 @@ const createBrowserSession = async (
 const closeBrowserSession = async (sessionId: string): Promise<void> => {
   await apiClient.request(`/api/v1/browser/session/${sessionId}/close`, {
     method: "POST",
+  })
+}
+
+const monitorPageChanges = async (
+  url: string,
+  checkIntervalSeconds: number = 3600,
+  previousContent?: string,
+): Promise<{
+  id: string
+  url: string
+  diff_hash: string
+  previous_content: string | null
+  current_content: string | null
+  detected_at: string
+  change_type: string | null
+  description: string | null
+} | null> => {
+  return apiClient.request("/api/v1/browser/monitor", {
+    method: "POST",
+    body: JSON.stringify({
+      url,
+      check_interval_seconds: checkIntervalSeconds,
+      previous_content: previousContent || undefined,
+    }),
   })
 }
 
@@ -216,7 +240,11 @@ export function BrowserSessionManager() {
   })
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isMonitorDialogOpen, setIsMonitorDialogOpen] = useState(false)
   const [selectedBrowserTool, setSelectedBrowserTool] = useState("playwright")
+  const [monitorUrl, setMonitorUrl] = useState("")
+  const [monitorInterval, setMonitorInterval] = useState("3600")
+  const [monitorPreviousContent, setMonitorPreviousContent] = useState("")
 
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -233,6 +261,43 @@ export function BrowserSessionManager() {
     },
     onError: (error: Error) => {
       showErrorToast("Failed to create browser session", error.message)
+    },
+  })
+
+  const monitorChangesMutation = useMutation({
+    mutationFn: () => {
+      if (!monitorUrl.trim()) {
+        throw new Error("Please provide a URL to monitor")
+      }
+      const interval = parseInt(monitorInterval, 10) || 3600
+      if (interval < 60 || interval > 86400) {
+        throw new Error("Check interval must be between 60 and 86400 seconds")
+      }
+      return monitorPageChanges(
+        monitorUrl,
+        interval,
+        monitorPreviousContent || undefined,
+      )
+    },
+    onSuccess: (data) => {
+      if (data) {
+        showSuccessToast(
+          "Change Detected",
+          `Changes detected on ${data.url}. Change type: ${data.change_type || "unknown"}`,
+        )
+      } else {
+        showSuccessToast(
+          "Monitoring Started",
+          `Monitoring ${monitorUrl} for changes (checking every ${monitorInterval}s)`,
+        )
+      }
+      setIsMonitorDialogOpen(false)
+      setMonitorUrl("")
+      setMonitorInterval("3600")
+      setMonitorPreviousContent("")
+    },
+    onError: (error: Error) => {
+      showErrorToast("Failed to monitor page", error.message)
     },
   })
 
@@ -254,63 +319,150 @@ export function BrowserSessionManager() {
             Manage browser automation sessions and actions
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Play className="h-4 w-4 mr-2" />
-              New Session
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Browser Session</DialogTitle>
-              <DialogDescription>
-                Start a new browser automation session
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="browser-tool">Browser Tool</Label>
-                <Select
-                  value={selectedBrowserTool}
-                  onValueChange={setSelectedBrowserTool}
-                >
-                  <SelectTrigger id="browser-tool">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="playwright">
-                      Playwright (JS-heavy pages)
-                    </SelectItem>
-                    <SelectItem value="puppeteer">
-                      Puppeteer (Headless Chrome)
-                    </SelectItem>
-                    <SelectItem value="browserbase">
-                      Browserbase (Fleet-scale)
-                    </SelectItem>
-                    <SelectItem value="undetected_chromedriver">
-                      Undetected ChromeDriver (Anti-bot)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                onClick={() => createSessionMutation.mutate()}
-                disabled={createSessionMutation.isPending}
-                className="w-full"
-              >
-                {createSessionMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Session"
-                )}
+        <div className="flex gap-2">
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+          >
+            <DialogTrigger asChild>
+              <Button>
+                <Play className="h-4 w-4 mr-2" />
+                New Session
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Browser Session</DialogTitle>
+                <DialogDescription>
+                  Start a new browser automation session
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="browser-tool">Browser Tool</Label>
+                  <Select
+                    value={selectedBrowserTool}
+                    onValueChange={setSelectedBrowserTool}
+                  >
+                    <SelectTrigger id="browser-tool">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="playwright">
+                        Playwright (JS-heavy pages)
+                      </SelectItem>
+                      <SelectItem value="puppeteer">
+                        Puppeteer (Headless Chrome)
+                      </SelectItem>
+                      <SelectItem value="browserbase">
+                        Browserbase (Fleet-scale)
+                      </SelectItem>
+                      <SelectItem value="undetected_chromedriver">
+                        Undetected ChromeDriver (Anti-bot)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={() => createSessionMutation.mutate()}
+                  disabled={createSessionMutation.isPending}
+                  className="w-full"
+                >
+                  {createSessionMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Session"
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog
+            open={isMonitorDialogOpen}
+            onOpenChange={setIsMonitorDialogOpen}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Bell className="h-4 w-4 mr-2" />
+                Monitor Page
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Monitor Page Changes</DialogTitle>
+                <DialogDescription>
+                  Monitor a page for content changes using browser automation
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="monitor-url">URL to Monitor</Label>
+                  <Input
+                    id="monitor-url"
+                    placeholder="https://example.com/page"
+                    value={monitorUrl}
+                    onChange={(e) => setMonitorUrl(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="monitor-interval">
+                    Check Interval (seconds)
+                  </Label>
+                  <Input
+                    id="monitor-interval"
+                    type="number"
+                    min="60"
+                    max="86400"
+                    placeholder="3600"
+                    value={monitorInterval}
+                    onChange={(e) => setMonitorInterval(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Minimum: 60 seconds (1 minute), Maximum: 86400 seconds (24
+                    hours)
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="monitor-previous">
+                    Previous Content (Optional)
+                  </Label>
+                  <Textarea
+                    id="monitor-previous"
+                    placeholder="Previous page content to compare against"
+                    value={monitorPreviousContent}
+                    onChange={(e) => setMonitorPreviousContent(e.target.value)}
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Optional: Provide previous content to compare against
+                  </p>
+                </div>
+                <Button
+                  onClick={() => monitorChangesMutation.mutate()}
+                  disabled={
+                    !monitorUrl.trim() || monitorChangesMutation.isPending
+                  }
+                  className="w-full"
+                >
+                  {monitorChangesMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Monitoring...
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="h-4 w-4 mr-2" />
+                      Start Monitoring
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {sessions && sessions.length > 0 ? (

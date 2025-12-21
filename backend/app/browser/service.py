@@ -5,6 +5,8 @@ Multi-engine browser automation service with proxy support and behavioral stealt
 Handles routing logic for multiple browser automation engines.
 """
 
+import asyncio
+import base64
 import logging
 import uuid
 from datetime import datetime
@@ -77,41 +79,6 @@ class BrowserService:
             }
 
         # Puppeteer (use Playwright as alternative)
-        if self._browser_engines.get("playwright", {}).get("is_available"):
-            self._browser_engines["puppeteer"] = {
-                "name": "puppeteer",
-                "is_available": True,
-                "use_playwright": True,
-            }
-        else:
-            self._browser_engines["puppeteer"] = {
-                "name": "puppeteer",
-                "is_available": False,
-            }
-        self._initialize_engines()
-
-    def _initialize_engines(self) -> None:
-        """Initialize available browser engines."""
-        # Playwright
-        try:
-            from playwright.async_api import async_playwright
-
-            self._browser_engines["playwright"] = {
-                "name": "playwright",
-                "is_available": True,
-                "async_playwright": async_playwright,
-            }
-            logger.info("✅ Playwright browser engine initialized")
-        except ImportError:
-            logger.info(
-                "playwright not installed. Install with: pip install playwright && playwright install"
-            )
-            self._browser_engines["playwright"] = {
-                "name": "playwright",
-                "is_available": False,
-            }
-
-        # Puppeteer (via pyppeteer or playwright-python)
         # Note: Puppeteer is Node.js-based, so we'll use Playwright as the primary engine
         # and mark Puppeteer as available if Playwright is available
         if self._browser_engines.get("playwright", {}).get("is_available"):
@@ -120,6 +87,7 @@ class BrowserService:
                 "is_available": True,  # Use Playwright as Puppeteer alternative
                 "use_playwright": True,
             }
+            logger.info("✅ Puppeteer (via Playwright) browser engine initialized")
         else:
             self._browser_engines["puppeteer"] = {
                 "name": "puppeteer",

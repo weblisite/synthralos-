@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { RAGIndexManager } from "@/components/RAG/RAGIndexManager"
+import { RoutingLogs } from "@/components/RAG/RoutingLogs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export const Route = createFileRoute("/_layout/rag")({
   component: RAGPage,
@@ -21,7 +23,18 @@ function RAGPage() {
           Manage your RAG indexes, documents, and queries
         </p>
       </div>
-      <RAGIndexManager />
+      <Tabs defaultValue="indexes" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="indexes">Indexes</TabsTrigger>
+          <TabsTrigger value="routing">Routing Logs</TabsTrigger>
+        </TabsList>
+        <TabsContent value="indexes">
+          <RAGIndexManager />
+        </TabsContent>
+        <TabsContent value="routing">
+          <RoutingLogs />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

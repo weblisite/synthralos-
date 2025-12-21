@@ -30,8 +30,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useConnections } from "@/hooks/useConnections"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
+import { getConnectorLogoUrls } from "@/lib/connectorLogos"
 import { ConnectButton } from "./ConnectButton"
 import { ConnectionStatus } from "./ConnectionStatus"
+import { ConnectorDetails } from "./ConnectorDetails"
 import { ConnectorTestRunner } from "./ConnectorTestRunner"
 import { ConnectorWizard } from "./ConnectorWizard"
 import { OAuthModal } from "./OAuthModal"
@@ -159,21 +161,59 @@ export function ConnectorCatalog() {
     return <Badge variant={variants[status] || "secondary"}>{status}</Badge>
   }
 
+  // Connector name cell component with logo
+  function ConnectorNameCell({ connector }: { connector: Connector }) {
+    const [logoUrl, setLogoUrl] = useState<string | null>(null)
+
+    useEffect(() => {
+      if (connector.slug && !logoUrl) {
+        const logoUrls = getConnectorLogoUrls(connector.slug)
+        let currentIndex = 0
+
+        const tryNextLogo = () => {
+          if (currentIndex >= logoUrls.length) {
+            setLogoUrl(null)
+            return
+          }
+
+          const img = new Image()
+          img.onload = () => setLogoUrl(logoUrls[currentIndex]!)
+          img.onerror = () => {
+            currentIndex++
+            tryNextLogo()
+          }
+          img.src = logoUrls[currentIndex]!
+        }
+
+        tryNextLogo()
+      }
+    }, [connector.slug, logoUrl])
+
+    return (
+      <div className="flex items-center gap-2">
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={connector.name}
+            className="h-5 w-5 object-contain flex-shrink-0"
+            onError={() => setLogoUrl(null)}
+          />
+        ) : (
+          <div className="h-5 w-5 flex-shrink-0" /> // Placeholder for alignment
+        )}
+        <div>
+          <div className="font-semibold">{connector.name}</div>
+          <div className="text-sm text-muted-foreground">{connector.slug}</div>
+        </div>
+      </div>
+    )
+  }
+
   const columns: ColumnDef<Connector>[] = [
     {
       accessorKey: "name",
       header: "Name",
-      cell: ({ row }) => {
-        const connector = row.original
-        return (
-          <div>
-            <div className="font-semibold">{connector.name}</div>
-            <div className="text-sm text-muted-foreground">
-              {connector.slug}
-            </div>
-          </div>
-        )
-      },
+      cell: ({ row }) => <ConnectorNameCell connector={row.original} />,
     },
     {
       accessorKey: "status",
@@ -235,19 +275,55 @@ export function ConnectorCatalog() {
           connectorData?.nango_enabled ||
           connectorDetails?.manifest?.nango?.enabled
 
+        const isDetailsOpen = detailsOpenMap[connector.id] || false
+
         return (
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedConnector(connector)
-                fetchConnectorDetails(connector.slug)
+            <Dialog
+              open={isDetailsOpen}
+              onOpenChange={(open) => {
+                setDetailsOpenMap((prev) => ({
+                  ...prev,
+                  [connector.id]: open,
+                }))
               }}
             >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              View
-            </Button>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedConnector(connector)
+                    fetchConnectorDetails(connector.slug)
+                    setDetailsOpenMap((prev) => ({
+                      ...prev,
+                      [connector.id]: true,
+                    }))
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Details
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Connector Details</DialogTitle>
+                  <DialogDescription>
+                    View actions, triggers, and versions for {connector.name}
+                  </DialogDescription>
+                </DialogHeader>
+                <ConnectorDetails
+                  connectorSlug={connector.slug}
+                  connectorName={connector.name}
+                  onClose={() => {
+                    setDetailsOpenMap((prev) => ({
+                      ...prev,
+                      [connector.id]: false,
+                    }))
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
             {hasNango &&
               (isConn ? (
                 <Button

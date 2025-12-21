@@ -130,9 +130,63 @@ export const useAuth = () => {
       }
     })
 
+    // Automatic session refresh to prevent freezing after inactivity
+    const refreshSessionInterval = setInterval(
+      async () => {
+        if (!mounted) return
+
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+
+          if (session?.expires_at) {
+            // Check if session expires soon (within 5 minutes)
+            const expiresAt = session.expires_at
+            const now = Math.floor(Date.now() / 1000)
+            const timeUntilExpiry = expiresAt - now
+
+            // Refresh if less than 5 minutes remaining
+            if (timeUntilExpiry < 300) {
+              console.log("[useAuth] Refreshing session before expiration")
+              await supabase.auth.refreshSession()
+              queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+            }
+          }
+        } catch (error) {
+          console.error("[useAuth] Error refreshing session:", error)
+        }
+      },
+      2 * 60 * 1000,
+    ) // Check every 2 minutes
+
+    // Refresh session on visibility change (when user returns to tab)
+    const handleVisibilityChange = async () => {
+      if (!document.hidden && mounted) {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+          if (session) {
+            await supabase.auth.refreshSession()
+            queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+          }
+        } catch (error) {
+          console.error(
+            "[useAuth] Error refreshing session on visibility change:",
+            error,
+          )
+        }
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
     return () => {
       mounted = false
       subscription.unsubscribe()
+      clearInterval(refreshSessionInterval)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
   }, [queryClient])
 

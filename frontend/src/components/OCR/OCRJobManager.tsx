@@ -7,7 +7,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
-import { Eye, FileText, Loader2, Upload } from "lucide-react"
+import { Eye, FileStack, FileText, Loader2, Play, Upload } from "lucide-react"
 import { useState } from "react"
 import { DataTable } from "@/components/Common/DataTable"
 import { FileUpload } from "@/components/Storage/FileUpload"
@@ -63,6 +63,28 @@ const createOCRJob = async (
       engine: engine,
     }),
   })
+}
+
+const processOCRJob = async (jobId: string): Promise<void> => {
+  await apiClient.request(`/api/v1/ocr/process/${jobId}`, {
+    method: "POST",
+  })
+}
+
+const batchExtractOCR = async (
+  documentUrls: string[],
+  engine?: string,
+): Promise<{ jobs: OCRJob[]; total_count: number }> => {
+  return apiClient.request<{ jobs: OCRJob[]; total_count: number }>(
+    "/api/v1/ocr/batch",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        document_urls: documentUrls,
+        engine: engine,
+      }),
+    },
+  )
 }
 
 const getStatusColor = (status: string) => {
@@ -126,68 +148,93 @@ const columns: ColumnDef<OCRJob>[] = [
     id: "actions",
     header: "Actions",
     cell: ({ row }) => {
-      const job = row.original
-      const [isViewOpen, setIsViewOpen] = useState(false)
-
-      return (
-        <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Eye className="h-4 w-4 mr-2" />
-              View
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>OCR Job Details</DialogTitle>
-              <DialogDescription>Job ID: {job.id}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <Label>Status</Label>
-                  <Badge className={getStatusColor(job.status)}>
-                    {job.status}
-                  </Badge>
-                </div>
-                <div>
-                  <Label>Engine</Label>
-                  <p>{job.engine}</p>
-                </div>
-                <div>
-                  <Label>Started At</Label>
-                  <p>{format(new Date(job.started_at), "PPP p")}</p>
-                </div>
-                {job.completed_at && (
-                  <div>
-                    <Label>Completed At</Label>
-                    <p>{format(new Date(job.completed_at), "PPP p")}</p>
-                  </div>
-                )}
-              </div>
-              {job.error_message && (
-                <div>
-                  <Label>Error</Label>
-                  <p className="text-red-500">{job.error_message}</p>
-                </div>
-              )}
-              {job.result && (
-                <div>
-                  <Label>Result</Label>
-                  <ScrollArea className="h-60 rounded-md border p-4 mt-2">
-                    <pre className="text-xs">
-                      {JSON.stringify(job.result, null, 2)}
-                    </pre>
-                  </ScrollArea>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )
+      return <OCRJobActionsCell job={row.original} />
     },
   },
 ]
+
+function OCRJobActionsCell({ job }: { job: OCRJob }) {
+  const [isViewOpen, setIsViewOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const handleProcess = async () => {
+    try {
+      await processOCRJob(job.id)
+      queryClient.invalidateQueries({ queryKey: ["ocrJobs"] })
+      showSuccessToast("OCR job processing started")
+    } catch (error) {
+      showErrorToast(
+        error instanceof Error ? error.message : "Failed to process job",
+      )
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {(job.status === "pending" || job.status === "failed") && (
+        <Button variant="outline" size="sm" onClick={handleProcess}>
+          <Play className="h-4 w-4 mr-2" />
+          Process
+        </Button>
+      )}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Eye className="h-4 w-4 mr-2" />
+            View
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>OCR Job Details</DialogTitle>
+            <DialogDescription>Job ID: {job.id}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <Label>Status</Label>
+                <Badge className={getStatusColor(job.status)}>
+                  {job.status}
+                </Badge>
+              </div>
+              <div>
+                <Label>Engine</Label>
+                <p>{job.engine}</p>
+              </div>
+              <div>
+                <Label>Started At</Label>
+                <p>{format(new Date(job.started_at), "PPP p")}</p>
+              </div>
+              {job.completed_at && (
+                <div>
+                  <Label>Completed At</Label>
+                  <p>{format(new Date(job.completed_at), "PPP p")}</p>
+                </div>
+              )}
+            </div>
+            {job.error_message && (
+              <div>
+                <Label>Error</Label>
+                <p className="text-red-500">{job.error_message}</p>
+              </div>
+            )}
+            {job.result && (
+              <div>
+                <Label>Result</Label>
+                <ScrollArea className="h-60 rounded-md border p-4 mt-2">
+                  <pre className="text-xs">
+                    {JSON.stringify(job.result, null, 2)}
+                  </pre>
+                </ScrollArea>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
 
 export function OCRJobManager() {
   const queryClient = useQueryClient()
@@ -198,8 +245,11 @@ export function OCRJobManager() {
   })
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false)
   const [documentUrl, setDocumentUrl] = useState("")
+  const [batchUrls, setBatchUrls] = useState<string>("")
   const [selectedEngine, setSelectedEngine] = useState<string>("")
+  const [batchEngine, setBatchEngine] = useState<string>("")
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null)
 
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -226,6 +276,35 @@ export function OCRJobManager() {
     },
   })
 
+  const batchExtractMutation = useMutation({
+    mutationFn: () => {
+      const urls = batchUrls
+        .split("\n")
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0)
+      if (urls.length === 0) {
+        throw new Error("Please provide at least one document URL")
+      }
+      if (urls.length > 100) {
+        throw new Error("Maximum 100 URLs allowed per batch")
+      }
+      return batchExtractOCR(urls, batchEngine || undefined)
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["ocrJobs"] })
+      showSuccessToast(
+        "Batch OCR Started",
+        `Created ${data.total_count} OCR jobs successfully`,
+      )
+      setIsBatchDialogOpen(false)
+      setBatchUrls("")
+      setBatchEngine("")
+    },
+    onError: (error: Error) => {
+      showErrorToast("Failed to create batch OCR jobs", error.message)
+    },
+  })
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -244,13 +323,91 @@ export function OCRJobManager() {
             Extract text from documents using multiple OCR engines
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Upload className="h-4 w-4 mr-2" />
-              New OCR Job
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Upload className="h-4 w-4 mr-2" />
+                New OCR Job
+              </Button>
+            </DialogTrigger>
+          </Dialog>
+          <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <FileStack className="h-4 w-4 mr-2" />
+                Batch Extract
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Batch OCR Extract</DialogTitle>
+                <DialogDescription>
+                  Extract text from multiple documents at once (max 100 URLs)
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="batch-urls">Document URLs (one per line)</Label>
+                  <textarea
+                    id="batch-urls"
+                    className="w-full min-h-32 p-3 border rounded-md font-mono text-sm"
+                    placeholder="https://example.com/doc1.pdf&#10;https://example.com/doc2.pdf&#10;https://example.com/doc3.pdf"
+                    value={batchUrls}
+                    onChange={(e) => setBatchUrls(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Enter one URL per line. Maximum 100 URLs per batch.
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="batch-engine">OCR Engine (Optional)</Label>
+                  <Select value={batchEngine} onValueChange={setBatchEngine}>
+                    <SelectTrigger id="batch-engine">
+                      <SelectValue placeholder="Auto-select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Auto-select</SelectItem>
+                      <SelectItem value="doctr">DocTR (Tables)</SelectItem>
+                      <SelectItem value="easyocr">
+                        EasyOCR (Handwriting)
+                      </SelectItem>
+                      <SelectItem value="paddleocr">
+                        PaddleOCR (Low-latency)
+                      </SelectItem>
+                      <SelectItem value="tesseract">
+                        Tesseract (Fallback)
+                      </SelectItem>
+                      <SelectItem value="google_vision">
+                        Google Vision API
+                      </SelectItem>
+                      <SelectItem value="omniparser">
+                        Omniparser (Structured)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={() => batchExtractMutation.mutate()}
+                  disabled={!batchUrls.trim() || batchExtractMutation.isPending}
+                  className="w-full"
+                >
+                  {batchExtractMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating Jobs...
+                    </>
+                  ) : (
+                    <>
+                      <FileStack className="h-4 w-4 mr-2" />
+                      Create Batch Jobs
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create OCR Job</DialogTitle>
@@ -396,7 +553,6 @@ export function OCRJobManager() {
             </div>
           </CardContent>
         </Card>
-      )}
+      )
     </div>
   )
-}

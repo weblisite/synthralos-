@@ -19,7 +19,7 @@ import {
   type NodeTypes,
   ReactFlow,
 } from "@xyflow/react"
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import "@xyflow/react/dist/style.css"
 
 import { AINode } from "./nodes/AINode"
@@ -55,6 +55,7 @@ interface WorkflowCanvasProps {
   onConnect: (connection: Connection) => void
   onNodeClick?: NodeMouseHandler
   onPaneClick?: (event: React.MouseEvent) => void
+  onNodeDelete?: (nodeId: string) => void
   readonly?: boolean
 }
 
@@ -66,16 +67,59 @@ export function WorkflowCanvas({
   onConnect,
   onNodeClick,
   onPaneClick,
+  onNodeDelete,
   readonly = false,
 }: WorkflowCanvasProps) {
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      // Handle node deletion via keyboard (Delete/Backspace)
+      const deleteChanges = changes.filter((change) => change.type === "remove")
+
+      if (deleteChanges.length > 0 && onNodeDelete) {
+        // React Flow handles deletion internally, but we can also call onNodeDelete
+        // for custom handling if needed
+        deleteChanges.forEach((change) => {
+          if (change.type === "remove" && change.id) {
+            onNodeDelete(change.id)
+          }
+        })
+      }
+
       // Apply changes to current nodes using React Flow's helper
       const updatedNodes = applyNodeChanges(changes, initialNodes)
       onNodesChange(updatedNodes)
     },
-    [initialNodes, onNodesChange],
+    [initialNodes, onNodesChange, onNodeDelete],
   )
+
+  // Add keyboard shortcut for delete (Delete/Backspace keys)
+  useEffect(() => {
+    if (readonly || !onNodeDelete) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if Delete or Backspace is pressed
+      if (event.key === "Delete" || event.key === "Backspace") {
+        // Don't delete if user is typing in an input/textarea
+        const target = event.target as HTMLElement
+        if (
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable
+        ) {
+          return
+        }
+
+        // React Flow will handle the deletion via handleNodesChange
+        // This is just for additional handling if needed
+        event.preventDefault()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [readonly, onNodeDelete])
 
   const handleEdgesChange = useCallback(
     (changes: any) => {
@@ -114,7 +158,15 @@ export function WorkflowCanvas({
           display: none !important;
         }
       `}</style>
-      <div className="w-full h-full" style={{ width: "100%", height: "100%" }}>
+      <div
+        className="w-full h-full"
+        style={{
+          width: "100%",
+          height: "100%",
+          minWidth: "100%",
+          minHeight: "100%",
+        }}
+      >
         <ReactFlow
           nodes={initialNodes}
           edges={initialEdges}
@@ -125,6 +177,7 @@ export function WorkflowCanvas({
           onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           fitView
+          fitViewOptions={{ padding: 0.2, maxZoom: 1.5 }}
           minZoom={0.1}
           maxZoom={2}
           defaultEdgeOptions={{

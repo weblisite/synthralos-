@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiClient } from "@/lib/apiClient"
 
 interface ConnectorWizardProps {
   onSuccess?: () => void
@@ -34,15 +34,6 @@ export function ConnectorWizard({
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to register connectors")
-        return
-      }
-
       let parsedManifest
       try {
         parsedManifest = JSON.parse(manifest)
@@ -52,23 +43,14 @@ export function ConnectorWizard({
       }
 
       const registerEndpoint = endpoint || "/api/v1/connectors/register"
-      const response = await fetch(registerEndpoint, {
+      await apiClient.request(registerEndpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
         body: JSON.stringify({
           manifest: parsedManifest,
           wheel_url: wheelUrl || undefined,
           is_platform: isPlatform,
         }),
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Failed to register connector")
-      }
 
       showSuccessToast("Connector registered successfully")
       if (onSuccess) {

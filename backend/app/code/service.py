@@ -433,6 +433,26 @@ class CodeExecutionService:
                 # Set timeout
                 timeout = input_data.get("timeout", settings.CODE_EXECUTION_TIMEOUT)
 
+                # Detect potential infinite loops in code
+                # Check for common infinite loop patterns
+                loop_patterns = [
+                    "while True:",
+                    "while 1:",
+                    "for i in range(999999)",
+                    "for i in range(9999999)",
+                    "while True",
+                    "while 1",
+                ]
+                code_lower = code.lower()
+                has_potential_loop = any(
+                    pattern in code_lower for pattern in loop_patterns
+                )
+
+                if has_potential_loop:
+                    logger.warning(
+                        f"Potential infinite loop detected in code. Timeout will be enforced at {timeout} seconds."
+                    )
+
                 # Execute code
                 start_memory = (
                     resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024

@@ -51,7 +51,7 @@ export function ThemeProvider({
     getResolvedTheme(theme),
   )
 
-  const updateTheme = useCallback((newTheme: Theme) => {
+  const _updateTheme = useCallback((newTheme: Theme) => {
     const root = window.document.documentElement
 
     root.classList.remove("light", "dark")
@@ -70,15 +70,41 @@ export function ThemeProvider({
   }, [])
 
   useEffect(() => {
-    updateTheme(theme)
-    setResolvedTheme(getResolvedTheme(theme))
+    // Apply theme immediately on mount and when theme changes
+    const root = window.document.documentElement
+
+    // Remove all theme classes first
+    root.classList.remove("light", "dark")
+
+    // Determine which theme to apply
+    let themeToApply: "light" | "dark"
+    if (theme === "system") {
+      themeToApply = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+    } else {
+      themeToApply = theme
+    }
+
+    // Apply the theme class
+    root.classList.add(themeToApply)
+    setResolvedTheme(themeToApply)
+
+    // Force reflow to ensure styles apply immediately
+    void root.offsetHeight
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
 
     const handleChange = () => {
       if (theme === "system") {
-        updateTheme("system")
-        setResolvedTheme(getResolvedTheme("system"))
+        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+          .matches
+          ? "dark"
+          : "light"
+        root.classList.remove("light", "dark")
+        root.classList.add(systemTheme)
+        setResolvedTheme(systemTheme)
+        void root.offsetHeight // Force reflow
       }
     }
 
@@ -87,7 +113,7 @@ export function ThemeProvider({
     return () => {
       mediaQuery.removeEventListener("change", handleChange)
     }
-  }, [theme, updateTheme, getResolvedTheme])
+  }, [theme])
 
   const value = {
     theme,

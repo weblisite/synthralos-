@@ -275,7 +275,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _set_default_emails_from(self) -> Self:
         if not self.EMAILS_FROM_NAME:
-            self.EMAILS_FROM_NAME = self.PROJECT_NAME
+            # Default to "SynthralOS AI" for better branding
+            self.EMAILS_FROM_NAME = "SynthralOS AI"
         return self
 
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48

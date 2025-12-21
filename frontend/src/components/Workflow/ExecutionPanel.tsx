@@ -5,14 +5,23 @@
  */
 
 import type { Edge, Node } from "@xyflow/react"
-import { Pause, Play, RefreshCw, Square, X } from "lucide-react"
+import { Clock, Pause, Play, RefreshCw, Square, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiClient } from "@/lib/apiClient"
+import { ExecutionTimeline } from "./ExecutionTimeline"
 
 interface ExecutionLog {
   id: string
@@ -78,29 +87,9 @@ export function ExecutionPanel({
     if (!executionId) return
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to view execution status")
-        return
-      }
-
-      const response = await fetch(
+      const status = await apiClient.request<ExecutionStatus>(
         `/api/v1/workflows/executions/${executionId}/status`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        },
       )
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch execution status")
-      }
-
-      const status = await response.json()
       setExecutionStatus(status)
       if (onExecutionStatusChangeRef.current) {
         onExecutionStatusChangeRef.current(status)
@@ -142,28 +131,9 @@ export function ExecutionPanel({
     if (!executionId) return
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        return
-      }
-
-      const response = await fetch(
-        `/api/v1/workflows/executions/${executionId}/logs`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        },
-      )
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch logs")
-      }
-
-      const logsData = await response.json()
+      const logsData = await apiClient.request<
+        ExecutionLog[] | { logs: ExecutionLog[] }
+      >(`/api/v1/workflows/executions/${executionId}/logs`)
       // Backend returns array directly, not wrapped in logs property
       setLogs(Array.isArray(logsData) ? logsData : logsData.logs || [])
     } catch (error) {
@@ -212,29 +182,12 @@ export function ExecutionPanel({
     if (!executionId) return
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to pause execution")
-        return
-      }
-
-      const response = await fetch(
+      await apiClient.request(
         `/api/v1/workflows/executions/${executionId}/pause`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
         },
       )
-
-      if (!response.ok) {
-        throw new Error("Failed to pause execution")
-      }
-
       showSuccessToast("Execution paused")
       fetchExecutionStatus()
     } catch (error) {
@@ -248,29 +201,12 @@ export function ExecutionPanel({
     if (!executionId) return
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to resume execution")
-        return
-      }
-
-      const response = await fetch(
+      await apiClient.request(
         `/api/v1/workflows/executions/${executionId}/resume`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
         },
       )
-
-      if (!response.ok) {
-        throw new Error("Failed to resume execution")
-      }
-
       showSuccessToast("Execution resumed")
       fetchExecutionStatus()
     } catch (error) {
@@ -284,29 +220,12 @@ export function ExecutionPanel({
     if (!executionId) return
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to terminate execution")
-        return
-      }
-
-      const response = await fetch(
+      await apiClient.request(
         `/api/v1/workflows/executions/${executionId}/terminate`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
         },
       )
-
-      if (!response.ok) {
-        throw new Error("Failed to terminate execution")
-      }
-
       showSuccessToast("Execution terminated")
       fetchExecutionStatus()
     } catch (error) {
@@ -323,31 +242,13 @@ export function ExecutionPanel({
 
     setIsReplaying(true)
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to replay execution")
-        return
-      }
-
-      const response = await fetch(
+      await apiClient.request(
         `/api/v1/workflows/executions/${executionId}/replay`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
           body: JSON.stringify({}),
         },
       )
-
-      if (!response.ok) {
-        throw new Error("Failed to replay execution")
-      }
-
       showSuccessToast("Execution replay started")
       fetchExecutionStatus()
     } catch (error) {
@@ -495,6 +396,23 @@ export function ExecutionPanel({
               Replay
             </Button>
           )}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Clock className="h-3 w-3 mr-1" />
+                Timeline
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Execution Timeline</DialogTitle>
+                <DialogDescription>
+                  Complete timeline of execution events
+                </DialogDescription>
+              </DialogHeader>
+              {executionId && <ExecutionTimeline executionId={executionId} />}
+            </DialogContent>
+          </Dialog>
         </div>
 
         {executionStatus.error_message && (
@@ -547,48 +465,13 @@ export function ExecutionPanel({
 
         <TabsContent value="timeline" className="flex-1 overflow-hidden m-0">
           <ScrollArea className="h-full p-4">
-            <div className="space-y-2">
-              {executionStatus.execution_state?.completed_node_ids?.length ===
-              0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No nodes executed yet
-                </p>
-              ) : (
-                executionStatus.execution_state?.completed_node_ids?.map(
-                  (nodeId: string) => {
-                    const nodeResult =
-                      executionStatus.execution_state?.node_results?.[nodeId]
-                    return (
-                      <div
-                        key={nodeId}
-                        className="p-2 rounded bg-muted/50 border"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`h-2 w-2 rounded-full ${
-                              nodeResult?.status === "failed"
-                                ? "bg-red-500"
-                                : "bg-green-500"
-                            }`}
-                          />
-                          <span className="text-sm font-medium">{nodeId}</span>
-                          {nodeResult?.duration_ms && (
-                            <span className="text-xs text-muted-foreground">
-                              {nodeResult.duration_ms}ms
-                            </span>
-                          )}
-                        </div>
-                        {nodeResult?.error && (
-                          <div className="text-xs text-red-600 mt-1">
-                            {nodeResult.error}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  },
-                )
-              )}
-            </div>
+            {executionId ? (
+              <ExecutionTimeline executionId={executionId} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No execution selected
+              </p>
+            )}
           </ScrollArea>
         </TabsContent>
       </Tabs>

@@ -7,7 +7,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
-import { Database, FileText, Loader2, Plus, Search } from "lucide-react"
+import {
+  CheckCircle,
+  Database,
+  FileText,
+  Info,
+  Loader2,
+  Plus,
+  Route,
+  Search,
+  Sparkles,
+} from "lucide-react"
 import { useState } from "react"
 import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
@@ -43,7 +53,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import { supabase } from "@/lib/supabase"
+import { QueryDetails } from "./QueryDetails"
 
 interface RAGIndex {
   id: string
@@ -91,6 +101,66 @@ const queryRAGIndex = async (
   })
 }
 
+const evaluateRouting = async (
+  indexId: string,
+  queryRequirements: Record<string, any>,
+): Promise<{
+  selected_vector_db: string
+  reasoning: string
+  confidence: number
+}> => {
+  return apiClient.request("/api/v1/rag/switch/evaluate", {
+    method: "POST",
+    body: JSON.stringify({
+      index_id: indexId,
+      query_requirements: queryRequirements,
+    }),
+  })
+}
+
+const validateAgent0Prompt = async (
+  prompt: string,
+  context?: Record<string, any>,
+): Promise<{
+  prompt: string
+  validation: {
+    is_valid: boolean
+    warnings: string[]
+    suggestions: string[]
+  }
+  recommended_index_type: string
+}> => {
+  return apiClient.request("/api/v1/rag/agent0/validate", {
+    method: "POST",
+    body: JSON.stringify({
+      prompt,
+      context: context || undefined,
+    }),
+  })
+}
+
+const startFinetuneJob = async (
+  indexId: string,
+  config: Record<string, any>,
+  datasetUrls: string[],
+): Promise<{
+  id: string
+  index_id: string
+  status: string
+  config: Record<string, any>
+  dataset_count: number
+  started_at: string
+}> => {
+  return apiClient.request("/api/v1/rag/finetune", {
+    method: "POST",
+    body: JSON.stringify({
+      index_id: indexId,
+      config,
+      dataset_urls: datasetUrls,
+    }),
+  })
+}
+
 const addDocumentToIndex = async (
   indexId: string,
   content: string,
@@ -111,31 +181,16 @@ const uploadDocumentToIndex = async (
   file: File,
   metadata: Record<string, any>,
 ): Promise<void> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error("You must be logged in to upload documents")
-  }
-
   const formData = new FormData()
   formData.append("index_id", indexId)
   formData.append("file", file)
   formData.append("metadata", JSON.stringify(metadata))
 
-  const response = await fetch("/api/v1/rag/document/upload", {
+  // Use apiClient for FormData upload - it handles FormData correctly
+  await apiClient.request("/api/v1/rag/document/upload", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
     body: formData,
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to upload document")
-  }
 }
 
 const indexColumns: ColumnDef<RAGIndex>[] = [
@@ -172,6 +227,9 @@ export function RAGIndexManager() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isQueryDialogOpen, setIsQueryDialogOpen] = useState(false)
   const [isAddDocDialogOpen, setIsAddDocDialogOpen] = useState(false)
+  const [isEvaluateDialogOpen, setIsEvaluateDialogOpen] = useState(false)
+  const [isValidateDialogOpen, setIsValidateDialogOpen] = useState(false)
+  const [isFinetuneDialogOpen, setIsFinetuneDialogOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState<RAGIndex | null>(null)
   const [newIndexName, setNewIndexName] = useState("")
   const [newIndexVectorDb, setNewIndexVectorDb] = useState("chromadb")
@@ -179,6 +237,13 @@ export function RAGIndexManager() {
   const [queryResult, setQueryResult] = useState<RAGQuery | null>(null)
   const [documentContent, setDocumentContent] = useState("")
   const [documentMetadata, setDocumentMetadata] = useState("")
+  const [evaluateRequirements, setEvaluateRequirements] = useState("{}")
+  const [evaluateResult, setEvaluateResult] = useState<any>(null)
+  const [agent0Prompt, setAgent0Prompt] = useState("")
+  const [agent0Context, setAgent0Context] = useState("{}")
+  const [validateResult, setValidateResult] = useState<any>(null)
+  const [finetuneConfig, setFinetuneConfig] = useState("{}")
+  const [finetuneDatasetUrls, setFinetuneDatasetUrls] = useState("")
 
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -258,6 +323,89 @@ export function RAGIndexManager() {
     },
     onError: (error: Error) => {
       showErrorToast("Failed to upload document", error.message)
+    },
+  })
+
+  const evaluateRoutingMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedIndex) throw new Error("No index selected")
+      let requirements = {}
+      if (evaluateRequirements.trim()) {
+        try {
+          requirements = JSON.parse(evaluateRequirements)
+        } catch {
+          throw new Error("Invalid JSON for query requirements")
+        }
+      }
+      return evaluateRouting(selectedIndex.id, requirements)
+    },
+    onSuccess: (data) => {
+      setEvaluateResult(data)
+      showSuccessToast(
+        "Routing evaluated",
+        "Routing decision evaluated successfully",
+      )
+    },
+    onError: (error: Error) => {
+      showErrorToast("Failed to evaluate routing", error.message)
+    },
+  })
+
+  const validateAgent0Mutation = useMutation({
+    mutationFn: () => {
+      if (!agent0Prompt.trim()) {
+        throw new Error("Please provide a prompt")
+      }
+      let context
+      if (agent0Context.trim()) {
+        try {
+          context = JSON.parse(agent0Context)
+        } catch {
+          throw new Error("Invalid JSON for context")
+        }
+      }
+      return validateAgent0Prompt(agent0Prompt, context)
+    },
+    onSuccess: (data) => {
+      setValidateResult(data)
+      showSuccessToast(
+        "Prompt validated",
+        "Agent0 prompt validated successfully",
+      )
+    },
+    onError: (error: Error) => {
+      showErrorToast("Failed to validate prompt", error.message)
+    },
+  })
+
+  const finetuneMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedIndex) throw new Error("No index selected")
+      let config = {}
+      if (finetuneConfig.trim()) {
+        try {
+          config = JSON.parse(finetuneConfig)
+        } catch {
+          throw new Error("Invalid JSON for config")
+        }
+      }
+      const urls = finetuneDatasetUrls
+        .split("\n")
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0)
+      return startFinetuneJob(selectedIndex.id, config, urls)
+    },
+    onSuccess: (data) => {
+      showSuccessToast(
+        "Finetune job started",
+        `Finetune job ${data.id} started with ${data.dataset_count} datasets`,
+      )
+      setIsFinetuneDialogOpen(false)
+      setFinetuneConfig("{}")
+      setFinetuneDatasetUrls("")
+    },
+    onError: (error: Error) => {
+      showErrorToast("Failed to start finetune job", error.message)
     },
   })
 
@@ -350,6 +498,248 @@ export function RAGIndexManager() {
                   </div>
                   <div className="flex gap-2">
                     <Dialog
+                      open={isEvaluateDialogOpen}
+                      onOpenChange={setIsEvaluateDialogOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Route className="h-4 w-4 mr-2" />
+                          Evaluate Routing
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Evaluate Routing Decision</DialogTitle>
+                          <DialogDescription>
+                            Evaluate which vector database would be selected for
+                            a query
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="evaluate-requirements">
+                              Query Requirements (JSON)
+                            </Label>
+                            <Textarea
+                              id="evaluate-requirements"
+                              placeholder='{"top_k": 5, "similarity_threshold": 0.7}'
+                              value={evaluateRequirements}
+                              onChange={(e) =>
+                                setEvaluateRequirements(e.target.value)
+                              }
+                              rows={5}
+                            />
+                          </div>
+                          <Button
+                            onClick={() => evaluateRoutingMutation.mutate()}
+                            disabled={evaluateRoutingMutation.isPending}
+                            className="w-full"
+                          >
+                            {evaluateRoutingMutation.isPending ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Evaluating...
+                              </>
+                            ) : (
+                              <>
+                                <Route className="h-4 w-4 mr-2" />
+                                Evaluate Routing
+                              </>
+                            )}
+                          </Button>
+                          {evaluateResult && (
+                            <div className="space-y-2 p-4 border rounded">
+                              <div className="font-medium">
+                                Selected Vector DB:{" "}
+                                {evaluateResult.selected_vector_db}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {evaluateResult.reasoning}
+                              </div>
+                              <div className="text-sm">
+                                Confidence:{" "}
+                                {(evaluateResult.confidence * 100).toFixed(1)}%
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog
+                      open={isValidateDialogOpen}
+                      onOpenChange={setIsValidateDialogOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Validate Agent0
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Validate Agent0 Prompt</DialogTitle>
+                          <DialogDescription>
+                            Validate an Agent0 prompt for RAG usage
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="agent0-prompt">Agent0 Prompt</Label>
+                            <Textarea
+                              id="agent0-prompt"
+                              placeholder="Enter your Agent0 prompt here..."
+                              value={agent0Prompt}
+                              onChange={(e) => setAgent0Prompt(e.target.value)}
+                              rows={6}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="agent0-context">
+                              Context (JSON, Optional)
+                            </Label>
+                            <Textarea
+                              id="agent0-context"
+                              placeholder='{"goal": "...", "belief": "..."}'
+                              value={agent0Context}
+                              onChange={(e) => setAgent0Context(e.target.value)}
+                              rows={4}
+                            />
+                          </div>
+                          <Button
+                            onClick={() => validateAgent0Mutation.mutate()}
+                            disabled={
+                              !agent0Prompt.trim() ||
+                              validateAgent0Mutation.isPending
+                            }
+                            className="w-full"
+                          >
+                            {validateAgent0Mutation.isPending ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Validating...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Validate Prompt
+                              </>
+                            )}
+                          </Button>
+                          {validateResult && (
+                            <div className="space-y-2 p-4 border rounded">
+                              <div
+                                className={`font-medium ${validateResult.validation.is_valid ? "text-green-600" : "text-red-600"}`}
+                              >
+                                {validateResult.validation.is_valid
+                                  ? "✓ Valid"
+                                  : "✗ Invalid"}
+                              </div>
+                              {validateResult.validation.warnings.length >
+                                0 && (
+                                <div>
+                                  <div className="font-medium text-yellow-600">
+                                    Warnings:
+                                  </div>
+                                  <ul className="list-disc list-inside text-sm">
+                                    {validateResult.validation.warnings.map(
+                                      (w: string, i: number) => (
+                                        <li key={i}>{w}</li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+                              {validateResult.validation.suggestions.length >
+                                0 && (
+                                <div>
+                                  <div className="font-medium">
+                                    Suggestions:
+                                  </div>
+                                  <ul className="list-disc list-inside text-sm">
+                                    {validateResult.validation.suggestions.map(
+                                      (s: string, i: number) => (
+                                        <li key={i}>{s}</li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+                              <div className="text-sm text-muted-foreground">
+                                Recommended Index Type:{" "}
+                                {validateResult.recommended_index_type}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog
+                      open={isFinetuneDialogOpen}
+                      onOpenChange={setIsFinetuneDialogOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Start Finetune
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Start Fine-tuning Job</DialogTitle>
+                          <DialogDescription>
+                            Start a fine-tuning job for this RAG index
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="finetune-config">
+                              Configuration (JSON)
+                            </Label>
+                            <Textarea
+                              id="finetune-config"
+                              placeholder='{"epochs": 10, "learning_rate": 0.001}'
+                              value={finetuneConfig}
+                              onChange={(e) =>
+                                setFinetuneConfig(e.target.value)
+                              }
+                              rows={5}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="finetune-datasets">
+                              Dataset URLs (one per line)
+                            </Label>
+                            <Textarea
+                              id="finetune-datasets"
+                              placeholder="https://example.com/dataset1.json&#10;https://example.com/dataset2.json"
+                              value={finetuneDatasetUrls}
+                              onChange={(e) =>
+                                setFinetuneDatasetUrls(e.target.value)
+                              }
+                              rows={4}
+                            />
+                          </div>
+                          <Button
+                            onClick={() => finetuneMutation.mutate()}
+                            disabled={finetuneMutation.isPending}
+                            className="w-full"
+                          >
+                            {finetuneMutation.isPending ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Starting...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Start Fine-tuning Job
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog
                       open={isQueryDialogOpen}
                       onOpenChange={setIsQueryDialogOpen}
                     >
@@ -392,7 +782,20 @@ export function RAGIndexManager() {
                             <div className="space-y-2">
                               <Separator />
                               <div>
-                                <Label>Results</Label>
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label>Results</Label>
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        <Info className="h-4 w-4 mr-2" />
+                                        View Details
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                      <QueryDetails queryId={queryResult.id} />
+                                    </DialogContent>
+                                  </Dialog>
+                                </div>
                                 <ScrollArea className="h-60 rounded-md border p-4 mt-2">
                                   <pre className="text-xs">
                                     {JSON.stringify(

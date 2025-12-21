@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiClient } from "@/lib/apiClient"
 
 interface Execution {
   id: string
@@ -65,16 +65,6 @@ export function ExecutionHistory({
 
     setIsLoading(true)
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session || !session.access_token) {
-        console.warn("[ExecutionHistory] No session or access token available")
-        setIsLoading(false)
-        return
-      }
-
       // Ensure limit is a valid integer and convert to number
       const validLimit = Math.max(1, Math.min(1000, Number(limit) || 100))
 
@@ -91,41 +81,7 @@ export function ExecutionHistory({
 
       const url = `${baseUrl}?${params.toString()}`
 
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        // Handle backend validation errors (array format)
-        let errorMessage = `Failed to fetch executions: ${response.status}`
-        if (Array.isArray(errorData.detail)) {
-          errorMessage = errorData.detail
-            .map(
-              (err: any) =>
-                `${err.loc?.join(".") || "field"}: ${err.msg || "validation error"}`,
-            )
-            .join(", ")
-        } else if (errorData.detail) {
-          errorMessage =
-            typeof errorData.detail === "string"
-              ? errorData.detail
-              : JSON.stringify(errorData.detail)
-        }
-        console.error("[ExecutionHistory] API error:", {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-          errorMessage,
-          fullError: JSON.stringify(errorData, null, 2),
-        })
-        throw new Error(errorMessage)
-      }
-
-      const data = await response.json()
+      const data = await apiClient.request<Execution[]>(url)
       setExecutions(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Failed to fetch executions:", error)
@@ -150,29 +106,12 @@ export function ExecutionHistory({
   const handleReplay = useCallback(
     async (execution: Execution) => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-
-        if (!session) {
-          showErrorToast("You must be logged in to replay executions")
-          return
-        }
-
-        const response = await fetch(
+        await apiClient.request(
           `/api/v1/workflows/executions/${execution.id}/replay`,
           {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
           },
         )
-
-        if (!response.ok) {
-          throw new Error("Failed to replay execution")
-        }
-
         showSuccessToast("Execution replayed successfully")
         fetchExecutions()
       } catch (error) {

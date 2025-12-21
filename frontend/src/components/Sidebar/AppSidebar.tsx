@@ -2,6 +2,7 @@ import {
   Bot,
   Code,
   Database,
+  Folder,
   Globe,
   Home,
   MessageSquare,
@@ -35,8 +36,9 @@ const baseItems: Item[] = [
   { icon: ScrollText, title: "OCR", path: "/ocr" },
   { icon: Globe, title: "Scraping", path: "/scraping" },
   { icon: Monitor, title: "Browser", path: "/browser" },
-  { icon: Search, title: "OSINT", path: "/osint" },
+  { icon: Search, title: "Social Monitoring", path: "/social-monitoring" },
   { icon: Code, title: "Code", path: "/code" },
+  { icon: Folder, title: "Storage", path: "/storage" },
   { icon: MessageSquare, title: "Chat", path: "/chat" },
 ]
 

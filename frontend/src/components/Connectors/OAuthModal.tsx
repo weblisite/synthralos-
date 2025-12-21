@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiClient } from "@/lib/apiClient"
 
 interface OAuthModalProps {
   connectorSlug: string
@@ -36,35 +36,16 @@ export function OAuthModal({
   const fetchAuthUrl = useCallback(async () => {
     setIsLoading(true)
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to authorize connectors")
-        return
-      }
-
-      const response = await fetch(
+      const data = await apiClient.request<{ authorization_url: string }>(
         `/api/v1/connectors/${connectorSlug}/authorize`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
           body: JSON.stringify({
             redirect_uri: `${window.location.origin}/connectors/oauth/callback`,
             scopes: null,
           }),
         },
       )
-
-      if (!response.ok) {
-        throw new Error("Failed to get OAuth authorization URL")
-      }
-
-      const data = await response.json()
       setAuthUrl(data.authorization_url)
     } catch (error) {
       showErrorToast(

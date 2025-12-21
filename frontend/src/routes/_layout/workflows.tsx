@@ -69,6 +69,21 @@ function WorkflowsPage() {
     [],
   )
 
+  const handleNodeDelete = useCallback(
+    (nodeId: string) => {
+      setNodes((prev) => prev.filter((node) => node.id !== nodeId))
+      // Also remove connected edges
+      setEdges((prev) =>
+        prev.filter((edge) => edge.source !== nodeId && edge.target !== nodeId),
+      )
+      // Clear selection if deleted node was selected
+      if (selectedNode?.id === nodeId) {
+        setSelectedNode(null)
+      }
+    },
+    [selectedNode],
+  )
+
   const handleSave = useCallback(async () => {
     // Prevent multiple simultaneous saves
     if (isSaving) {
@@ -261,6 +276,7 @@ function WorkflowsPage() {
           onNodeSelect={handleNodeSelect}
           selectedNode={selectedNode}
           onNodeUpdate={handleNodeUpdate}
+          onNodeDelete={handleNodeDelete}
         />
       </div>
     </div>

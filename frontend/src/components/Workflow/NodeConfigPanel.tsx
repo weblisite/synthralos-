@@ -4,11 +4,12 @@
  * Side panel for configuring selected workflow nodes.
  */
 
-import type { Node } from "@xyflow/react"
-import { X } from "lucide-react"
-import { useMemo } from "react"
+import type { Edge, Node } from "@xyflow/react"
+import { Copy, Trash2, X } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 import { MonacoEditor } from "@/components/Common/MonacoEditor"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -19,14 +20,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import useCustomToast from "@/hooks/useCustomToast"
+import { apiClient } from "@/lib/apiClient"
 
 interface NodeConfig {
   trigger_type?: string
   cron_expression?: string
+  webhook_method?: string
   prompt?: string
   model?: string
   connector_slug?: string
   action?: string
+  oauth_scopes?: string[]
+  personalization?: string
   language?: string
   code?: string
   runtime?: string
@@ -47,19 +53,103 @@ interface NodeConfig {
 
 interface NodeConfigPanelProps {
   node: Node | null
+  workflowId?: string | null
+  nodes?: Node[]
+  edges?: Edge[]
   onClose: () => void
   onUpdate: (nodeId: string, updates: Partial<Node>) => void
+  onDelete?: (nodeId: string) => void
 }
 
 export function NodeConfigPanel({
   node,
+  workflowId,
+  nodes = [],
+  edges = [],
   onClose,
   onUpdate,
+  onDelete,
 }: NodeConfigPanelProps) {
   const config: NodeConfig = useMemo(
     () => (node?.data?.config || {}) as NodeConfig,
     [node],
   )
+  const { showSuccessToast } = useCustomToast()
+
+  // State for connector scopes
+  const [connectorScopes, setConnectorScopes] = useState<string[]>([])
+  const [selectedScopes, setSelectedScopes] = useState<string[]>(
+    config.oauth_scopes || [],
+  )
+  const [isLoadingScopes, setIsLoadingScopes] = useState(false)
+
+  // Fetch connector scopes when connector node is selected
+  useEffect(() => {
+    if (node?.type === "connector" && config.connector_slug) {
+      setIsLoadingScopes(true)
+      apiClient
+        .request(`/api/v1/connectors/${config.connector_slug}`)
+        .then((details: any) => {
+          const scopes =
+            details.manifest?.oauth?.scopes || details.manifest?.scopes || []
+          setConnectorScopes(scopes)
+          // If no scopes selected yet, select all by default
+          if (
+            scopes.length > 0 &&
+            (!config.oauth_scopes || config.oauth_scopes.length === 0)
+          ) {
+            setSelectedScopes(scopes)
+            handleConfigUpdate("oauth_scopes", scopes)
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to fetch connector scopes:", error)
+        })
+        .finally(() => {
+          setIsLoadingScopes(false)
+        })
+    }
+  }, [
+    node?.type,
+    config.connector_slug,
+    config.oauth_scopes,
+    handleConfigUpdate,
+  ])
+
+  // Calculate available fields from previous nodes for personalization
+  const availableFields = useMemo(() => {
+    if (!node || nodes.length === 0 || edges.length === 0) return []
+
+    // Get all nodes that connect to this node
+    const incomingEdges = edges.filter((e) => e.target === node.id)
+    const previousNodes = nodes.filter((n) =>
+      incomingEdges.some((e) => e.source === n.id),
+    )
+
+    // Extract available fields from previous nodes
+    return previousNodes.map((prevNode) => {
+      const nodeType = prevNode.type || "unknown"
+      const nodeLabel = (prevNode.data?.label as string) || nodeType
+
+      // Common fields based on node type
+      let fields: string[] = ["output"]
+      if (nodeType === "connector") {
+        fields = ["output", "response", "data"]
+      } else if (nodeType === "ai_prompt") {
+        fields = ["output", "response", "content"]
+      } else if (nodeType === "http_request") {
+        fields = ["output", "response", "status", "body"]
+      } else if (nodeType === "code") {
+        fields = ["output", "result", "stdout", "stderr"]
+      }
+
+      return {
+        nodeId: prevNode.id,
+        nodeLabel,
+        fields,
+      }
+    })
+  }, [node, nodes, edges])
 
   if (!node) {
     return null
@@ -84,13 +174,40 @@ export function NodeConfigPanel({
     })
   }
 
+  const handleDelete = () => {
+    if (!node || !onDelete) return
+
+    // Confirm deletion
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${node.data.label || node.type}" node?`,
+      )
+    ) {
+      onDelete(node.id)
+      onClose()
+    }
+  }
+
   return (
     <div className="h-full bg-background flex flex-col">
       <div className="p-4 border-b flex items-center justify-between">
         <h2 className="text-lg font-semibold">Node Configuration</h2>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDelete}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              title="Delete node (or press Delete key)"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -136,7 +253,64 @@ export function NodeConfigPanel({
                   }
                   placeholder="0 0 * * *"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Example: 0 0 * * * (runs daily at midnight)
+                </p>
               </div>
+            )}
+
+            {config.trigger_type === "webhook" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Webhook URL</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={
+                        workflowId
+                          ? `${window.location.origin}/api/v1/workflows/${workflowId}/webhook/${node.id}`
+                          : "Save workflow to generate webhook URL"
+                      }
+                      readOnly
+                      className="font-mono text-xs"
+                    />
+                    {workflowId && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const webhookUrl = `${window.location.origin}/api/v1/workflows/${workflowId}/webhook/${node.id}`
+                          navigator.clipboard.writeText(webhookUrl)
+                          showSuccessToast("Webhook URL copied!")
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Send HTTP POST to this URL to trigger the workflow
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="webhook-method">HTTP Method</Label>
+                  <Select
+                    value={config.webhook_method || "POST"}
+                    onValueChange={(value) =>
+                      handleConfigUpdate("webhook_method", value)
+                    }
+                  >
+                    <SelectTrigger id="webhook-method">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="POST">POST</SelectItem>
+                      <SelectItem value="GET">GET</SelectItem>
+                      <SelectItem value="PUT">PUT</SelectItem>
+                      <SelectItem value="PATCH">PATCH</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
           </>
         )}
@@ -203,6 +377,45 @@ export function NodeConfigPanel({
                 placeholder="send_message, create_issue, etc."
               />
             </div>
+            {connectorScopes.length > 0 && (
+              <div className="space-y-2">
+                <Label>OAuth Scopes</Label>
+                {isLoadingScopes ? (
+                  <p className="text-xs text-muted-foreground">
+                    Loading scopes...
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto border rounded p-2">
+                    {connectorScopes.map((scope) => (
+                      <label
+                        key={scope}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded"
+                      >
+                        <Checkbox
+                          checked={selectedScopes.includes(scope)}
+                          onCheckedChange={(checked) => {
+                            let updated: string[]
+                            if (checked) {
+                              updated = [...selectedScopes, scope]
+                            } else {
+                              updated = selectedScopes.filter(
+                                (s) => s !== scope,
+                              )
+                            }
+                            setSelectedScopes(updated)
+                            handleConfigUpdate("oauth_scopes", updated)
+                          }}
+                        />
+                        <span className="text-sm">{scope}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Select OAuth scopes required for this connector action
+                </p>
+              </div>
+            )}
           </>
         )}
 
@@ -501,6 +714,43 @@ export function NodeConfigPanel({
               />
             </div>
           </>
+        )}
+
+        {/* Personalization Values - Available for all node types except trigger */}
+        {node.type !== "trigger" && availableFields.length > 0 && (
+          <div className="space-y-2 border-t pt-4">
+            <Label htmlFor="personalization">Personalization Values</Label>
+            <Select
+              value={config.personalization || ""}
+              onValueChange={(value) =>
+                handleConfigUpdate("personalization", value)
+              }
+            >
+              <SelectTrigger id="personalization">
+                <SelectValue placeholder="Select from previous nodes" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableFields.map(({ nodeId, nodeLabel, fields }) => (
+                  <div key={nodeId}>
+                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                      {nodeLabel}
+                    </div>
+                    {fields.map((field) => (
+                      <SelectItem
+                        key={`${nodeId}.${field}`}
+                        value={`${nodeId}.${field}`}
+                      >
+                        {field}
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Reference output values from previous nodes using dot notation
+            </p>
+          </div>
         )}
       </div>
     </div>

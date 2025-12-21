@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import { supabase } from "@/lib/supabase"
 
 interface FileUploadProps {
   bucket: string
@@ -103,16 +102,6 @@ export function FileUpload({
     setUploadedFiles({})
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to upload files")
-        setUploading(false)
-        return
-      }
-
       const uploadPromises = files.map(async (file) => {
         const formData = new FormData()
         formData.append("file", file)
@@ -121,29 +110,11 @@ export function FileUpload({
           formData.append("folder_path", folderPath)
         }
 
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        if (!session) {
-          throw new Error("You must be logged in to upload files")
-        }
-
-        const url = apiClient.getApiUrl("/api/v1/storage/upload")
-        return fetch(url, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: formData,
-        })
-          .then(async (response) => {
-            if (!response.ok) {
-              const error = await response
-                .json()
-                .catch(() => ({ detail: "Upload failed" }))
-              throw new Error(error.detail || "Upload failed")
-            }
-            return response.json()
+        // Use apiClient for FormData upload - it handles FormData correctly
+        return apiClient
+          .request("/api/v1/storage/upload", {
+            method: "POST",
+            body: formData,
           })
           .then((result) => {
             setUploadProgress((prev) => ({

@@ -7,7 +7,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
-import { Box, Code, Eye, Loader2, Play, Plus } from "lucide-react"
+import { Box, Code, Info, Loader2, Play, Plus } from "lucide-react"
 import { useState } from "react"
 import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
@@ -36,6 +36,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
+import { ToolDetails } from "./ToolDetails"
+import { ToolRegistration } from "./ToolRegistration"
 
 interface CodeTool {
   id: string
@@ -206,45 +208,12 @@ function ToolActionsCell({ tool }: { tool: CodeTool }) {
     <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Eye className="h-4 w-4 mr-2" />
-          View
+          <Info className="h-4 w-4 mr-2" />
+          Details
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{tool.name}</DialogTitle>
-          <DialogDescription>
-            Tool ID: {tool.tool_id} | Version: {tool.version}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <Label>Runtime</Label>
-              <p>{tool.runtime}</p>
-            </div>
-            <div>
-              <Label>Usage Count</Label>
-              <p>{tool.usage_count}</p>
-            </div>
-            <div>
-              <Label>Status</Label>
-              <Badge variant={tool.is_deprecated ? "secondary" : "default"}>
-                {tool.is_deprecated ? "Deprecated" : "Active"}
-              </Badge>
-            </div>
-            <div>
-              <Label>Created</Label>
-              <p>{format(new Date(tool.created_at), "PPP")}</p>
-            </div>
-          </div>
-          {tool.description && (
-            <div>
-              <Label>Description</Label>
-              <p className="text-sm">{tool.description}</p>
-            </div>
-          )}
-        </div>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <ToolDetails toolId={tool.id} onClose={() => setIsViewOpen(false)} />
       </DialogContent>
     </Dialog>
   )
@@ -525,6 +494,7 @@ export function CodeToolRegistry() {
           </p>
         </div>
         <div className="flex gap-2">
+          <ToolRegistration />
           <Dialog
             open={isCreateSandboxOpen}
             onOpenChange={setIsCreateSandboxOpen}

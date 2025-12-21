@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { supabase } from "@/lib/supabase"
+import { apiClient } from "@/lib/apiClient"
 
 interface ConnectorTestRunnerProps {
   connectorSlug: string
@@ -50,15 +50,6 @@ export function ConnectorTestRunner({
     setResult(null)
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        showErrorToast("You must be logged in to test connectors")
-        return
-      }
-
       let parsedInput
       try {
         parsedInput = JSON.parse(inputData)
@@ -68,24 +59,13 @@ export function ConnectorTestRunner({
       }
 
       if (testType === "action" && selectedAction) {
-        const response = await fetch(
+        const data = await apiClient.request(
           `/api/v1/connectors/${connectorSlug}/${selectedAction}`,
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
             body: JSON.stringify(parsedInput),
           },
         )
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.detail || "Test failed")
-        }
-
-        const data = await response.json()
         setResult(data)
       } else if (testType === "trigger" && selectedTrigger) {
         // Trigger testing would require webhook simulation

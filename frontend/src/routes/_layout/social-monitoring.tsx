@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { SocialMonitoringManager } from "@/components/SocialMonitoring/SocialMonitoringManager"
 
-export const Route = createFileRoute("/_layout/osint")({
+export const Route = createFileRoute("/_layout/social-monitoring")({
   component: SocialMonitoringPage,
   head: () => ({
     meta: [

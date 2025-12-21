@@ -25,6 +25,7 @@ interface WorkflowBuilderProps {
   onNodeSelect: (node: Node | null) => void
   selectedNode: Node | null
   onNodeUpdate: (nodeId: string, updates: Partial<Node>) => void
+  onNodeDelete?: (nodeId: string) => void
 }
 
 export function WorkflowBuilder({
@@ -39,6 +40,7 @@ export function WorkflowBuilder({
   onNodeSelect,
   selectedNode,
   onNodeUpdate,
+  onNodeDelete,
 }: WorkflowBuilderProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [internalExecutionId, setInternalExecutionId] = useState<string | null>(
@@ -51,12 +53,19 @@ export function WorkflowBuilder({
   // Track the last added node position for stacking
   const lastNodePositionRef = useRef<{ x: number; y: number } | null>(null)
 
-  // Calculate center position for new nodes
+  // Calculate center position for new nodes - responsive to viewport size
   const getCenterPosition = useCallback(() => {
-    // React Flow coordinates are relative to the flow, not the viewport
-    // We'll use a fixed center point that works well for most screen sizes
-    const centerX = 500 // Fixed center X coordinate
-    const centerY = 300 // Fixed center Y coordinate
+    // Get viewport dimensions for ultra-wide screen support
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Account for sidebar width (NodePalette is ~240px)
+    const sidebarWidth = 240
+    const availableWidth = viewportWidth - sidebarWidth
+
+    // Calculate center based on available space
+    const centerX = availableWidth / 2
+    const centerY = viewportHeight / 2
 
     // If we have a last node position, stack below it
     if (lastNodePositionRef.current) {
@@ -203,7 +212,12 @@ export function WorkflowBuilder({
         className={`flex-1 min-h-0 transition-all duration-300 ${
           showNodeConfig || showExecutionDetails ? "mr-80" : ""
         }`}
-        style={{ height: "100%" }}
+        style={{
+          height: "100%",
+          width: "100%",
+          minWidth: "100%",
+          minHeight: "100%",
+        }}
         role="application"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -233,6 +247,7 @@ export function WorkflowBuilder({
           onConnect={onConnect}
           onNodeClick={handleNodeClick}
           onPaneClick={handlePaneClick}
+          onNodeDelete={onNodeDelete}
         />
       </div>
 
@@ -241,8 +256,12 @@ export function WorkflowBuilder({
         <div className="absolute right-0 top-0 bottom-0 w-80 bg-background border-l shadow-lg z-20 animate-in slide-in-from-right duration-300">
           <NodeConfigPanel
             node={selectedNode}
+            workflowId={workflowId}
+            nodes={nodes}
+            edges={edges}
             onClose={() => onNodeSelect(null)}
             onUpdate={onNodeUpdate}
+            onDelete={onNodeDelete}
           />
         </div>
       )}
