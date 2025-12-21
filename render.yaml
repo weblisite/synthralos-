@@ -114,21 +114,53 @@ services:
       # - key: SIGNOZ_ENDPOINT
       #   sync: false  # e.g., http://signoz:4317 or https://signoz.example.com:4317
       #
-      # ChromaDB (Vector Database for RAG) - Optional
-      # - key: CHROMA_SERVER_HOST
-      #   sync: false  # e.g., chromadb.example.com or localhost
-      # - key: CHROMA_SERVER_HTTP_PORT
-      #   value: "8000"  # ChromaDB HTTP port (default: 8000)
-      # - key: CHROMA_SERVER_AUTH_TOKEN
-      #   sync: false  # Optional - Auth token for ChromaDB Cloud
+      # ChromaDB (Vector Database for RAG) - Optional but Recommended
+      # Setup Instructions:
+      # 1. Deploy ChromaDB server (self-hosted or use ChromaDB Cloud)
+      # 2. For ChromaDB Cloud: Sign up at https://www.trychroma.com/
+      # 3. Get your server host from ChromaDB dashboard
+      # 4. Set CHROMA_SERVER_HOST in Render dashboard
+      # Note: If not configured, RAG will use database-based search (slower but functional)
+      - key: CHROMA_SERVER_HOST
+        sync: false  # REQUIRED for ChromaDB: e.g., chromadb.example.com or [PROJECT_ID].chromadb.cloud
+        # For ChromaDB Cloud: Format is [PROJECT_ID].chromadb.cloud
+        # For self-hosted: Use your server hostname or IP
+
+      - key: CHROMA_SERVER_HTTP_PORT
+        value: "8000"  # ChromaDB HTTP port (default: 8000, ChromaDB Cloud uses 443)
+        # For ChromaDB Cloud, change to "443" and ensure CHROMA_SERVER_HOST includes https://
+
+      - key: CHROMA_SERVER_AUTH_TOKEN
+        sync: false  # Optional - Auth token for ChromaDB Cloud (get from ChromaDB dashboard)
+        # Only needed for ChromaDB Cloud, not for self-hosted instances
       #
-      # Twitter/X API (OSINT) - Optional
-      # - key: TWITTER_API_KEY
-      #   sync: false  # Get from https://developer.twitter.com > Your App > Keys and Tokens
-      # - key: TWITTER_API_SECRET
-      #   sync: false  # Get from https://developer.twitter.com > Your App > Keys and Tokens
-      # - key: TWITTER_BEARER_TOKEN
-      #   sync: false  # Get from https://developer.twitter.com > Your App > Keys and Tokens
+      # Twitter/X API (OSINT) - Optional but Recommended for Social Monitoring
+      # Setup Instructions:
+      # 1. Create a Twitter Developer account at https://developer.twitter.com/
+      # 2. Create a new app/project
+      # 3. Generate API keys and Bearer Token
+      # 4. Set credentials in Render dashboard
+      # Note: Bearer Token is sufficient for most operations (recommended)
+      # OAuth credentials (API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET) are optional
+      - key: TWITTER_BEARER_TOKEN
+        sync: false  # RECOMMENDED: Get from https://developer.twitter.com > Your App > Keys and Tokens > Bearer Token
+        # Bearer Token is the simplest authentication method for Tweepy
+
+      - key: TWITTER_API_KEY
+        sync: false  # Optional: Get from https://developer.twitter.com > Your App > Keys and Tokens > API Key
+        # Only needed if using OAuth authentication instead of Bearer Token
+
+      - key: TWITTER_API_SECRET
+        sync: false  # Optional: Get from https://developer.twitter.com > Your App > Keys and Tokens > API Secret
+        # Only needed if using OAuth authentication instead of Bearer Token
+
+      - key: TWITTER_ACCESS_TOKEN
+        sync: false  # Optional: Get from https://developer.twitter.com > Your App > Keys and Tokens > Access Token
+        # Only needed if using OAuth authentication instead of Bearer Token
+
+      - key: TWITTER_ACCESS_TOKEN_SECRET
+        sync: false  # Optional: Get from https://developer.twitter.com > Your App > Keys and Tokens > Access Token Secret
+        # Only needed if using OAuth authentication instead of Bearer Token
       #
       # Sentry (Error Tracking) - Optional
       # - key: SENTRY_DSN
