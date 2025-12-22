@@ -10,9 +10,26 @@ import { supabase } from "./supabase"
 /**
  * Get the base API URL from environment variable
  * Falls back to localhost for development
+ * 
+ * Automatically converts HTTP to HTTPS in production (browser context)
+ * to prevent Mixed Content errors when frontend is served over HTTPS
  */
 export function getApiUrl(): string {
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000"
+  let apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000"
+  
+  // In browser context (production), ensure HTTPS is used if frontend is HTTPS
+  // This prevents Mixed Content errors
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    // Convert HTTP to HTTPS for production deployments
+    if (apiUrl.startsWith("http://") && !apiUrl.includes("localhost")) {
+      apiUrl = apiUrl.replace("http://", "https://")
+      console.warn(
+        "[API] Converted HTTP API URL to HTTPS to prevent Mixed Content errors:",
+        apiUrl
+      )
+    }
+  }
+  
   // Remove trailing slash if present
   return apiUrl.replace(/\/$/, "")
 }
