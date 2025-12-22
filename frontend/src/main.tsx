@@ -10,11 +10,13 @@ import ReactDOM from "react-dom/client"
 import { ApiError, OpenAPI } from "./client"
 import { ThemeProvider } from "./components/theme-provider"
 import { Toaster } from "./components/ui/sonner"
+import { getApiUrl } from "./lib/api"
 import { supabase } from "./lib/supabase"
 import "./index.css"
 import { routeTree } from "./routeTree.gen"
 
-OpenAPI.BASE = import.meta.env.VITE_API_URL
+// Use getApiUrl() to ensure HTTPS in production (prevents Mixed Content errors)
+OpenAPI.BASE = getApiUrl()
 OpenAPI.TOKEN = async () => {
   try {
     const {
