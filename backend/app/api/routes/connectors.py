@@ -660,6 +660,8 @@ def revoke_connector_authorization(
     """
     Revoke OAuth authorization for a connector.
 
+    This will force re-authorization with PKCE when user reconnects.
+
     Path Parameters:
     - slug: Connector slug
 
@@ -695,16 +697,107 @@ def revoke_connector_authorization(
             # If secret doesn't exist, that's fine
             pass
 
+        # Also delete refresh token if stored separately
+        refresh_token_key = f"connector_{slug}_user_{current_user.id}_refresh_token"
+        try:
+            default_secrets_service.delete_secret(refresh_token_key)
+        except Exception:
+            pass
+
         # If using Nango, we might need to delete the connection
         # This would require Nango API call to delete connection
 
         return {
             "success": True,
-            "message": f"Authorization revoked for connector '{slug}'",
+            "message": f"Authorization revoked for connector '{slug}'. Reconnect to authorize with PKCE.",
         }
     except ConnectorNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+@router.post("/{slug}/reauthorize")
+def force_reauthorize_connector(
+    slug: str,
+    session: SessionDep,
+    current_user: CurrentUser,
+    redirect_uri: str,
+    scopes: list[str] | None = None,
+) -> Any:
+    """
+    Force re-authorization of a connector with PKCE.
+
+    This revokes existing tokens and initiates a new OAuth flow with PKCE.
+    Useful for migrating old connections to use PKCE.
+
+    Path Parameters:
+    - slug: Connector slug
+
+    Request Body:
+    - redirect_uri: OAuth callback redirect URI
+    - scopes: Optional list of OAuth scopes
+
+    Returns:
+    - Authorization URL and state token (with PKCE)
+    """
+    oauth_service = default_oauth_service
+
+    try:
+        # Check if connector exists
+        connector_version = default_connector_registry.get_connector(session, slug)
+
+        # Check if connector requires OAuth
+        manifest = connector_version.manifest
+        oauth_config = manifest.get("oauth", {})
+
+        if not oauth_config:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Connector '{slug}' does not require OAuth authorization",
+            )
+
+        # Revoke existing tokens first
+        from app.services.secrets import default_secrets_service
+
+        secret_key = f"connector:{slug}:user:{current_user.id}:oauth_tokens"
+        refresh_token_key = f"connector_{slug}_user_{current_user.id}_refresh_token"
+        try:
+            default_secrets_service.delete_secret(secret_key)
+        except Exception:
+            pass
+        try:
+            default_secrets_service.delete_secret(refresh_token_key)
+        except Exception:
+            pass
+
+        # Generate new authorization URL with PKCE
+        result = oauth_service.generate_authorization_url(
+            session=session,
+            connector_slug=slug,
+            user_id=current_user.id,
+            redirect_uri=redirect_uri,
+            scopes=scopes,
+        )
+
+        # Check if connector uses Nango
+        nango_config = manifest.get("nango", {})
+        use_nango = settings.NANGO_ENABLED and nango_config.get("enabled", False)
+
+        return {
+            **result,
+            "oauth_method": "nango" if use_nango else "direct",
+            "message": "Re-authorization initiated with PKCE. Complete the OAuth flow.",
+        }
+    except ConnectorNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+    except OAuthError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 

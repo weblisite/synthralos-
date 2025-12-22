@@ -11,6 +11,7 @@ from typing import Any
 import httpx
 from sqlmodel import Session
 
+from app.connectors.pkce import generate_pkce_pair
 from app.core.config import settings
 
 
@@ -114,8 +115,12 @@ class NangoService:
             oauth_config = manifest.get("oauth", {})
             requested_scopes = oauth_config.get("default_scopes", [])
 
+        # Generate PKCE code verifier and challenge for enhanced security
+        code_verifier, code_challenge = generate_pkce_pair()
+
         # Build Nango authorization URL
         # Format: {NANGO_URL}/oauth/{provider_key}?connection_id={connection_id}&redirect_uri={redirect_uri}
+        # Note: Nango may support PKCE parameters - include them for providers that support it
         params = {
             "connection_id": connection_id,
             "redirect_uri": redirect_uri,
@@ -123,6 +128,11 @@ class NangoService:
 
         if requested_scopes:
             params["scopes"] = ",".join(requested_scopes)
+
+        # Add PKCE parameters (if Nango/provider supports it)
+        # Some OAuth providers require PKCE, so we include it
+        params["code_challenge"] = code_challenge
+        params["code_challenge_method"] = "S256"
 
         from urllib.parse import urlencode
 
@@ -137,6 +147,7 @@ class NangoService:
             "authorization_url": auth_url,
             "state": state_token,
             "connection_id": connection_id,
+            "code_verifier": code_verifier,  # Store for validation (if needed)
         }
 
     def handle_callback(

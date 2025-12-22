@@ -108,7 +108,7 @@ class ConnectorOAuthService:
                     redirect_uri=redirect_uri,
                     scopes=scopes,
                 )
-                # Store state with Nango connection_id
+                # Store state with Nango connection_id and PKCE verifier
                 state_token = result["state"]
                 self._oauth_states[state_token] = {
                     "connector_slug": connector_slug,
@@ -118,6 +118,7 @@ class ConnectorOAuthService:
                     "scopes": scopes or [],
                     "use_nango": True,
                     "connection_id": result.get("connection_id"),
+                    "code_verifier": result.get("code_verifier"),  # PKCE: Store verifier for Nango flows
                 }
                 return {
                     "authorization_url": result["authorization_url"],
