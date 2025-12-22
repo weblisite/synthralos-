@@ -5,6 +5,7 @@ Routes agent tasks to appropriate frameworks based on task requirements.
 Handles framework selection, task execution, and context caching.
 """
 
+import logging
 import uuid
 from datetime import datetime, timedelta
 from typing import Any
@@ -31,6 +32,8 @@ from app.models import (
     AgentTask,
     AgentTaskLog,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AgentRouterError(Exception):
