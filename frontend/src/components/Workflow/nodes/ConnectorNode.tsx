@@ -54,6 +54,10 @@ export function ConnectorNode(props: NodeProps) {
 
     function loadLogoFromUrls() {
       // Get logo URLs using utility function
+      if (!connectorSlug) {
+        setLogoUrl(null)
+        return
+      }
       const possiblePaths = getConnectorLogoUrls(connectorSlug, customLogo)
 
       if (possiblePaths.length === 0) {

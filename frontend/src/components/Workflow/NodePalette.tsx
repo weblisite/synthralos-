@@ -390,17 +390,14 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
                     No connectors available
                   </div>
                 ) : (
-                  connectorNodes.map((nodeType) => {
-                    const _Icon = nodeType.icon
-                    return (
-                      <ConnectorPaletteItem
-                        key={nodeType.type}
-                        nodeType={nodeType}
-                        onDragStart={handleDragStart}
-                        onClick={handleClick}
-                      />
-                    )
-                  })
+                  connectorNodes.map((nodeType) => (
+                    <ConnectorPaletteItem
+                      key={nodeType.type}
+                      nodeType={nodeType}
+                      onDragStart={handleDragStart}
+                      onClick={handleClick}
+                    />
+                  ))
                 )}
               </div>
             </CollapsibleContent>
