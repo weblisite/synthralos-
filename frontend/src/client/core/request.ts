@@ -77,7 +77,16 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
 			return substring;
 		});
 
-	const url = config.BASE + path;
+	// Ensure HTTPS is used in production (prevent Mixed Content errors)
+	let baseUrl = config.BASE;
+	if (typeof window !== "undefined" && window.location.protocol === "https:") {
+		// Convert HTTP to HTTPS for production deployments
+		if (baseUrl.startsWith("http://") && !baseUrl.includes("localhost")) {
+			baseUrl = baseUrl.replace("http://", "https://");
+		}
+	}
+
+	const url = baseUrl + path;
 	return options.query ? url + getQueryString(options.query) : url;
 };
 
