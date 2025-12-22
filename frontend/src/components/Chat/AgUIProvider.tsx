@@ -83,7 +83,6 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
       }
 
       // Get API URL from environment, convert http/https to ws/wss
-      const { getApiUrl } = await import("@/lib/api")
       const apiUrl = getApiUrl()
       const wsProtocol = apiUrl.startsWith("https") ? "wss" : "ws"
       const wsHost = apiUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
