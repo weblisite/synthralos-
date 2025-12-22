@@ -488,7 +488,7 @@ export function OSINTStreamManager() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [platform, setPlatform] = useState("twitter")
   const [keywordsInput, setKeywordsInput] = useState("")
-  const [selectedEngine, setSelectedEngine] = useState<string>("")
+  const [selectedEngine, setSelectedEngine] = useState<string>("auto")
 
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -498,7 +498,7 @@ export function OSINTStreamManager() {
         .split(",")
         .map((k) => k.trim())
         .filter((k) => k.length > 0)
-      return createOSINTStream(platform, keywords, selectedEngine || undefined)
+      return createOSINTStream(platform, keywords, selectedEngine === "auto" ? undefined : selectedEngine)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["osintStreams"] })
@@ -506,7 +506,7 @@ export function OSINTStreamManager() {
       setIsCreateDialogOpen(false)
       setPlatform("twitter")
       setKeywordsInput("")
-      setSelectedEngine("")
+      setSelectedEngine("auto")
     },
     onError: (error: Error) => {
       showErrorToast("Failed to create stream", error.message)
@@ -581,7 +581,7 @@ export function OSINTStreamManager() {
                     <SelectValue placeholder="Auto-select" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Auto-select</SelectItem>
+                    <SelectItem value="auto">Auto-select</SelectItem>
                     <SelectItem value="twint">
                       Twint (Twitter scraping)
                     </SelectItem>

@@ -288,21 +288,21 @@ export function ScrapingJobManager() {
   const [monitorInterval, setMonitorInterval] = useState("3600")
   const [monitorSelector, setMonitorSelector] = useState("")
   const [monitorWebhook, setMonitorWebhook] = useState("")
-  const [selectedEngine, setSelectedEngine] = useState<string>("")
-  const [crawlEngine, setCrawlEngine] = useState<string>("")
+  const [selectedEngine, setSelectedEngine] = useState<string>("auto")
+  const [crawlEngine, setCrawlEngine] = useState<string>("auto")
   const [autoSelectProxy, setAutoSelectProxy] = useState(true)
 
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const createJobMutation = useMutation({
     mutationFn: () =>
-      createScrapeJob(url, selectedEngine || undefined, autoSelectProxy),
+      createScrapeJob(url, selectedEngine === "auto" ? undefined : selectedEngine, autoSelectProxy),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scrapeJobs"] })
       showSuccessToast("Job started successfully")
       setIsCreateDialogOpen(false)
       setUrl("")
-      setSelectedEngine("")
+      setSelectedEngine("auto")
       setAutoSelectProxy(true)
     },
     onError: (error: Error) => {
@@ -319,7 +319,7 @@ export function ScrapingJobManager() {
       if (urls.length === 0) {
         throw new Error("Please provide at least one URL")
       }
-      return createCrawlJobs(urls, crawlEngine || undefined)
+      return createCrawlJobs(urls, crawlEngine === "auto" ? undefined : crawlEngine)
     },
     onSuccess: (jobs) => {
       queryClient.invalidateQueries({ queryKey: ["scrapeJobs"] })
@@ -329,7 +329,7 @@ export function ScrapingJobManager() {
       )
       setIsCrawlDialogOpen(false)
       setCrawlUrls("")
-      setCrawlEngine("")
+      setCrawlEngine("auto")
     },
     onError: (error: Error) => {
       showErrorToast("Failed to create crawl jobs", error.message)
@@ -435,7 +435,7 @@ export function ScrapingJobManager() {
                       <SelectValue placeholder="Auto-select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Auto-select</SelectItem>
+                      <SelectItem value="auto">Auto-select</SelectItem>
                       <SelectItem value="playwright">Playwright</SelectItem>
                       <SelectItem value="scrapy">Scrapy</SelectItem>
                       <SelectItem value="beautifulsoup">

@@ -456,14 +456,14 @@ export function NodeConfigPanel({
             <div className="space-y-2">
               <Label htmlFor="code-runtime">Runtime (Optional)</Label>
               <Select
-                value={config.runtime || ""}
-                onValueChange={(value) => handleConfigUpdate("runtime", value)}
+                value={config.runtime || "auto"}
+                onValueChange={(value) => handleConfigUpdate("runtime", value === "auto" ? undefined : value)}
               >
                 <SelectTrigger id="code-runtime">
                   <SelectValue placeholder="Auto-select" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Auto-select</SelectItem>
+                  <SelectItem value="auto">Auto-select</SelectItem>
                   <SelectItem value="e2b">E2B</SelectItem>
                   <SelectItem value="wasmedge">WasmEdge</SelectItem>
                   <SelectItem value="bacalhau">Bacalhau</SelectItem>

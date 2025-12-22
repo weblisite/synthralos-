@@ -248,8 +248,8 @@ export function OCRJobManager() {
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false)
   const [documentUrl, setDocumentUrl] = useState("")
   const [batchUrls, setBatchUrls] = useState<string>("")
-  const [selectedEngine, setSelectedEngine] = useState<string>("")
-  const [batchEngine, setBatchEngine] = useState<string>("")
+  const [selectedEngine, setSelectedEngine] = useState<string>("auto")
+  const [batchEngine, setBatchEngine] = useState<string>("auto")
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null)
 
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -261,7 +261,7 @@ export function OCRJobManager() {
       if (!urlToUse) {
         throw new Error("Please upload a file or provide a document URL")
       }
-      return createOCRJob(urlToUse, selectedEngine || undefined)
+      return createOCRJob(urlToUse, selectedEngine === "auto" ? undefined : selectedEngine)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ocrJobs"] })
@@ -269,7 +269,7 @@ export function OCRJobManager() {
       setIsCreateDialogOpen(false)
       setDocumentUrl("")
       setUploadedFileUrl(null)
-      setSelectedEngine("")
+      setSelectedEngine("auto")
     },
     onError: (error: Error) => {
       showErrorToast("Failed to create OCR job", error.message)
@@ -288,7 +288,7 @@ export function OCRJobManager() {
       if (urls.length > 100) {
         throw new Error("Maximum 100 URLs allowed per batch")
       }
-      return batchExtractOCR(urls, batchEngine || undefined)
+      return batchExtractOCR(urls, batchEngine === "auto" ? undefined : batchEngine)
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["ocrJobs"] })
@@ -375,7 +375,7 @@ export function OCRJobManager() {
                       <SelectValue placeholder="Auto-select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Auto-select</SelectItem>
+                      <SelectItem value="auto">Auto-select</SelectItem>
                       <SelectItem value="doctr">DocTR (Tables)</SelectItem>
                       <SelectItem value="easyocr">
                         EasyOCR (Handwriting)
@@ -416,7 +416,7 @@ export function OCRJobManager() {
                       <SelectValue placeholder="Auto-select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Auto-select</SelectItem>
+                      <SelectItem value="auto">Auto-select</SelectItem>
                       <SelectItem value="doctr">DocTR (Tables)</SelectItem>
                       <SelectItem value="easyocr">
                         EasyOCR (Handwriting)

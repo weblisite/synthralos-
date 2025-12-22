@@ -600,7 +600,7 @@ export function CodeToolRegistry() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Auto-select</SelectItem>
+                        <SelectItem value="auto">Auto-select</SelectItem>
                         <SelectItem value="e2b">E2B</SelectItem>
                         <SelectItem value="wasmedge">WasmEdge</SelectItem>
                         <SelectItem value="bacalhau">Bacalhau</SelectItem>

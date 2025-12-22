@@ -1,8 +1,11 @@
+import logging
 import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import func, select
+
+logger = logging.getLogger(__name__)
 
 from app import crud
 from app.api.deps import (
@@ -279,15 +282,20 @@ def list_user_api_keys(
     result = []
     for api_key in api_keys:
         # Retrieve key from Infisical to mask it
-        credentials = api_key_service.retrieve_api_key(
-            str(current_user.id), api_key.service_name, api_key.credential_type
-        )
+        try:
+            credentials = api_key_service.retrieve_api_key(
+                str(current_user.id), api_key.service_name, api_key.credential_type
+            )
 
-        masked_key = "***hidden***"
-        if credentials:
-            main_key = credentials.get("api_key", "")
-            if main_key:
-                masked_key = api_key_service.mask_key(main_key)
+            masked_key = "***hidden***"
+            if credentials:
+                main_key = credentials.get("api_key", "")
+                if main_key:
+                    masked_key = api_key_service.mask_key(main_key)
+        except Exception as e:
+            # If retrieval fails (e.g., Infisical not configured), use default masked value
+            logger.warning(f"Failed to retrieve API key for masking: {e}")
+            masked_key = "***hidden***"
 
         result.append(
             UserAPIKeyPublic(

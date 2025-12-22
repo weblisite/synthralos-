@@ -521,8 +521,8 @@ export function SocialMonitoringManager() {
   const [digestPlatform, setDigestPlatform] = useState("twitter")
   const [keywordsInput, setKeywordsInput] = useState("")
   const [digestKeywordsInput, setDigestKeywordsInput] = useState("")
-  const [selectedEngine, setSelectedEngine] = useState<string>("")
-  const [digestEngine, setDigestEngine] = useState<string>("")
+  const [selectedEngine, setSelectedEngine] = useState<string>("auto")
+  const [digestEngine, setDigestEngine] = useState<string>("auto")
   const [digestResults, setDigestResults] = useState<SocialMonitoringSignal[]>(
     [],
   )
@@ -538,7 +538,7 @@ export function SocialMonitoringManager() {
       return createSocialMonitoringStream(
         platform,
         keywords,
-        selectedEngine || undefined,
+        selectedEngine === "auto" ? undefined : selectedEngine,
       )
     },
     onSuccess: () => {
@@ -550,7 +550,7 @@ export function SocialMonitoringManager() {
       setIsCreateDialogOpen(false)
       setPlatform("twitter")
       setKeywordsInput("")
-      setSelectedEngine("")
+      setSelectedEngine("auto")
     },
     onError: (error: Error) => {
       showErrorToast("Failed to create stream", error.message)
@@ -563,7 +563,7 @@ export function SocialMonitoringManager() {
         .split(",")
         .map((k) => k.trim())
         .filter((k) => k.length > 0)
-      return createDigest(digestPlatform, keywords, digestEngine || undefined)
+      return createDigest(digestPlatform, keywords, digestEngine === "auto" ? undefined : digestEngine)
     },
     onSuccess: (data) => {
       setDigestResults(data.signals || [])
@@ -651,7 +651,7 @@ export function SocialMonitoringManager() {
                       <SelectValue placeholder="Auto-select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Auto-select</SelectItem>
+                      <SelectItem value="auto">Auto-select</SelectItem>
                       <SelectItem value="twint">
                         Twint (Twitter scraping)
                       </SelectItem>
@@ -745,7 +745,7 @@ export function SocialMonitoringManager() {
                       <SelectValue placeholder="Auto-select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Auto-select</SelectItem>
+                      <SelectItem value="auto">Auto-select</SelectItem>
                       <SelectItem value="twitter_api">Twitter API</SelectItem>
                       <SelectItem value="reddit_api">Reddit API</SelectItem>
                       <SelectItem value="news_api">News API</SelectItem>
