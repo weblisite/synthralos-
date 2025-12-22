@@ -19,13 +19,18 @@ export function getApiUrl(): string {
   
   // In browser context (production), ensure HTTPS is used if frontend is HTTPS
   // This prevents Mixed Content errors
-  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+  if (typeof window !== "undefined") {
+    const isHttps = window.location.protocol === "https:"
+    const isHttp = apiUrl.startsWith("http://")
+    const isNotLocalhost = !apiUrl.includes("localhost")
+    
     // Convert HTTP to HTTPS for production deployments
-    if (apiUrl.startsWith("http://") && !apiUrl.includes("localhost")) {
+    if (isHttps && isHttp && isNotLocalhost) {
       apiUrl = apiUrl.replace("http://", "https://")
       console.warn(
         "[API] Converted HTTP API URL to HTTPS to prevent Mixed Content errors:",
-        apiUrl
+        apiUrl,
+        "(original:", import.meta.env.VITE_API_URL + ")"
       )
     }
   }
