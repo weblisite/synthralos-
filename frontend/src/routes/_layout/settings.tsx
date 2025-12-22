@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-
+import { APIKeys } from "@/components/UserSettings/APIKeys"
 import ChangePassword from "@/components/UserSettings/ChangePassword"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
@@ -8,6 +8,7 @@ import useAuth from "@/hooks/useAuth"
 
 const tabsConfig = [
   { value: "my-profile", title: "My profile", component: UserInformation },
+  { value: "api-keys", title: "API Keys", component: APIKeys },
   { value: "password", title: "Password", component: ChangePassword },
   { value: "danger-zone", title: "Danger zone", component: DeleteAccount },
 ]

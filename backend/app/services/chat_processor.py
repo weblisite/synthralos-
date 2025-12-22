@@ -105,10 +105,17 @@ class ChatProcessor:
         try:
             import openai
 
-            if not settings.OPENAI_API_KEY:
-                raise ValueError("OPENAI_API_KEY not configured")
+            # Get user's API key or fallback to platform default
+            from app.services.api_keys import default_api_key_service
 
-            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+            api_key = default_api_key_service.get_user_api_key_without_session(
+                user_id, "openai"
+            )
+
+            if not api_key:
+                raise ValueError("OpenAI API key not configured")
+
+            client = openai.OpenAI(api_key=api_key)
 
             # Build system prompt based on mode
             system_prompts = {

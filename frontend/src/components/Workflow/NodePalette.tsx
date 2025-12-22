@@ -391,7 +391,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
                   </div>
                 ) : (
                   connectorNodes.map((nodeType) => {
-                    const Icon = nodeType.icon
+                    const _Icon = nodeType.icon
                     return (
                       <ConnectorPaletteItem
                         key={nodeType.type}

@@ -73,8 +73,23 @@ class AgentGPTFramework(BaseAgentFramework):
             import openai
 
             from app.observability.langfuse import default_langfuse_client
+            from app.services.api_keys import default_api_key_service
 
-            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+            # Get user's API key or fallback to platform default
+            user_id = input_data.get("user_id") or context.get("user_id")
+            api_key = None
+            if user_id:
+                api_key = default_api_key_service.get_user_api_key_without_session(
+                    user_id, "openai"
+                )
+
+            if not api_key:
+                api_key = settings.OPENAI_API_KEY
+
+            if not api_key:
+                raise ValueError("OpenAI API key not configured")
+
+            client = openai.OpenAI(api_key=api_key)
 
             # Build prompt from input data
             prompt = (

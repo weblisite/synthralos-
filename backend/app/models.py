@@ -59,6 +59,9 @@ class User(UserBase, table=True):
     code_sandboxes: list["CodeSandbox"] = Relationship(
         back_populates="owner", cascade_delete=True
     )
+    api_keys: list["UserAPIKey"] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
 
 
 # Properties to return via API, id is always required
@@ -758,3 +761,90 @@ class UserConnectorConnection(SQLModel, table=True):
         default_factory=datetime.utcnow,
         sa_column=Column(DateTime(timezone=True), onupdate=datetime.utcnow),
     )
+
+
+# ============================================================================
+# USER API KEYS MODELS
+# ============================================================================
+
+
+class UserAPIKeyBase(SQLModel):
+    """Base model for user API keys."""
+
+    service_name: str = Field(
+        max_length=50, index=True
+    )  # "openai", "anthropic", "twitter", etc.
+    service_display_name: str = Field(
+        max_length=100
+    )  # "OpenAI", "Anthropic Claude", "Twitter"
+    credential_type: str | None = Field(
+        default=None, max_length=50
+    )  # "api_key", "bearer_token", "oauth"
+    is_active: bool = Field(default=True, index=True)
+    last_used_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
+
+
+class UserAPIKeyCreate(SQLModel):
+    """Create API key request."""
+
+    service_name: str = Field(max_length=50)
+    credential_type: str | None = Field(default=None, max_length=50)
+    api_key: str = Field(min_length=1)  # Plain text key (will be encrypted)
+    # For services with multiple credentials (e.g., Twitter)
+    api_secret: str | None = Field(default=None)  # For Twitter API Key + Secret
+    access_token: str | None = Field(default=None)  # For Twitter OAuth
+    access_token_secret: str | None = Field(default=None)  # For Twitter OAuth
+
+
+class UserAPIKeyUpdate(SQLModel):
+    """Update API key request."""
+
+    api_key: str | None = Field(default=None, min_length=1)
+    api_secret: str | None = Field(default=None)
+    access_token: str | None = Field(default=None)
+    access_token_secret: str | None = Field(default=None)
+    is_active: bool | None = Field(default=None)
+
+
+class UserAPIKeyPublic(SQLModel):
+    """Public API key response (masked)."""
+
+    id: uuid.UUID
+    service_name: str
+    service_display_name: str
+    credential_type: str | None
+    masked_key: str  # Shows only last 4 characters
+    is_active: bool
+    last_used_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserAPIKey(UserAPIKeyBase, table=True):
+    """User API keys for external services."""
+
+    __tablename__ = "user_api_key"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+
+    # Encrypted key storage (stored in Infisical, reference stored here)
+    # Format: "infisical://users/{user_id}/api-keys/{service_name}/{credential_type}"
+    infisical_path: str = Field(max_length=500)
+
+    # Hash for verification (SHA256)
+    key_hash: str = Field(max_length=64)
+
+    # Timestamps
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True))
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime(timezone=True), onupdate=datetime.utcnow),
+    )
+
+    # Relationships
+    user: User = Relationship(back_populates="api_keys")

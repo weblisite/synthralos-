@@ -5,14 +5,11 @@ Routes agent tasks to appropriate frameworks based on task requirements.
 Handles framework selection, task execution, and context caching.
 """
 
-import logging
 import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
 from sqlmodel import Session, select
-
-logger = logging.getLogger(__name__)
 
 from app.agents.frameworks import (
     AgentGPTFramework,
@@ -111,7 +108,6 @@ class AgentRouter:
                 return preferred_framework
 
         # Routing logic based on task requirements
-        agent_type = task_requirements.get("agent_type", "simple")
         recursive_planning = task_requirements.get("recursive_planning", False)
         agent_roles = task_requirements.get("agent_roles", 1)
         agent_self_fix = task_requirements.get("agent_self_fix", False)
@@ -125,7 +121,7 @@ class AgentRouter:
             metagpt_config = session.exec(
                 select(AgentFrameworkConfig).where(
                     AgentFrameworkConfig.framework == "metagpt",
-                    AgentFrameworkConfig.is_enabled == True,
+                    AgentFrameworkConfig.is_enabled.is_(True),
                 )
             ).first()
             if metagpt_config:
@@ -134,7 +130,7 @@ class AgentRouter:
             crewai_config = session.exec(
                 select(AgentFrameworkConfig).where(
                     AgentFrameworkConfig.framework == "crewai",
-                    AgentFrameworkConfig.is_enabled == True,
+                    AgentFrameworkConfig.is_enabled.is_(True),
                 )
             ).first()
             if crewai_config:
@@ -145,7 +141,7 @@ class AgentRouter:
             archon_config = session.exec(
                 select(AgentFrameworkConfig).where(
                     AgentFrameworkConfig.framework == "archon",
-                    AgentFrameworkConfig.is_enabled == True,
+                    AgentFrameworkConfig.is_enabled.is_(True),
                 )
             ).first()
             if archon_config:
@@ -156,7 +152,7 @@ class AgentRouter:
             autogpt_config = session.exec(
                 select(AgentFrameworkConfig).where(
                     AgentFrameworkConfig.framework == "autogpt",
-                    AgentFrameworkConfig.is_enabled == True,
+                    AgentFrameworkConfig.is_enabled.is_(True),
                 )
             ).first()
             if autogpt_config:
@@ -165,7 +161,7 @@ class AgentRouter:
             babyagi_config = session.exec(
                 select(AgentFrameworkConfig).where(
                     AgentFrameworkConfig.framework == "babyagi",
-                    AgentFrameworkConfig.is_enabled == True,
+                    AgentFrameworkConfig.is_enabled.is_(True),
                 )
             ).first()
             if babyagi_config:
@@ -178,7 +174,7 @@ class AgentRouter:
             agentgpt_config = session.exec(
                 select(AgentFrameworkConfig).where(
                     AgentFrameworkConfig.framework == "agentgpt",
-                    AgentFrameworkConfig.is_enabled == True,
+                    AgentFrameworkConfig.is_enabled.is_(True),
                 )
             ).first()
             if agentgpt_config:
@@ -288,6 +284,13 @@ class AgentRouter:
                 "cached_context": cached_context,
                 "framework_config": framework_config.config,
             }
+
+            # Add user_id to execution context and input_data for API key resolution
+            if agent_id:
+                execution_context["user_id"] = agent_id
+                # Also add to input_data so frameworks can access it
+                if isinstance(input_data, dict):
+                    input_data["user_id"] = agent_id
 
             # Execute task using framework handler
             result = self._execute_with_framework(handler, execution_context)

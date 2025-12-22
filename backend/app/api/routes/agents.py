@@ -58,13 +58,17 @@ def run_agent_task(
                 task_requirements=task_requirements,
             )
 
+        # Add user_id to input_data for API key resolution
+        if isinstance(input_data, dict):
+            input_data["user_id"] = str(current_user.id)
+
         # Execute task
         task = router.execute_task(
             session=session,
             framework=selected_framework,
             task_type=task_type,
             input_data=input_data,
-            agent_id=agent_id,
+            agent_id=str(current_user.id),  # Use current_user.id as agent_id
         )
 
         return {
@@ -263,7 +267,7 @@ def list_available_agents(
 @router.get("/tasks")
 def list_agent_tasks(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa: ARG001
     skip: int = 0,
     limit: int = 100,
     framework: str | None = None,
