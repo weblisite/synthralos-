@@ -16,7 +16,22 @@ import "./index.css"
 import { routeTree } from "./routeTree.gen"
 
 // Use getApiUrl() to ensure HTTPS in production (prevents Mixed Content errors)
-OpenAPI.BASE = getApiUrl()
+// Set OpenAPI.BASE dynamically to ensure HTTPS conversion applies
+const setOpenApiBase = () => {
+  OpenAPI.BASE = getApiUrl()
+}
+setOpenApiBase()
+
+// Re-set OpenAPI.BASE after DOM is ready to ensure HTTPS conversion works
+if (typeof window !== "undefined") {
+  // Set immediately if window is available
+  setOpenApiBase()
+  
+  // Also set on DOMContentLoaded as a fallback
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setOpenApiBase)
+  }
+}
 OpenAPI.TOKEN = async () => {
   try {
     const {
