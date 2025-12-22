@@ -8,6 +8,7 @@ Endpoints for Supabase Storage operations:
 - List files
 - Get signed URLs
 """
+import logging
 import uuid
 from typing import Any
 
@@ -21,6 +22,8 @@ from app.services.storage import (
     StorageServiceError,
     default_storage_service,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/storage", tags=["storage"])
 
