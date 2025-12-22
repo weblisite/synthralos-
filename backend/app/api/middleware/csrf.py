@@ -30,6 +30,8 @@ CSRF_EXEMPT_PATHS = [
     "/api/v1/openapi.json",
     "/docs",
     "/redoc",
+    # Webhook endpoints are exempted - they use signature validation instead
+    # Webhooks are called by external services, not browsers, so CSRF doesn't apply
 ]
 
 # Methods that require CSRF protection

@@ -44,6 +44,10 @@ if settings.ENVIRONMENT in ["staging", "production"]:
         exempt_paths=[
             "/api/v1/chat/ws",  # WebSocket connections
             "/api/v1/agws",  # WebSocket connections
+            "/api/v1/connectors/",  # Webhook endpoints (use signature validation instead)
+            # Note: Webhook endpoints are at /api/v1/connectors/{slug}/webhook
+            # They are exempted because they use HMAC signature validation
+            # Other connector endpoints still require CSRF protection
         ],
     )
 
