@@ -142,6 +142,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         # Check if path is exempt
         path = request.url.path
+        
+        # Special handling for webhook endpoints
+        # Webhooks are at /api/v1/connectors/{slug}/webhook
+        # They use signature validation instead of CSRF tokens
+        if "/webhook" in path and path.startswith("/api/v1/connectors/"):
+            return await call_next(request)
+        
+        # Check other exempt paths
         if any(path.startswith(exempt) for exempt in self.all_exempt_paths):
             return await call_next(request)
 
