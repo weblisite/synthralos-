@@ -4,6 +4,7 @@ import * as React from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { UserPublic } from "@/client"
 import { apiClient } from "@/lib/apiClient"
+import { clearCsrfToken } from "@/lib/csrf"
 import { supabase } from "@/lib/supabase"
 import useCustomToast from "./useCustomToast"
 
@@ -354,6 +355,8 @@ export const useAuth = () => {
   }
 
   const logout = async () => {
+    // Clear CSRF token on logout
+    clearCsrfToken()
     await supabase.auth.signOut()
     queryClient.clear()
     // Force full page reload to ensure session is cleared and route protection works

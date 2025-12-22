@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { useEffect } from "react"
 import { AgUIProvider } from "@/components/Chat/AgUIProvider"
 import { Footer } from "@/components/Common/Footer"
 import AppSidebar from "@/components/Sidebar/AppSidebar"
@@ -7,6 +8,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { fetchCsrfToken } from "@/lib/csrf"
 import { supabase } from "@/lib/supabase"
 
 export const Route = createFileRoute("/_layout")({
@@ -25,6 +27,15 @@ export const Route = createFileRoute("/_layout")({
 })
 
 function Layout() {
+  // Initialize CSRF token on mount
+  useEffect(() => {
+    // Fetch CSRF token when layout loads (user is authenticated)
+    fetchCsrfToken().catch((error) => {
+      // Log but don't fail - CSRF may not be enabled in local dev
+      console.warn("Failed to initialize CSRF token:", error)
+    })
+  }, [])
+
   return (
     <AgUIProvider>
       <SidebarProvider>

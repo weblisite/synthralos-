@@ -4,6 +4,7 @@
  * Provides a centralized way to construct API URLs and make authenticated requests.
  */
 
+import { getCsrfToken } from "./csrf"
 import { supabase } from "./supabase"
 
 /**
@@ -49,6 +50,18 @@ export async function apiRequest<T = unknown>(
   const url = getApiPath(path)
   const headers = new Headers(options.headers)
   headers.set("Authorization", `Bearer ${session.access_token}`)
+
+  // Add CSRF token for state-changing requests (POST, PUT, DELETE, PATCH)
+  const method = options.method?.toUpperCase() || "GET"
+  if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
+    try {
+      const csrfToken = await getCsrfToken()
+      headers.set("X-CSRF-Token", csrfToken)
+    } catch (error) {
+      // Log error but don't fail the request (CSRF may not be enabled in local dev)
+      console.warn("Failed to get CSRF token:", error)
+    }
+  }
 
   // Don't set Content-Type for FormData - browser will set it with boundary
   if (!(options.body instanceof FormData)) {

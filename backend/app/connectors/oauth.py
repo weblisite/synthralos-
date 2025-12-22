@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 import httpx
 from sqlmodel import Session
 
+from app.connectors.pkce import generate_pkce_pair
 from app.connectors.registry import default_connector_registry
 from app.core.config import settings
 from app.services.nango import NangoError, default_nango_service
@@ -149,7 +150,10 @@ class ConnectorOAuthService:
         # Generate state token for CSRF protection
         state_token = secrets.token_urlsafe(32)
 
-        # Store state with metadata
+        # Generate PKCE code verifier and challenge
+        code_verifier, code_challenge = generate_pkce_pair()
+
+        # Store state with metadata including PKCE verifier
         self._oauth_states[state_token] = {
             "connector_slug": connector_slug,
             "connector_version_id": str(connector_version.id),
@@ -157,6 +161,8 @@ class ConnectorOAuthService:
             "redirect_uri": redirect_uri,
             "scopes": scopes or [],
             "use_nango": False,
+            "code_verifier": code_verifier,  # Store for validation in callback
+            "code_challenge": code_challenge,  # Store for validation
         }
 
         # Build authorization URL
@@ -170,6 +176,8 @@ class ConnectorOAuthService:
             "redirect_uri": redirect_uri,
             "state": state_token,
             "scope": scope_string,
+            "code_challenge": code_challenge,  # PKCE: Include code challenge
+            "code_challenge_method": "S256",  # PKCE: SHA256 method
         }
 
         # Add any additional OAuth parameters from manifest
@@ -258,6 +266,7 @@ class ConnectorOAuthService:
 
         # Direct OAuth flow (existing implementation)
         redirect_uri = state_data["redirect_uri"]
+        code_verifier = state_data.get("code_verifier")  # PKCE: Get stored verifier
 
         if not code:
             del self._oauth_states[state]
@@ -268,11 +277,12 @@ class ConnectorOAuthService:
         manifest = connector_version.manifest
         oauth_config = manifest.get("oauth", {})
 
-        # Exchange code for tokens
+        # Exchange code for tokens (with PKCE code_verifier)
         tokens = self._exchange_code_for_tokens(
             oauth_config,
             code,
             redirect_uri,
+            code_verifier=code_verifier,  # PKCE: Include code verifier
         )
 
         # Store tokens in Infisical
@@ -300,6 +310,7 @@ class ConnectorOAuthService:
         oauth_config: dict[str, Any],
         code: str,
         redirect_uri: str,
+        code_verifier: str | None = None,
     ) -> dict[str, Any]:
         """
         Exchange authorization code for access tokens.
@@ -308,6 +319,7 @@ class ConnectorOAuthService:
             oauth_config: OAuth configuration from manifest
             code: Authorization code
             redirect_uri: Redirect URI used in authorization
+            code_verifier: PKCE code verifier (optional, for PKCE flow)
 
         Returns:
             Token response dictionary
@@ -329,6 +341,10 @@ class ConnectorOAuthService:
             "redirect_uri": redirect_uri,
             "client_id": client_id,
         }
+
+        # Add PKCE code_verifier if provided
+        if code_verifier:
+            data["code_verifier"] = code_verifier
 
         # Add client secret if provided
         if client_secret:

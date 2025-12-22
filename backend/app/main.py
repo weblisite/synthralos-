@@ -4,6 +4,7 @@ from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
+from app.api.middleware.csrf import CSRFMiddleware
 from app.api.middleware.guardrails import GuardrailsMiddleware
 from app.core.config import settings
 from app.observability.langfuse import default_langfuse_client
@@ -33,6 +34,17 @@ if settings.all_cors_origins:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+    )
+
+# Add CSRF protection middleware (after CORS, before guardrails)
+# CSRF protection is enabled in production and staging
+if settings.ENVIRONMENT in ["staging", "production"]:
+    app.add_middleware(
+        CSRFMiddleware,
+        exempt_paths=[
+            "/api/v1/chat/ws",  # WebSocket connections
+            "/api/v1/agws",  # WebSocket connections
+        ],
     )
 
 # Add guardrails middleware for input validation and abuse detection
