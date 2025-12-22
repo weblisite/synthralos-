@@ -26,6 +26,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { apiClient } from "@/lib/apiClient"
+import { getConnectorLogoUrls } from "@/lib/connectorLogos"
 
 interface Connector {
   id: string
@@ -119,6 +120,72 @@ const baseNodeTypes: NodeType[] = [
 
 interface NodePaletteProps {
   onNodeAdd?: (node: Node) => void
+}
+
+// Component to display connector items with logos in the palette
+function ConnectorPaletteItem({
+  nodeType,
+  onDragStart,
+  onClick,
+}: {
+  nodeType: NodeType
+  onDragStart: (e: React.DragEvent, nodeType: NodeType) => void
+  onClick: (nodeType: NodeType) => void
+}) {
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const Icon = nodeType.icon
+
+  useEffect(() => {
+    if (nodeType.connectorSlug && !logoUrl) {
+      const logoUrls = getConnectorLogoUrls(nodeType.connectorSlug)
+      let currentIndex = 0
+
+      const tryNextLogo = () => {
+        if (currentIndex >= logoUrls.length) {
+          setLogoUrl(null)
+          return
+        }
+
+        const img = new Image()
+        img.onload = () => setLogoUrl(logoUrls[currentIndex]!)
+        img.onerror = () => {
+          currentIndex++
+          tryNextLogo()
+        }
+        img.src = logoUrls[currentIndex]!
+      }
+
+      tryNextLogo()
+    }
+  }, [nodeType.connectorSlug, logoUrl])
+
+  return (
+    <button
+      type="button"
+      draggable
+      onDragStart={(e) => onDragStart(e, nodeType)}
+      onClick={() => onClick(nodeType)}
+      className="flex items-center gap-2 p-2 rounded-md border cursor-move hover:bg-accent transition-colors w-full text-left ml-4"
+      title={nodeType.description}
+    >
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt={nodeType.label}
+          className="h-4 w-4 object-contain flex-shrink-0"
+          onError={() => setLogoUrl(null)}
+        />
+      ) : (
+        <Icon className="h-4 w-4 text-green-600 flex-shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium">{nodeType.label}</div>
+        <div className="text-xs text-muted-foreground truncate">
+          {nodeType.description}
+        </div>
+      </div>
+    </button>
+  )
 }
 
 export function NodePalette({ onNodeAdd }: NodePaletteProps) {
@@ -326,25 +393,12 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
                   connectorNodes.map((nodeType) => {
                     const Icon = nodeType.icon
                     return (
-                      <button
+                      <ConnectorPaletteItem
                         key={nodeType.type}
-                        type="button"
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, nodeType)}
-                        onClick={() => handleClick(nodeType)}
-                        className="flex items-center gap-2 p-2 rounded-md border cursor-move hover:bg-accent transition-colors w-full text-left ml-4"
-                        title={nodeType.description}
-                      >
-                        <Icon className="h-4 w-4 text-green-600" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium">
-                            {nodeType.label}
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {nodeType.description}
-                          </div>
-                        </div>
-                      </button>
+                        nodeType={nodeType}
+                        onDragStart={handleDragStart}
+                        onClick={handleClick}
+                      />
                     )
                   })
                 )}

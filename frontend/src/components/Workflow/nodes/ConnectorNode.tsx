@@ -24,17 +24,42 @@ export function ConnectorNode(props: NodeProps) {
   const nodeData = data as ConnectorNodeData
   const connectorName =
     nodeData.label || nodeData.config?.connector_slug || "Connector"
-  const [logoUrl, setLogoUrl] = useState<string | null>(
-    nodeData.config?.logo || null,
-  )
+  const connectorSlug = nodeData.config?.connector_slug
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    if (nodeData.config?.connector_slug && !logoUrl) {
-      const slug = nodeData.config.connector_slug
-      const customLogo = nodeData.config?.logo
+    // Reset logo when connector changes
+    setLogoUrl(null)
 
+    if (!connectorSlug) {
+      return
+    }
+
+    const customLogo = nodeData.config?.logo
+
+    // If custom logo is provided, use it directly
+    if (customLogo) {
+      const img = new Image()
+      img.onload = () => setLogoUrl(customLogo)
+      img.onerror = () => {
+        // Fall back to logo URLs if custom logo fails
+        loadLogoFromUrls()
+      }
+      img.src = customLogo
+      return
+    }
+
+    // Load logo from available sources
+    loadLogoFromUrls()
+
+    function loadLogoFromUrls() {
       // Get logo URLs using utility function
-      const possiblePaths = getConnectorLogoUrls(slug, customLogo)
+      const possiblePaths = getConnectorLogoUrls(connectorSlug, customLogo)
+
+      if (possiblePaths.length === 0) {
+        setLogoUrl(null)
+        return
+      }
 
       // Try to load logos sequentially
       let currentIndex = 0
@@ -56,10 +81,8 @@ export function ConnectorNode(props: NodeProps) {
       }
 
       tryNextLogo()
-    } else if (nodeData.config?.logo) {
-      setLogoUrl(nodeData.config.logo)
     }
-  }, [nodeData.config?.connector_slug, nodeData.config?.logo, logoUrl])
+  }, [connectorSlug, nodeData.config?.logo])
 
   return (
     <div
