@@ -285,9 +285,16 @@ async def list_files(
         }
 
     except StorageServiceError as e:
+        logger.error(f"Storage service error listing files in bucket {bucket}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error listing files in bucket {bucket}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list files: {str(e)}",
         )
 
 
