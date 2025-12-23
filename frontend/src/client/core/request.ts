@@ -80,16 +80,34 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
 	// Ensure HTTPS is used in production (prevent Mixed Content errors)
 	let baseUrl = config.BASE;
 	
-	// Always convert HTTP to HTTPS if we're in a browser HTTPS context
+	// Always convert HTTP to HTTPS for production domains
+	const isProductionDomain =
+		baseUrl.includes(".onrender.com") ||
+		baseUrl.includes(".vercel.app") ||
+		baseUrl.includes(".netlify.app") ||
+		baseUrl.includes(".herokuapp.com") ||
+		baseUrl.includes(".fly.dev");
+
+	const isLocalhost = baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1");
+
+	if (isProductionDomain && baseUrl.startsWith("http://")) {
+		baseUrl = baseUrl.replace("http://", "https://");
+		console.warn(
+			"[OpenAPI SDK] Converted HTTP BASE URL to HTTPS (production domain):",
+			baseUrl,
+			"(original:", config.BASE + ")"
+		);
+	}
+	
+	// Also check window.location.protocol as safety net
 	if (typeof window !== "undefined") {
 		const isHttps = window.location.protocol === "https:";
 		const isHttp = baseUrl.startsWith("http://");
-		const isNotLocalhost = !baseUrl.includes("localhost") && !baseUrl.includes("127.0.0.1");
 		
-		if (isHttps && isHttp && isNotLocalhost) {
+		if (isHttps && isHttp && !isLocalhost) {
 			baseUrl = baseUrl.replace("http://", "https://");
 			console.warn(
-				"[OpenAPI SDK] Converted HTTP BASE URL to HTTPS:",
+				"[OpenAPI SDK] Converted HTTP BASE URL to HTTPS (browser check):",
 				baseUrl,
 				"(original:", config.BASE + ")"
 			);
@@ -100,11 +118,32 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
 	const finalUrl = options.query ? url + getQueryString(options.query) : url;
 	
 	// Double-check the final URL and convert if needed
+	const finalIsProductionDomain =
+		finalUrl.includes(".onrender.com") ||
+		finalUrl.includes(".vercel.app") ||
+		finalUrl.includes(".netlify.app") ||
+		finalUrl.includes(".herokuapp.com") ||
+		finalUrl.includes(".fly.dev");
+
+	const finalIsLocalhost = finalUrl.includes("localhost") || finalUrl.includes("127.0.0.1");
+
+	// Always convert HTTP to HTTPS for production domains
+	if (finalIsProductionDomain && finalUrl.startsWith("http://")) {
+		const httpsUrl = finalUrl.replace("http://", "https://");
+		console.warn(
+			"[OpenAPI SDK] Converted final HTTP URL to HTTPS (production domain):",
+			httpsUrl,
+			"(original:", finalUrl + ")"
+		);
+		return httpsUrl;
+	}
+
+	// Also check window.location.protocol
 	if (typeof window !== "undefined" && window.location.protocol === "https:") {
-		if (finalUrl.startsWith("http://") && !finalUrl.includes("localhost") && !finalUrl.includes("127.0.0.1")) {
+		if (finalUrl.startsWith("http://") && !finalIsLocalhost) {
 			const httpsUrl = finalUrl.replace("http://", "https://");
 			console.warn(
-				"[OpenAPI SDK] Converted final HTTP URL to HTTPS:",
+				"[OpenAPI SDK] Converted final HTTP URL to HTTPS (browser check):",
 				httpsUrl,
 				"(original:", finalUrl + ")"
 			);

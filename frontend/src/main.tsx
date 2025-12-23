@@ -19,8 +19,23 @@ import { routeTree } from "./routeTree.gen"
 // Set OpenAPI.BASE dynamically to ensure HTTPS conversion applies
 const setOpenApiBase = () => {
   const apiUrl = getApiUrl()
-  // Force HTTPS conversion if needed
+  // getApiUrl() already handles HTTPS conversion, but ensure it's applied
   let finalUrl = apiUrl
+
+  // Additional safety check for production domains
+  const isProductionDomain =
+    finalUrl.includes(".onrender.com") ||
+    finalUrl.includes(".vercel.app") ||
+    finalUrl.includes(".netlify.app") ||
+    finalUrl.includes(".herokuapp.com") ||
+    finalUrl.includes(".fly.dev")
+
+  if (isProductionDomain && finalUrl.startsWith("http://")) {
+    finalUrl = finalUrl.replace("http://", "https://")
+    console.warn("[main.tsx] Converted OpenAPI.BASE HTTP to HTTPS:", finalUrl)
+  }
+
+  // Also check window.location.protocol
   if (typeof window !== "undefined" && window.location.protocol === "https:") {
     if (
       finalUrl.startsWith("http://") &&
@@ -28,9 +43,13 @@ const setOpenApiBase = () => {
       !finalUrl.includes("127.0.0.1")
     ) {
       finalUrl = finalUrl.replace("http://", "https://")
-      console.warn("[main.tsx] Converted OpenAPI.BASE HTTP to HTTPS:", finalUrl)
+      console.warn(
+        "[main.tsx] Converted OpenAPI.BASE HTTP to HTTPS (browser check):",
+        finalUrl,
+      )
     }
   }
+
   OpenAPI.BASE = finalUrl
 }
 

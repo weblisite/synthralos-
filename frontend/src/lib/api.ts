@@ -17,20 +17,40 @@ import { supabase } from "./supabase"
 export function getApiUrl(): string {
   let apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000"
 
-  // In browser context (production), ensure HTTPS is used if frontend is HTTPS
-  // This prevents Mixed Content errors
+  // Always convert HTTP to HTTPS for production domains (Render, etc.)
+  // This prevents Mixed Content errors when frontend is served over HTTPS
+  const isProductionDomain =
+    apiUrl.includes(".onrender.com") ||
+    apiUrl.includes(".vercel.app") ||
+    apiUrl.includes(".netlify.app") ||
+    apiUrl.includes(".herokuapp.com") ||
+    apiUrl.includes(".fly.dev")
+
+  const isLocalhost =
+    apiUrl.includes("localhost") || apiUrl.includes("127.0.0.1")
+
+  // Convert HTTP to HTTPS for production domains (always, regardless of window.location)
+  if (isProductionDomain && apiUrl.startsWith("http://")) {
+    apiUrl = apiUrl.replace("http://", "https://")
+    console.warn(
+      "[API] Converted HTTP API URL to HTTPS for production domain:",
+      apiUrl,
+      "(original:",
+      `${import.meta.env.VITE_API_URL})`,
+    )
+  }
+
+  // In browser context, also check window.location.protocol as a safety net
   if (typeof window !== "undefined") {
     try {
       const isHttps = window.location.protocol === "https:"
       const isHttp = apiUrl.startsWith("http://")
-      const isNotLocalhost =
-        !apiUrl.includes("localhost") && !apiUrl.includes("127.0.0.1")
 
-      // Convert HTTP to HTTPS for production deployments
-      if (isHttps && isHttp && isNotLocalhost) {
+      // Convert HTTP to HTTPS if frontend is HTTPS and not localhost
+      if (isHttps && isHttp && !isLocalhost) {
         apiUrl = apiUrl.replace("http://", "https://")
         console.warn(
-          "[API] Converted HTTP API URL to HTTPS to prevent Mixed Content errors:",
+          "[API] Converted HTTP API URL to HTTPS (browser check):",
           apiUrl,
           "(original:",
           `${import.meta.env.VITE_API_URL})`,
@@ -79,15 +99,33 @@ export async function apiRequest<T = unknown>(
   let url = getApiPath(path)
 
   // Double-check HTTPS conversion at request time (safety net)
+  // Check for production domains first
+  const isProductionDomain =
+    url.includes(".onrender.com") ||
+    url.includes(".vercel.app") ||
+    url.includes(".netlify.app") ||
+    url.includes(".herokuapp.com") ||
+    url.includes(".fly.dev")
+
+  const isLocalhost = url.includes("localhost") || url.includes("127.0.0.1")
+
+  // Always convert HTTP to HTTPS for production domains
+  if (isProductionDomain && url.startsWith("http://")) {
+    url = url.replace("http://", "https://")
+    console.warn(
+      "[apiRequest] Converted HTTP URL to HTTPS (production domain check):",
+      url,
+      "(original path:",
+      `${path})`,
+    )
+  }
+
+  // Also check window.location.protocol as additional safety net
   if (typeof window !== "undefined" && window.location.protocol === "https:") {
-    if (
-      url.startsWith("http://") &&
-      !url.includes("localhost") &&
-      !url.includes("127.0.0.1")
-    ) {
+    if (url.startsWith("http://") && !isLocalhost) {
       url = url.replace("http://", "https://")
       console.warn(
-        "[apiRequest] Converted HTTP URL to HTTPS at request time:",
+        "[apiRequest] Converted HTTP URL to HTTPS (browser check):",
         url,
         "(original path:",
         `${path})`,
