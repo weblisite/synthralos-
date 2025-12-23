@@ -227,6 +227,36 @@ services:
         sync: false  # REQUIRED: Set to your Supabase anon key
         # Get from: Supabase Dashboard > Settings > API > Project API keys > anon/public key
 
+  # ========================================================================
+  # Workflow Worker - Processes workflow executions
+  # ========================================================================
+  # The worker polls the database every 1 second and executes workflow nodes.
+  # This is REQUIRED for workflows to execute - without it, workflows are
+  # created but never run.
+  #
+  # IMPORTANT: Copy ALL environment variables from backend service to worker.
+  # The worker needs the same database connection and configuration.
+  # ========================================================================
+  - type: worker
+    name: synthralos-workflow-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile.worker
+    dockerContext: ./backend
+    plan: starter  # $7/month - upgrade to standard ($25/month) for more resources
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PROJECT_NAME
+        value: SynthralOS
+      # IMPORTANT: Copy ALL environment variables from backend service
+      # Set these manually in Render dashboard (same values as backend):
+      # - SUPABASE_URL (required)
+      # - SUPABASE_ANON_KEY (required)
+      # - SUPABASE_DB_URL (required - database connection)
+      # - SECRET_KEY (required)
+      # - WORKFLOW_WORKER_CONCURRENCY (optional, default: 10)
+      # - All other backend environment variables (NANGO_SECRET_KEY, etc.)
+
 # ============================================================================
 # Database Service: NOT INCLUDED
 # ============================================================================

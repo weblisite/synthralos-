@@ -6,19 +6,34 @@
 
 import type { Node } from "@xyflow/react"
 import {
+  AlertTriangle,
+  ArrowRight,
+  Bell,
   Bot,
   Brain,
   ChevronDown,
   ChevronRight,
+  Clock,
   Code,
   Database,
+  Download,
   FileText,
+  Filter,
   GitBranch,
   Globe,
+  Layers,
+  Merge,
   Monitor,
   Network,
+  Pause,
   Play,
   Plug,
+  RefreshCw,
+  Repeat,
+  Save,
+  Search,
+  Split,
+  UserCheck,
   Workflow,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -132,6 +147,160 @@ const baseNodeTypes: NodeType[] = [
     category: "Core",
     description: "Execute nested workflow",
   },
+  {
+    type: "loop",
+    label: "Loop",
+    icon: Repeat,
+    category: "Logic",
+    description: "Iterate over items",
+  },
+  {
+    type: "for",
+    label: "For Loop",
+    icon: Repeat,
+    category: "Logic",
+    description: "For each item in array",
+  },
+  {
+    type: "while",
+    label: "While Loop",
+    icon: Repeat,
+    category: "Logic",
+    description: "Repeat while condition is true",
+  },
+  {
+    type: "repeat",
+    label: "Repeat",
+    icon: Repeat,
+    category: "Logic",
+    description: "Repeat N times",
+  },
+  {
+    type: "delay",
+    label: "Delay",
+    icon: Clock,
+    category: "Control",
+    description: "Wait for specified duration",
+  },
+  {
+    type: "wait",
+    label: "Wait",
+    icon: Clock,
+    category: "Control",
+    description: "Wait until condition or time",
+  },
+  {
+    type: "try",
+    label: "Try",
+    icon: AlertTriangle,
+    category: "Control",
+    description: "Try block for error handling",
+  },
+  {
+    type: "catch",
+    label: "Catch",
+    icon: AlertTriangle,
+    category: "Control",
+    description: "Catch errors from try block",
+  },
+  {
+    type: "finally",
+    label: "Finally",
+    icon: AlertTriangle,
+    category: "Control",
+    description: "Finally block always executes",
+  },
+  {
+    type: "map",
+    label: "Map",
+    icon: RefreshCw,
+    category: "Data",
+    description: "Transform each item in array",
+  },
+  {
+    type: "filter",
+    label: "Filter",
+    icon: Filter,
+    category: "Data",
+    description: "Filter items by condition",
+  },
+  {
+    type: "reduce",
+    label: "Reduce",
+    icon: Layers,
+    category: "Data",
+    description: "Reduce array to single value",
+  },
+  {
+    type: "merge",
+    label: "Merge",
+    icon: Merge,
+    category: "Data",
+    description: "Merge multiple data sources",
+  },
+  {
+    type: "split",
+    label: "Split",
+    icon: Split,
+    category: "Data",
+    description: "Split data into multiple outputs",
+  },
+  {
+    type: "set_variable",
+    label: "Set Variable",
+    icon: Save,
+    category: "Variables",
+    description: "Set workflow variable",
+  },
+  {
+    type: "get_variable",
+    label: "Get Variable",
+    icon: Download,
+    category: "Variables",
+    description: "Get workflow variable value",
+  },
+  {
+    type: "break",
+    label: "Break",
+    icon: Pause,
+    category: "Control",
+    description: "Exit loop immediately",
+  },
+  {
+    type: "continue",
+    label: "Continue",
+    icon: ArrowRight,
+    category: "Control",
+    description: "Skip to next loop iteration",
+  },
+  {
+    type: "storage",
+    label: "Storage",
+    icon: Database,
+    category: "Data",
+    description: "Store or retrieve files",
+  },
+  {
+    type: "social_monitoring",
+    label: "Social Monitoring",
+    icon: Search,
+    category: "Data",
+    description: "Social media monitoring and intelligence",
+  },
+  {
+    type: "human_approval",
+    label: "Human Approval",
+    icon: UserCheck,
+    category: "Control",
+    description: "Wait for human approval",
+  },
+  {
+    type: "notification",
+    label: "Notification",
+    icon: Bell,
+    category: "Integration",
+    description: "Send notification",
+  },
 ]
 
 interface NodePaletteProps {
@@ -206,13 +375,13 @@ function ConnectorPaletteItem({
 
 export function NodePalette({ onNodeAdd }: NodePaletteProps) {
   const [connectors, setConnectors] = useState<Connector[]>([])
-  const [isConnectorsLoading, setIsConnectorsLoading] = useState(true)
+  const [isConnectorsLoading, setIsConnectorsLoading] = useState(false)
   const [isConnectorsExpanded, setIsConnectorsExpanded] = useState(false)
 
   const [hasFetchedConnectors, setHasFetchedConnectors] = useState(false)
 
   useEffect(() => {
-    // Only fetch connectors when the section is expanded (lazy loading)
+    // Fetch connectors when the section is expanded (lazy loading)
     if (!isConnectorsExpanded) {
       return
     }
@@ -268,6 +437,42 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
 
     fetchConnectors()
   }, [isConnectorsExpanded, hasFetchedConnectors])
+
+  // Fetch connector count on mount to show in header (lightweight)
+  useEffect(() => {
+    // Skip if already fetched (e.g., from expansion)
+    if (hasFetchedConnectors) {
+      return
+    }
+
+    const fetchConnectorCount = async () => {
+      try {
+        const data = await apiClient.request<
+          { connectors?: any[]; total_count?: number } | any[]
+        >(`/api/v1/connectors/list?include_custom=true`)
+
+        // Handle both response formats: array or object with connectors property
+        const connectorsList = Array.isArray(data)
+          ? data
+          : data.connectors || []
+
+        // Filter out deprecated connectors
+        const activeConnectors = connectorsList.filter(
+          (c: Connector & { status?: string }) =>
+            !c.status || c.status !== "deprecated",
+        )
+
+        // Set connectors for count display (will be refreshed if expanded)
+        setConnectors(activeConnectors)
+        setHasFetchedConnectors(true)
+      } catch (error) {
+        console.error("[NodePalette] Failed to fetch connector count:", error)
+        // Don't set empty array here - let it show 0 until expanded
+      }
+    }
+
+    fetchConnectorCount()
+  }, [hasFetchedConnectors])
 
   const connectorNodes = useMemo(() => {
     return connectors.map((connector) => ({

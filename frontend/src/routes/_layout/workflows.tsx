@@ -8,6 +8,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import type { Connection, Edge, Node } from "@xyflow/react"
 import { Play, Save } from "lucide-react"
 import { useCallback, useState } from "react"
+import { ExecutionHistory } from "@/components/Admin/ExecutionHistory"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -270,6 +271,7 @@ function WorkflowsPage() {
         <Tabs defaultValue="builder" className="h-full flex flex-col">
           <TabsList className="mx-4 mt-4">
             <TabsTrigger value="builder">Builder</TabsTrigger>
+            <TabsTrigger value="executions">Executions</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             {workflowId && <TabsTrigger value="test">Test</TabsTrigger>}
           </TabsList>
@@ -289,6 +291,13 @@ function WorkflowsPage() {
               onNodeUpdate={handleNodeUpdate}
               onNodeDelete={handleNodeDelete}
             />
+          </TabsContent>
+
+          <TabsContent
+            value="executions"
+            className="flex-1 m-0 p-4 overflow-auto"
+          >
+            <ExecutionHistory workflowId={workflowId || undefined} />
           </TabsContent>
 
           <TabsContent

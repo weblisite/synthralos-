@@ -11,7 +11,7 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from app.models import ExecutionLog, Workflow, WorkflowExecution, WorkflowNode
+from app.models import ExecutionLog, Workflow, WorkflowExecution
 from app.self_healing.service import SelfHealingService, default_self_healing_service
 from app.workflows.retry import RetryManager, default_retry_manager
 from app.workflows.signals import SignalHandler, default_signal_handler
@@ -223,38 +223,83 @@ class WorkflowEngine:
         # Use specified version or workflow's current version
         target_version = version or workflow.version
 
-        # Get nodes for this workflow
-        nodes_query = select(WorkflowNode).where(
-            WorkflowNode.workflow_id == workflow_id
-        )
-        nodes = session.exec(nodes_query).all()
-
-        # Build node dictionary
+        # Extract nodes and edges from graph_config
+        graph_config = workflow.graph_config or {}
         node_dict = {}
+        edges = []
         entry_node_id = None
 
-        for node in nodes:
-            node_dict[node.node_id] = {
-                "node_type": node.node_type,
-                "config": node.config,
-                "position_x": node.position_x,
-                "position_y": node.position_y,
-            }
+        # Load nodes from graph_config.nodes[] (frontend format)
+        if "nodes" in graph_config and isinstance(graph_config["nodes"], list):
+            # Frontend format: nodes is an array
+            for node_data in graph_config["nodes"]:
+                node_id = node_data.get("node_id")
+                if not node_id:
+                    continue
 
-            # Find entry node (first trigger node or first node)
-            if entry_node_id is None and (
-                node.node_type == "trigger" or not entry_node_id
-            ):
-                entry_node_id = node.node_id
+                node_dict[node_id] = {
+                    "node_type": node_data.get("node_type", "unknown"),
+                    "config": node_data.get("config", {}),
+                    "position_x": node_data.get("position_x", 0),
+                    "position_y": node_data.get("position_y", 0),
+                }
+
+                # Find entry node (first trigger node or first node)
+                if entry_node_id is None:
+                    if node_data.get("node_type") == "trigger":
+                        entry_node_id = node_id
+                    elif not entry_node_id:
+                        entry_node_id = node_id
+
+        elif "nodes" in graph_config and isinstance(graph_config["nodes"], dict):
+            # LangGraph format: nodes is a dict
+            for node_id, node_config in graph_config["nodes"].items():
+                node_dict[node_id] = {
+                    "node_type": node_config.get("node_type", "unknown"),
+                    "config": node_config.get("config", node_config),
+                    "position_x": node_config.get("position_x", 0),
+                    "position_y": node_config.get("position_y", 0),
+                }
+
+                # Find entry node
+                if entry_node_id is None:
+                    if node_config.get("node_type") == "trigger":
+                        entry_node_id = node_id
+                    elif not entry_node_id:
+                        entry_node_id = node_id
+
+        # Try loading from WorkflowNode table as fallback (if it exists)
+        try:
+            from app.models import WorkflowNode
+
+            nodes_query = select(WorkflowNode).where(
+                WorkflowNode.workflow_id == workflow_id
+            )
+            db_nodes = session.exec(nodes_query).all()
+
+            # Only use DB nodes if graph_config has no nodes
+            if not node_dict and db_nodes:
+                for node in db_nodes:
+                    node_dict[node.node_id] = {
+                        "node_type": node.node_type,
+                        "config": node.config or {},
+                        "position_x": node.position_x or 0,
+                        "position_y": node.position_y or 0,
+                    }
+                    if entry_node_id is None:
+                        if node.node_type == "trigger":
+                            entry_node_id = node.node_id
+                        elif not entry_node_id:
+                            entry_node_id = node.node_id
+        except (ImportError, AttributeError):
+            # WorkflowNode model doesn't exist, use graph_config only
+            pass
 
         # Extract edges from graph_config
-        edges = []
-        graph_config = workflow.graph_config or {}
-
-        # Support both LangGraph format and simple edge format
-        if "edges" in graph_config:
+        if "edges" in graph_config and isinstance(graph_config["edges"], list):
+            # Frontend format: edges is an array
             edges = graph_config["edges"]
-        elif "nodes" in graph_config:
+        elif "nodes" in graph_config and isinstance(graph_config["nodes"], dict):
             # LangGraph format - extract edges from node connections
             for node_id, node_config in graph_config.get("nodes", {}).items():
                 if "next" in node_config:
@@ -316,7 +361,19 @@ class WorkflowEngine:
 
         try:
             # Get node type from config
+            # node_config structure: {"node_type": "...", "config": {...}, ...}
             node_type = node_config.get("node_type", "unknown")
+
+            # Extract actual config (nested config dict) if present, otherwise use node_config itself
+            # This handles both formats:
+            # 1. {"node_type": "loop", "config": {"loop_type": "for"}} - from database
+            # 2. {"node_type": "loop", "loop_type": "for"} - direct format
+            actual_config = node_config.get("config", node_config)
+            # Merge node_type into actual_config so handlers can access it
+            if isinstance(actual_config, dict):
+                actual_config = {**actual_config, "node_type": node_type}
+            else:
+                actual_config = {"node_type": node_type}
 
             # Get activity handler for this node type
             from app.workflows.activities import get_activity_handler
@@ -328,7 +385,7 @@ class WorkflowEngine:
                 # Pass execution_id and session for handlers that need them
                 result = handler.execute(
                     node_id=node_id,
-                    node_config=node_config,
+                    node_config=actual_config,
                     input_data=input_data,
                     execution_id=execution_id,
                     session=session,
@@ -421,7 +478,8 @@ class WorkflowEngine:
                 try:
                     healed_task = healing_result.get("healed_task", {})
                     healed_node_config = healed_task.get("node_config", node_config)
-                    healed_input_data = healed_task.get("input_data", input_data)
+                    # healed_input_data can be used for retry logic
+                    _ = healed_task.get("input_data", input_data)
 
                     # Retry execution with healed configuration
                     # Note: This is a simplified retry - full implementation would re-execute the node
@@ -710,7 +768,8 @@ class WorkflowEngine:
 
             self.save_execution_state(session, execution_id, state)
 
-            retry_info = self.retry_manager.get_retry_info(state.retry_count - 1)
+            # retry_info can be used for logging or metrics
+            _ = self.retry_manager.get_retry_info(state.retry_count - 1)
             self._log_execution(
                 session,
                 execution_id,

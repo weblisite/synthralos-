@@ -492,6 +492,44 @@ export function NodeConfigPanel({
           </div>
         )}
 
+        {node.type === "switch" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="switch-expression">Switch Expression</Label>
+              <Input
+                id="switch-expression"
+                value={config.switch_expression || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("switch_expression", e.target.value)
+                }
+                placeholder="input.status"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="switch-cases">Cases (JSON)</Label>
+              <Textarea
+                id="switch-cases"
+                value={JSON.stringify(config.cases || {}, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const cases = JSON.parse(e.target.value)
+                    handleConfigUpdate("cases", cases)
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder='{"case1": "value1", "case2": "value2", "default": "default_value"}'
+                rows={6}
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Define case values and their corresponding output values. Use
+                "default" for default case.
+              </p>
+            </div>
+          </>
+        )}
+
         {node.type === "http_request" && (
           <>
             <div className="space-y-2">
@@ -796,6 +834,746 @@ export function NodeConfigPanel({
                 placeholder='{"key": "value"}'
                 rows={4}
                 className="font-mono text-sm"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Loop Nodes */}
+        {(node.type === "loop" ||
+          node.type === "for" ||
+          node.type === "while" ||
+          node.type === "repeat") && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="loop-type">Loop Type</Label>
+              <Select
+                value={config.loop_type || node.type}
+                onValueChange={(value) =>
+                  handleConfigUpdate("loop_type", value)
+                }
+              >
+                <SelectTrigger id="loop-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="for">For Loop (iterate array)</SelectItem>
+                  <SelectItem value="while">While Loop (condition)</SelectItem>
+                  <SelectItem value="repeat">Repeat (N times)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {config.loop_type === "for" && (
+              <div className="space-y-2">
+                <Label htmlFor="loop-array">Array Expression</Label>
+                <Input
+                  id="loop-array"
+                  value={config.array_expression || ""}
+                  onChange={(e) =>
+                    handleConfigUpdate("array_expression", e.target.value)
+                  }
+                  placeholder="input.items or ['item1', 'item2']"
+                />
+              </div>
+            )}
+            {config.loop_type === "while" && (
+              <div className="space-y-2">
+                <Label htmlFor="loop-condition">Condition Expression</Label>
+                <Input
+                  id="loop-condition"
+                  value={config.condition_expression || ""}
+                  onChange={(e) =>
+                    handleConfigUpdate("condition_expression", e.target.value)
+                  }
+                  placeholder="input.value < 10"
+                />
+              </div>
+            )}
+            {config.loop_type === "repeat" && (
+              <div className="space-y-2">
+                <Label htmlFor="loop-count">Repeat Count</Label>
+                <Input
+                  id="loop-count"
+                  type="number"
+                  value={config.repeat_count || 1}
+                  onChange={(e) =>
+                    handleConfigUpdate(
+                      "repeat_count",
+                      parseInt(e.target.value, 10),
+                    )
+                  }
+                  placeholder="10"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="loop-variable">Loop Variable Name</Label>
+              <Input
+                id="loop-variable"
+                value={config.loop_variable || "item"}
+                onChange={(e) =>
+                  handleConfigUpdate("loop_variable", e.target.value)
+                }
+                placeholder="item"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Delay/Wait Nodes */}
+        {(node.type === "delay" || node.type === "wait") && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="delay-type">Delay Type</Label>
+              <Select
+                value={config.delay_type || "seconds"}
+                onValueChange={(value) =>
+                  handleConfigUpdate("delay_type", value)
+                }
+              >
+                <SelectTrigger id="delay-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="seconds">Delay by seconds</SelectItem>
+                  <SelectItem value="until_time">
+                    Wait until specific time
+                  </SelectItem>
+                  <SelectItem value="until_condition">
+                    Wait until condition
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {config.delay_type === "seconds" && (
+              <div className="space-y-2">
+                <Label htmlFor="delay-seconds">Seconds</Label>
+                <Input
+                  id="delay-seconds"
+                  type="number"
+                  value={config.delay_seconds || 1}
+                  onChange={(e) =>
+                    handleConfigUpdate(
+                      "delay_seconds",
+                      parseInt(e.target.value, 10),
+                    )
+                  }
+                  placeholder="5"
+                />
+              </div>
+            )}
+            {config.delay_type === "until_time" && (
+              <div className="space-y-2">
+                <Label htmlFor="delay-time">Target Time (ISO 8601)</Label>
+                <Input
+                  id="delay-time"
+                  type="datetime-local"
+                  value={config.target_time || ""}
+                  onChange={(e) =>
+                    handleConfigUpdate("target_time", e.target.value)
+                  }
+                />
+              </div>
+            )}
+            {config.delay_type === "until_condition" && (
+              <div className="space-y-2">
+                <Label htmlFor="delay-condition">Condition Expression</Label>
+                <Input
+                  id="delay-condition"
+                  value={config.condition_expression || ""}
+                  onChange={(e) =>
+                    handleConfigUpdate("condition_expression", e.target.value)
+                  }
+                  placeholder="input.status === 'ready'"
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Try/Catch/Finally Nodes */}
+        {node.type === "try" && (
+          <div className="space-y-2">
+            <Label htmlFor="try-scope">Try Block Scope</Label>
+            <Textarea
+              id="try-scope"
+              value={config.try_scope || ""}
+              onChange={(e) => handleConfigUpdate("try_scope", e.target.value)}
+              placeholder="Description of what to try"
+              rows={3}
+            />
+          </div>
+        )}
+
+        {node.type === "catch" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="catch-error-type">Error Type (Optional)</Label>
+              <Input
+                id="catch-error-type"
+                value={config.error_type || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("error_type", e.target.value)
+                }
+                placeholder="ValueError, KeyError, or leave empty for all"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="catch-handler">Error Handler Code</Label>
+              <MonacoEditor
+                value={config.error_handler || ""}
+                onChange={(value) =>
+                  handleConfigUpdate("error_handler", value || "")
+                }
+                language="python"
+                height="200px"
+                className="border rounded-md overflow-hidden"
+              />
+            </div>
+          </>
+        )}
+
+        {node.type === "finally" && (
+          <div className="space-y-2">
+            <Label htmlFor="finally-code">Finally Block Code</Label>
+            <MonacoEditor
+              value={config.finally_code || ""}
+              onChange={(value) =>
+                handleConfigUpdate("finally_code", value || "")
+              }
+              language="python"
+              height="200px"
+              className="border rounded-md overflow-hidden"
+            />
+          </div>
+        )}
+
+        {/* Transform Nodes */}
+        {node.type === "map" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="map-expression">Map Expression</Label>
+              <Textarea
+                id="map-expression"
+                value={config.map_expression || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("map_expression", e.target.value)
+                }
+                placeholder="item * 2 or item.upper()"
+                rows={3}
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="map-input">Input Array Expression</Label>
+              <Input
+                id="map-input"
+                value={config.input_array || "input.items"}
+                onChange={(e) =>
+                  handleConfigUpdate("input_array", e.target.value)
+                }
+                placeholder="input.items"
+              />
+            </div>
+          </>
+        )}
+
+        {node.type === "filter" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="filter-condition">Filter Condition</Label>
+              <Input
+                id="filter-condition"
+                value={config.filter_condition || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("filter_condition", e.target.value)
+                }
+                placeholder="item.value > 10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="filter-input">Input Array Expression</Label>
+              <Input
+                id="filter-input"
+                value={config.input_array || "input.items"}
+                onChange={(e) =>
+                  handleConfigUpdate("input_array", e.target.value)
+                }
+                placeholder="input.items"
+              />
+            </div>
+          </>
+        )}
+
+        {node.type === "reduce" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="reduce-function">Reduce Function</Label>
+              <Textarea
+                id="reduce-function"
+                value={config.reduce_function || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("reduce_function", e.target.value)
+                }
+                placeholder="(acc, item) => acc + item"
+                rows={3}
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reduce-initial">Initial Value</Label>
+              <Input
+                id="reduce-initial"
+                value={config.initial_value || "0"}
+                onChange={(e) =>
+                  handleConfigUpdate("initial_value", e.target.value)
+                }
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reduce-input">Input Array Expression</Label>
+              <Input
+                id="reduce-input"
+                value={config.input_array || "input.items"}
+                onChange={(e) =>
+                  handleConfigUpdate("input_array", e.target.value)
+                }
+                placeholder="input.items"
+              />
+            </div>
+          </>
+        )}
+
+        {node.type === "merge" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="merge-strategy">Merge Strategy</Label>
+              <Select
+                value={config.merge_strategy || "deep"}
+                onValueChange={(value) =>
+                  handleConfigUpdate("merge_strategy", value)
+                }
+              >
+                <SelectTrigger id="merge-strategy">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="deep">Deep Merge</SelectItem>
+                  <SelectItem value="shallow">Shallow Merge</SelectItem>
+                  <SelectItem value="array">Array Concatenation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="merge-inputs">Input Sources (JSON)</Label>
+              <Textarea
+                id="merge-inputs"
+                value={JSON.stringify(config.input_sources || [], null, 2)}
+                onChange={(e) => {
+                  try {
+                    const sources = JSON.parse(e.target.value)
+                    handleConfigUpdate("input_sources", sources)
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder='["input.source1", "input.source2"]'
+                rows={3}
+                className="font-mono text-sm"
+              />
+            </div>
+          </>
+        )}
+
+        {node.type === "split" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="split-strategy">Split Strategy</Label>
+              <Select
+                value={config.split_strategy || "by_key"}
+                onValueChange={(value) =>
+                  handleConfigUpdate("split_strategy", value)
+                }
+              >
+                <SelectTrigger id="split-strategy">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="by_key">By Key</SelectItem>
+                  <SelectItem value="by_size">By Size</SelectItem>
+                  <SelectItem value="by_condition">By Condition</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="split-config">Split Configuration (JSON)</Label>
+              <Textarea
+                id="split-config"
+                value={JSON.stringify(config.split_config || {}, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const splitConfig = JSON.parse(e.target.value)
+                    handleConfigUpdate("split_config", splitConfig)
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder='{"keys": ["key1", "key2"]} or {"size": 10}'
+                rows={3}
+                className="font-mono text-sm"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Variable Nodes */}
+        {node.type === "set_variable" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="variable-name">Variable Name</Label>
+              <Input
+                id="variable-name"
+                value={config.variable_name || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("variable_name", e.target.value)
+                }
+                placeholder="my_variable"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="variable-value">Variable Value (JSON)</Label>
+              <Textarea
+                id="variable-value"
+                value={JSON.stringify(config.variable_value || null, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const value = e.target.value
+                      ? JSON.parse(e.target.value)
+                      : null
+                    handleConfigUpdate("variable_value", value)
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder='{"key": "value"} or "string" or 123'
+                rows={4}
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="variable-scope">Variable Scope</Label>
+              <Select
+                value={config.variable_scope || "workflow"}
+                onValueChange={(value) =>
+                  handleConfigUpdate("variable_scope", value)
+                }
+              >
+                <SelectTrigger id="variable-scope">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="workflow">Workflow</SelectItem>
+                  <SelectItem value="node">Node</SelectItem>
+                  <SelectItem value="loop">Loop</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
+        {node.type === "get_variable" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="get-variable-name">Variable Name</Label>
+              <Input
+                id="get-variable-name"
+                value={config.variable_name || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("variable_name", e.target.value)
+                }
+                placeholder="my_variable"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="get-variable-default">
+                Default Value (JSON, Optional)
+              </Label>
+              <Textarea
+                id="get-variable-default"
+                value={JSON.stringify(config.default_value || null, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const value = e.target.value
+                      ? JSON.parse(e.target.value)
+                      : null
+                    handleConfigUpdate("default_value", value)
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder='null or {"default": "value"}'
+                rows={3}
+                className="font-mono text-sm"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Control Flow Nodes */}
+        {node.type === "break" && (
+          <div className="space-y-2">
+            <Label htmlFor="break-label">Loop Label (Optional)</Label>
+            <Input
+              id="break-label"
+              value={config.loop_label || ""}
+              onChange={(e) => handleConfigUpdate("loop_label", e.target.value)}
+              placeholder="Leave empty to break nearest loop"
+            />
+          </div>
+        )}
+
+        {node.type === "continue" && (
+          <div className="space-y-2">
+            <Label htmlFor="continue-label">Loop Label (Optional)</Label>
+            <Input
+              id="continue-label"
+              value={config.loop_label || ""}
+              onChange={(e) => handleConfigUpdate("loop_label", e.target.value)}
+              placeholder="Leave empty to continue nearest loop"
+            />
+          </div>
+        )}
+
+        {/* Storage Node */}
+        {node.type === "storage" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="storage-operation">Operation</Label>
+              <Select
+                value={config.operation || "upload"}
+                onValueChange={(value) =>
+                  handleConfigUpdate("operation", value)
+                }
+              >
+                <SelectTrigger id="storage-operation">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="upload">Upload File</SelectItem>
+                  <SelectItem value="download">Download File</SelectItem>
+                  <SelectItem value="list">List Files</SelectItem>
+                  <SelectItem value="delete">Delete File</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="storage-provider">Storage Provider</Label>
+              <Select
+                value={config.provider || "s3"}
+                onValueChange={(value) => handleConfigUpdate("provider", value)}
+              >
+                <SelectTrigger id="storage-provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="s3">Amazon S3</SelectItem>
+                  <SelectItem value="gcs">Google Cloud Storage</SelectItem>
+                  <SelectItem value="azure">Azure Blob Storage</SelectItem>
+                  <SelectItem value="local">Local Storage</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="storage-path">File Path/Bucket</Label>
+              <Input
+                id="storage-path"
+                value={config.file_path || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("file_path", e.target.value)
+                }
+                placeholder="bucket-name/path/to/file.txt"
+              />
+            </div>
+            {config.operation === "upload" && (
+              <div className="space-y-2">
+                <Label htmlFor="storage-data">File Data Expression</Label>
+                <Input
+                  id="storage-data"
+                  value={config.file_data || "input.file_data"}
+                  onChange={(e) =>
+                    handleConfigUpdate("file_data", e.target.value)
+                  }
+                  placeholder="input.file_data"
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Social Monitoring Node */}
+        {node.type === "social_monitoring" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="osint-operation">Operation</Label>
+              <Select
+                value={config.operation || "stream"}
+                onValueChange={(value) =>
+                  handleConfigUpdate("operation", value)
+                }
+              >
+                <SelectTrigger id="osint-operation">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stream">Start Live Stream</SelectItem>
+                  <SelectItem value="digest">Historical Digest</SelectItem>
+                  <SelectItem value="search">Search</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="osint-source">Source Platform</Label>
+              <Select
+                value={config.source || "twitter"}
+                onValueChange={(value) => handleConfigUpdate("source", value)}
+              >
+                <SelectTrigger id="osint-source">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="twitter">Twitter/X</SelectItem>
+                  <SelectItem value="reddit">Reddit</SelectItem>
+                  <SelectItem value="telegram">Telegram</SelectItem>
+                  <SelectItem value="news">News/Blogs</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="osint-query">Query/Keywords (JSON)</Label>
+              <Textarea
+                id="osint-query"
+                value={JSON.stringify(config.query || {}, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const query = JSON.parse(e.target.value)
+                    handleConfigUpdate("query", query)
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder='{"keywords": ["keyword1", "keyword2"], "filters": {}}'
+                rows={4}
+                className="font-mono text-sm"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Human Approval Node */}
+        {node.type === "human_approval" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="approval-message">Approval Message</Label>
+              <Textarea
+                id="approval-message"
+                value={config.approval_message || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("approval_message", e.target.value)
+                }
+                placeholder="Please approve this action..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="approval-timeout">Timeout (seconds)</Label>
+              <Input
+                id="approval-timeout"
+                type="number"
+                value={config.timeout_seconds || 3600}
+                onChange={(e) =>
+                  handleConfigUpdate(
+                    "timeout_seconds",
+                    parseInt(e.target.value, 10),
+                  )
+                }
+                placeholder="3600"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="approval-options">Approval Options (JSON)</Label>
+              <Textarea
+                id="approval-options"
+                value={JSON.stringify(
+                  config.approval_options || ["approve", "reject"],
+                  null,
+                  2,
+                )}
+                onChange={(e) => {
+                  try {
+                    const options = JSON.parse(e.target.value)
+                    handleConfigUpdate("approval_options", options)
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder='["approve", "reject", "request_changes"]'
+                rows={2}
+                className="font-mono text-sm"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Notification Node */}
+        {node.type === "notification" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="notification-channel">Channel</Label>
+              <Select
+                value={config.channel || "email"}
+                onValueChange={(value) => handleConfigUpdate("channel", value)}
+              >
+                <SelectTrigger id="notification-channel">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="sms">SMS</SelectItem>
+                  <SelectItem value="slack">Slack</SelectItem>
+                  <SelectItem value="discord">Discord</SelectItem>
+                  <SelectItem value="webhook">Webhook</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notification-recipient">Recipient</Label>
+              <Input
+                id="notification-recipient"
+                value={config.recipient || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("recipient", e.target.value)
+                }
+                placeholder="user@example.com or @channel"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notification-subject">Subject</Label>
+              <Input
+                id="notification-subject"
+                value={config.subject || ""}
+                onChange={(e) => handleConfigUpdate("subject", e.target.value)}
+                placeholder="Notification subject"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notification-message">Message</Label>
+              <Textarea
+                id="notification-message"
+                value={config.message || ""}
+                onChange={(e) => handleConfigUpdate("message", e.target.value)}
+                placeholder="Notification message body"
+                rows={4}
               />
             </div>
           </>

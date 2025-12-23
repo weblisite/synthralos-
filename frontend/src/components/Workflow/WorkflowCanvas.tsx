@@ -27,13 +27,29 @@ import { AINode } from "./nodes/AINode"
 import { BrowserNode } from "./nodes/BrowserNode"
 import { CodeNode } from "./nodes/CodeNode"
 import { ConnectorNode } from "./nodes/ConnectorNode"
+import { BreakNode, ContinueNode } from "./nodes/ControlFlowNode"
+import { DelayNode } from "./nodes/DelayNode"
 import { HTTPRequestNode } from "./nodes/HTTPRequestNode"
+import { HumanApprovalNode } from "./nodes/HumanApprovalNode"
 import { LogicNode } from "./nodes/LogicNode"
+import { LoopNode } from "./nodes/LoopNode"
+import { NotificationNode } from "./nodes/NotificationNode"
 import { OCRSwitchNode } from "./nodes/OCRSwitchNode"
+import { OSINTNode as SocialMonitoringNode } from "./nodes/OSINTNode"
 import { RAGSwitchNode } from "./nodes/RAGSwitchNode"
 import { ScrapingNode } from "./nodes/ScrapingNode"
+import { StorageNode } from "./nodes/StorageNode"
 import { SubWorkflowNode } from "./nodes/SubWorkflowNode"
+import {
+  FilterNode,
+  MapNode,
+  MergeNode,
+  ReduceNode,
+  SplitNode,
+} from "./nodes/TransformNode"
 import { TriggerNode } from "./nodes/TriggerNode"
+import { CatchNode, FinallyNode, TryNode } from "./nodes/TryCatchNode"
+import { GetVariableNode, SetVariableNode } from "./nodes/VariableNode"
 
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
@@ -50,6 +66,28 @@ const nodeTypes: NodeTypes = {
   http_request: HTTPRequestNode,
   sub_workflow: SubWorkflowNode,
   "sub-workflow": SubWorkflowNode, // Alias with hyphen
+  loop: LoopNode,
+  for: LoopNode,
+  while: LoopNode,
+  repeat: LoopNode,
+  delay: DelayNode,
+  wait: DelayNode,
+  try: TryNode,
+  catch: CatchNode,
+  finally: FinallyNode,
+  map: MapNode,
+  filter: FilterNode,
+  reduce: ReduceNode,
+  merge: MergeNode,
+  split: SplitNode,
+  set_variable: SetVariableNode,
+  get_variable: GetVariableNode,
+  break: BreakNode,
+  continue: ContinueNode,
+  storage: StorageNode,
+  social_monitoring: SocialMonitoringNode,
+  human_approval: HumanApprovalNode,
+  notification: NotificationNode,
 }
 
 interface WorkflowCanvasProps {
