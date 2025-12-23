@@ -234,8 +234,18 @@ services:
   # This is REQUIRED for workflows to execute - without it, workflows are
   # created but never run.
   #
-  # IMPORTANT: Copy ALL environment variables from backend service to worker.
-  # The worker needs the same database connection and configuration.
+  # ⚠️  CRITICAL: You MUST set environment variables in Render dashboard!
+  # The worker needs the same database connection as the backend.
+  #
+  # Required Environment Variables (set in Render dashboard):
+  # 1. SUPABASE_DB_URL - Database connection string (REQUIRED)
+  # 2. SUPABASE_URL - Supabase project URL (REQUIRED)
+  # 3. SUPABASE_ANON_KEY - Supabase anonymous key (REQUIRED)
+  # 4. SECRET_KEY - Application secret key (REQUIRED)
+  # 5. WORKFLOW_WORKER_CONCURRENCY - Concurrent executions (optional, default: 10)
+  # 6. All other backend environment variables (NANGO_SECRET_KEY, etc.)
+  #
+  # See docs/WORKER_ENV_VARS_SETUP.md for detailed setup instructions.
   # ========================================================================
   - type: worker
     name: synthralos-workflow-worker
@@ -248,14 +258,14 @@ services:
         value: production
       - key: PROJECT_NAME
         value: SynthralOS
-      # IMPORTANT: Copy ALL environment variables from backend service
-      # Set these manually in Render dashboard (same values as backend):
-      # - SUPABASE_URL (required)
-      # - SUPABASE_ANON_KEY (required)
-      # - SUPABASE_DB_URL (required - database connection)
-      # - SECRET_KEY (required)
+      # ⚠️  REQUIRED: Set these in Render dashboard after deployment:
+      # - SUPABASE_DB_URL (REQUIRED - database connection string)
+      # - SUPABASE_URL (REQUIRED - Supabase project URL)
+      # - SUPABASE_ANON_KEY (REQUIRED - Supabase anonymous key)
+      # - SECRET_KEY (REQUIRED - application secret key)
       # - WORKFLOW_WORKER_CONCURRENCY (optional, default: 10)
-      # - All other backend environment variables (NANGO_SECRET_KEY, etc.)
+      # - WORKFLOW_NODE_TIMEOUT_SECONDS (optional, default: 300)
+      # - All other backend environment variables (NANGO_SECRET_KEY, CHROMA_SERVER_HOST, etc.)
 
 # ============================================================================
 # Database Service: NOT INCLUDED
