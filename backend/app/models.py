@@ -139,6 +139,12 @@ class Workflow(WorkflowBase, table=True):
     schedules: list["WorkflowSchedule"] = Relationship(
         back_populates="workflow", cascade_delete=True
     )
+    webhook_subscriptions: list["WorkflowWebhookSubscription"] = Relationship(
+        back_populates="workflow", cascade_delete=True
+    )
+    webhook_subscriptions: list["WorkflowWebhookSubscription"] = Relationship(
+        back_populates="workflow", cascade_delete=True
+    )
 
 
 class WorkflowPublic(WorkflowBase):
@@ -234,6 +240,24 @@ class WorkflowSignal(SQLModel, table=True):
     processed: bool = Field(default=False)
 
     execution: WorkflowExecution | None = Relationship(back_populates="signals")
+
+
+class WorkflowWebhookSubscription(SQLModel, table=True):
+    """Webhook subscription for workflows (separate from connector webhooks)."""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    workflow_id: uuid.UUID = Field(
+        foreign_key="workflow.id", nullable=False, ondelete="CASCADE"
+    )
+    webhook_path: str = Field(max_length=500, index=True)
+    secret: str | None = Field(default=None, max_length=255)
+    headers: dict[str, str] = Field(default_factory=dict, sa_column=Column(JSONB))
+    filters: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
+    is_active: bool = Field(default=True, index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    workflow: Workflow | None = Relationship(back_populates="webhook_subscriptions")
 
 
 # ============================================================================

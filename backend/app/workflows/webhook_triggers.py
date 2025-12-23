@@ -16,7 +16,7 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from app.models import WebhookSubscription
+from app.models import WorkflowWebhookSubscription
 from app.workflows.engine import WorkflowEngine
 
 
@@ -48,7 +48,7 @@ class WebhookTriggerManager:
         secret: str | None = None,
         headers: dict[str, str] | None = None,
         filters: dict[str, Any] | None = None,
-    ) -> WebhookSubscription:
+    ) -> WorkflowWebhookSubscription:
         """
         Create a webhook subscription for a workflow.
 
@@ -61,9 +61,9 @@ class WebhookTriggerManager:
             filters: Optional filters for payload matching
 
         Returns:
-            WebhookSubscription instance
+            WorkflowWebhookSubscription instance
         """
-        subscription = WebhookSubscription(
+        subscription = WorkflowWebhookSubscription(
             workflow_id=workflow_id,
             webhook_path=webhook_path,
             secret=secret,
@@ -81,7 +81,7 @@ class WebhookTriggerManager:
 
     def get_subscription_by_path(
         self, session: Session, webhook_path: str
-    ) -> WebhookSubscription | None:
+    ) -> WorkflowWebhookSubscription | None:
         """
         Get webhook subscription by path.
 
@@ -90,11 +90,11 @@ class WebhookTriggerManager:
             webhook_path: Webhook path
 
         Returns:
-            WebhookSubscription if found, None otherwise
+            WorkflowWebhookSubscription if found, None otherwise
         """
-        query = select(WebhookSubscription).where(
-            WebhookSubscription.webhook_path == webhook_path,
-            WebhookSubscription.is_active == True,
+        query = select(WorkflowWebhookSubscription).where(
+            WorkflowWebhookSubscription.webhook_path == webhook_path,
+            WorkflowWebhookSubscription.is_active.is_(True),
         )
 
         return session.exec(query).first()
