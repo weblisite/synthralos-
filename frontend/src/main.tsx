@@ -58,6 +58,8 @@ if (typeof window !== "undefined") {
         httpsUrl,
         "(original:",
         url + ")",
+        "| Stack:",
+        new Error().stack?.split("\n").slice(0, 5).join("\n"),
       )
 
       // Create new input with HTTPS URL
@@ -67,10 +69,22 @@ if (typeof window !== "undefined") {
         modifiedInput = new URL(httpsUrl)
       } else if (input instanceof Request) {
         // Create new Request with HTTPS URL, preserving all other properties
+        // IMPORTANT: Clone the body if it's been read, otherwise use the original
+        let bodyToUse: BodyInit | null = null
+        try {
+          // Try to clone the body if it's a ReadableStream
+          if (input.body && input.bodyUsed === false) {
+            bodyToUse = input.body
+          }
+        } catch (e) {
+          // If cloning fails, try to get body from init
+          bodyToUse = init?.body || null
+        }
+
         modifiedInput = new Request(httpsUrl, {
           method: input.method,
           headers: input.headers,
-          body: input.body,
+          body: bodyToUse || init?.body || null,
           mode: input.mode,
           credentials: input.credentials,
           cache: input.cache,
@@ -85,6 +99,7 @@ if (typeof window !== "undefined") {
 
     return originalFetch.call(this, modifiedInput, init)
   }
+  console.log("[Global Fetch Interceptor] Installed successfully")
 }
 
 // Use getApiUrl() to ensure HTTPS in production (prevents Mixed Content errors)
