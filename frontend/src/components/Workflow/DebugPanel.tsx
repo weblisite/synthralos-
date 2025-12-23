@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/hooks/use-toast"
+import useCustomToast from "@/hooks/useCustomToast"
 import { apiRequest } from "@/lib/api"
 
 interface DebugPanelProps {
@@ -49,7 +49,7 @@ export function DebugPanel({ executionId, onClose }: DebugPanelProps) {
   const [variables, setVariables] = useState<VariableScope[]>([])
   const [breakpoints, setBreakpoints] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
-  const { toast } = useToast()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const loadDebugState = async () => {
     try {
@@ -94,17 +94,13 @@ export function DebugPanel({ executionId, onClose }: DebugPanelProps) {
         },
       )
       setDebugMode(true)
-      toast({
-        title: "Debug mode enabled",
-        description: "Execution is now in debug mode",
-      })
+      showSuccessToast("Execution is now in debug mode", "Debug mode enabled")
       await loadDebugState()
     } catch (error: any) {
-      toast({
-        title: "Failed to enable debug mode",
-        description: error.message,
-        variant: "destructive",
-      })
+      showErrorToast(
+        error.message || "Failed to enable debug mode",
+        "Failed to enable debug mode",
+      )
     } finally {
       setLoading(false)
     }
@@ -120,16 +116,12 @@ export function DebugPanel({ executionId, onClose }: DebugPanelProps) {
         },
       )
       setDebugMode(false)
-      toast({
-        title: "Debug mode disabled",
-        description: "Execution resumed",
-      })
+      showSuccessToast("Execution resumed", "Debug mode disabled")
     } catch (error: any) {
-      toast({
-        title: "Failed to disable debug mode",
-        description: error.message,
-        variant: "destructive",
-      })
+      showErrorToast(
+        error.message || "Failed to disable debug mode",
+        "Failed to disable debug mode",
+      )
     } finally {
       setLoading(false)
     }
@@ -138,7 +130,7 @@ export function DebugPanel({ executionId, onClose }: DebugPanelProps) {
   const stepOver = async () => {
     setLoading(true)
     try {
-      const result = await apiRequest(
+      const result = await apiRequest<{ current_node_id?: string }>(
         `/api/v1/workflows/executions/${executionId}/debug/step`,
         {
           method: "POST",
@@ -146,16 +138,12 @@ export function DebugPanel({ executionId, onClose }: DebugPanelProps) {
       )
       await loadDebugState()
       await loadVariables()
-      toast({
-        title: "Step executed",
-        description: `Current node: ${result.current_node_id || "none"}`,
-      })
+      showSuccessToast(
+        `Current node: ${result.current_node_id || "none"}`,
+        "Step executed",
+      )
     } catch (error: any) {
-      toast({
-        title: "Failed to step",
-        description: error.message,
-        variant: "destructive",
-      })
+      showErrorToast(error.message || "Failed to step", "Failed to step")
     } finally {
       setLoading(false)
     }
@@ -184,11 +172,10 @@ export function DebugPanel({ executionId, onClose }: DebugPanelProps) {
         setBreakpoints((prev) => new Set(prev).add(nodeId))
       }
     } catch (error: any) {
-      toast({
-        title: "Failed to toggle breakpoint",
-        description: error.message,
-        variant: "destructive",
-      })
+      showErrorToast(
+        error.message || "Failed to toggle breakpoint",
+        "Failed to toggle breakpoint",
+      )
     }
   }
 

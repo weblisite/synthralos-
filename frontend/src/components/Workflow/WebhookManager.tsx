@@ -40,7 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useToast } from "@/hooks/use-toast"
+import useCustomToast from "@/hooks/useCustomToast"
 import { apiRequest, getApiUrl } from "@/lib/api"
 
 interface WebhookSubscription {
@@ -63,8 +63,8 @@ interface WebhookManagerProps {
 export function WebhookManager({ workflowId }: WebhookManagerProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [webhookPath, setWebhookPath] = useState("")
-  const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const { data: subscriptions, isLoading } = useQuery<WebhookSubscription[]>({
     queryKey: ["webhookSubscriptions", workflowId],
@@ -97,17 +97,16 @@ export function WebhookManager({ workflowId }: WebhookManagerProps) {
       })
       setIsCreateDialogOpen(false)
       setWebhookPath("")
-      toast({
-        title: "Webhook subscription created",
-        description: "Your webhook is now active",
-      })
+      showSuccessToast(
+        "Your webhook is now active",
+        "Webhook subscription created",
+      )
     },
     onError: (error: any) => {
-      toast({
-        title: "Failed to create webhook",
-        description: error.message,
-        variant: "destructive",
-      })
+      showErrorToast(
+        error.message || "Failed to create webhook",
+        "Failed to create webhook",
+      )
     },
   })
 
@@ -125,26 +124,22 @@ export function WebhookManager({ workflowId }: WebhookManagerProps) {
       queryClient.invalidateQueries({
         queryKey: ["webhookSubscriptions", workflowId],
       })
-      toast({
-        title: "Webhook subscription deleted",
-        description: "The webhook has been removed",
-      })
+      showSuccessToast(
+        "The webhook has been removed",
+        "Webhook subscription deleted",
+      )
     },
     onError: (error: any) => {
-      toast({
-        title: "Failed to delete webhook",
-        description: error.message,
-        variant: "destructive",
-      })
+      showErrorToast(
+        error.message || "Failed to delete webhook",
+        "Failed to delete webhook",
+      )
     },
   })
 
   const copyWebhookUrl = (url: string) => {
     navigator.clipboard.writeText(url)
-    toast({
-      title: "Copied to clipboard",
-      description: "Webhook URL copied",
-    })
+    showSuccessToast("Webhook URL copied", "Copied to clipboard")
   }
 
   const getWebhookUrl = (subscription: WebhookSubscription) => {

@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, WebSocket
+from fastapi import APIRouter, Body, HTTPException, Query, Request, WebSocket
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlmodel import select
 
@@ -616,8 +616,9 @@ def create_webhook_subscription(
     secret: str | None = Body(None),
     headers: dict[str, str] | None = Body(None),
     filters: dict[str, Any] | None = Body(None),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """
     Create a webhook subscription for a workflow.
@@ -741,8 +742,9 @@ def debug_step(
 def set_breakpoint(
     execution_id: uuid.UUID,
     node_id: str = Body(...),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Set breakpoint at a node."""
     from app.workflows.debugging import default_debugger
@@ -793,8 +795,9 @@ def remove_breakpoint(
 def get_debug_variables(
     execution_id: uuid.UUID,
     scope: str | None = Query(None),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Inspect variables in execution."""
     from app.workflows.debugging import default_debugger
@@ -842,8 +845,9 @@ def test_workflow(
     workflow_id: uuid.UUID,
     test_data: dict[str, Any] | None = Body(None),
     mock_nodes: dict[str, dict[str, Any]] | None = Body(None),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Run workflow in test mode."""
     from app.workflows.testing import TestExecutionError, default_test_runner
@@ -868,8 +872,9 @@ def test_workflow(
 def validate_test_result(
     execution_id: uuid.UUID,
     expected_outputs: dict[str, Any] | None = Body(None),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Validate test execution result."""
     from app.workflows.testing import default_test_runner
@@ -898,8 +903,9 @@ def get_execution_stats(
     workflow_id: uuid.UUID | None = Query(None),
     start_date: datetime | None = Query(None),
     end_date: datetime | None = Query(None),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Get execution statistics."""
     from app.workflows.analytics import default_analytics
@@ -937,8 +943,9 @@ def get_execution_stats(
 def get_performance_metrics(
     workflow_id: uuid.UUID | None = Query(None),
     days: int = Query(7, ge=1, le=365),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Get performance metrics."""
     from app.workflows.analytics import default_analytics
@@ -956,8 +963,9 @@ def get_performance_metrics(
 def get_usage_trends(
     workflow_id: uuid.UUID | None = Query(None),
     days: int = Query(30, ge=1, le=365),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Get usage trends over time."""
     from app.workflows.analytics import default_analytics
@@ -975,8 +983,9 @@ def get_usage_trends(
 def get_cost_estimate(
     workflow_id: uuid.UUID | None = Query(None),
     days: int = Query(30, ge=1, le=365),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Get cost estimate."""
     from app.workflows.analytics import default_analytics
@@ -999,8 +1008,9 @@ def get_cost_estimate(
 def add_workflow_dependency(
     workflow_id: uuid.UUID,
     depends_on_workflow_id: uuid.UUID = Body(...),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Add a dependency to a workflow."""
     from app.workflows.dependencies import DependencyError, default_dependency_manager
@@ -1109,8 +1119,9 @@ def get_monitoring_metrics(
     workflow_id: uuid.UUID | None = Query(None),
     start_date: datetime | None = Query(None),
     end_date: datetime | None = Query(None),
-    session: SessionDep = Depends(),
-    current_user: CurrentUser = Depends(),
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """Get monitoring metrics."""
     from app.workflows.monitoring import default_workflow_monitor

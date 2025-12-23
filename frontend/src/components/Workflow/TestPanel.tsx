@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
+import useCustomToast from "@/hooks/useCustomToast"
 import { apiRequest } from "@/lib/api"
 
 interface TestPanelProps {
@@ -35,7 +35,7 @@ export function TestPanel({ workflowId }: TestPanelProps) {
   const [executionId, setExecutionId] = useState<string | null>(null)
   const [isRunning, setIsRunning] = useState(false)
   const [testResult, setTestResult] = useState<any>(null)
-  const { toast } = useToast()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const addMockNode = () => {
     const newNodeId = `node_${Object.keys(mockNodes).length + 1}`
@@ -59,11 +59,7 @@ export function TestPanel({ workflowId }: TestPanelProps) {
       try {
         parsedTestData = JSON.parse(testData)
       } catch (_e) {
-        toast({
-          title: "Invalid JSON",
-          description: "Test data must be valid JSON",
-          variant: "destructive",
-        })
+        showErrorToast("Test data must be valid JSON", "Invalid JSON")
         return
       }
 
@@ -72,36 +68,31 @@ export function TestPanel({ workflowId }: TestPanelProps) {
         try {
           parsedMockNodes[nodeId] = JSON.parse(mockData)
         } catch (_e) {
-          toast({
-            title: "Invalid JSON",
-            description: `Mock data for ${nodeId} must be valid JSON`,
-            variant: "destructive",
-          })
+          showErrorToast(
+            `Mock data for ${nodeId} must be valid JSON`,
+            "Invalid JSON",
+          )
           return
         }
       }
 
-      const result = await apiRequest(`/api/v1/workflows/${workflowId}/test`, {
-        method: "POST",
-        body: JSON.stringify({
-          test_data: parsedTestData,
-          mock_nodes: parsedMockNodes,
-        }),
-      })
+      const result = await apiRequest<{ execution_id: string }>(
+        `/api/v1/workflows/${workflowId}/test`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            test_data: parsedTestData,
+            mock_nodes: parsedMockNodes,
+          }),
+        },
+      )
 
       setExecutionId(result.execution_id)
       setTestResult(result)
 
-      toast({
-        title: "Test started",
-        description: `Execution ID: ${result.execution_id}`,
-      })
+      showSuccessToast(`Execution ID: ${result.execution_id}`, "Test started")
     } catch (error: any) {
-      toast({
-        title: "Test failed",
-        description: error.message,
-        variant: "destructive",
-      })
+      showErrorToast(error.message || "Test failed", "Test failed")
     } finally {
       setIsRunning(false)
     }
@@ -111,7 +102,7 @@ export function TestPanel({ workflowId }: TestPanelProps) {
     if (!executionId) return
 
     try {
-      const result = await apiRequest(
+      const result = await apiRequest<{ valid: boolean; errors?: string[] }>(
         `/api/v1/workflows/executions/${executionId}/test/validate`,
         {
           method: "POST",
@@ -124,23 +115,15 @@ export function TestPanel({ workflowId }: TestPanelProps) {
       setTestResult(result)
 
       if (result.valid) {
-        toast({
-          title: "Test passed",
-          description: "All validations passed",
-        })
+        showSuccessToast("All validations passed", "Test passed")
       } else {
-        toast({
-          title: "Test failed",
-          description: `${result.errors.length} errors found`,
-          variant: "destructive",
-        })
+        showErrorToast(
+          `${result.errors?.length || 0} errors found`,
+          "Test failed",
+        )
       }
     } catch (error: any) {
-      toast({
-        title: "Validation failed",
-        description: error.message,
-        variant: "destructive",
-      })
+      showErrorToast(error.message || "Validation failed", "Validation failed")
     }
   }
 
