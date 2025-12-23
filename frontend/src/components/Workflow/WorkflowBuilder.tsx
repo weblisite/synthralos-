@@ -205,7 +205,7 @@ export function WorkflowBuilder({
   const showExecutionDetails = showExecutionPanel && !showNodeConfig
 
   return (
-    <div className="flex h-full relative overflow-hidden">
+    <div className="flex h-full relative" style={{ height: '100%', overflow: 'hidden' }}>
       <NodePalette onNodeAdd={handleNodeAddWithPosition} />
       <div
         ref={reactFlowWrapper}
@@ -214,6 +214,7 @@ export function WorkflowBuilder({
         }`}
         style={{
           height: "100%",
+          overflow: "hidden",
         }}
         role="application"
         onDrop={handleDrop}

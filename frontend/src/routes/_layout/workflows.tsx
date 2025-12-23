@@ -12,7 +12,7 @@ import { ExecutionHistory } from "@/components/Admin/ExecutionHistory"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AnalyticsPanel } from "@/components/Workflow/AnalyticsPanel"
 import { TestPanel } from "@/components/Workflow/TestPanel"
 import { WorkflowBuilder } from "@/components/Workflow/WorkflowBuilder"
@@ -39,6 +39,7 @@ function WorkflowsPage() {
   const [workflowId, setWorkflowId] = useState<string | null>(null)
   const [executionId, setExecutionId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState("builder")
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const handleNodesChange = useCallback((updatedNodes: Node[]) => {
@@ -233,15 +234,26 @@ function WorkflowsPage() {
               Create and manage automation workflows
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={handleRun}>
-              <Play className="h-4 w-4 mr-2" />
-              Run
-            </Button>
-            <Button type="button" onClick={handleSave} disabled={isSaving}>
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? "Saving..." : "Save Workflow"}
-            </Button>
+          <div className="flex items-center gap-4">
+            {/* Tabs moved to top header */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
+              <TabsList>
+                <TabsTrigger value="builder">Builder</TabsTrigger>
+                <TabsTrigger value="executions">Executions</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                {workflowId && <TabsTrigger value="test">Test</TabsTrigger>}
+              </TabsList>
+            </Tabs>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={handleRun}>
+                <Play className="h-4 w-4 mr-2" />
+                Run
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={isSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? "Saving..." : "Save Workflow"}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -268,15 +280,9 @@ function WorkflowsPage() {
       </div>
 
       <div className="flex-1 overflow-hidden min-h-0">
-        <Tabs defaultValue="builder" className="h-full flex flex-col">
-          <TabsList className="mx-4 mt-4">
-            <TabsTrigger value="builder">Builder</TabsTrigger>
-            <TabsTrigger value="executions">Executions</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            {workflowId && <TabsTrigger value="test">Test</TabsTrigger>}
-          </TabsList>
-
-          <TabsContent value="builder" className="flex-1 m-0">
+        {/* Tab Content */}
+        {activeTab === "builder" && (
+          <div className="h-full">
             <WorkflowBuilder
               workflowId={workflowId}
               executionId={executionId}
@@ -291,28 +297,26 @@ function WorkflowsPage() {
               onNodeUpdate={handleNodeUpdate}
               onNodeDelete={handleNodeDelete}
             />
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent
-            value="executions"
-            className="flex-1 m-0 p-4 overflow-auto"
-          >
+        {activeTab === "executions" && (
+          <div className="h-full p-4 overflow-auto">
             <ExecutionHistory workflowId={workflowId || undefined} />
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent
-            value="analytics"
-            className="flex-1 m-0 p-4 overflow-auto"
-          >
+        {activeTab === "analytics" && (
+          <div className="h-full p-4 overflow-auto">
             <AnalyticsPanel workflowId={workflowId || undefined} />
-          </TabsContent>
+          </div>
+        )}
 
-          {workflowId && (
-            <TabsContent value="test" className="flex-1 m-0 p-4 overflow-auto">
-              <TestPanel workflowId={workflowId} />
-            </TabsContent>
-          )}
-        </Tabs>
+        {activeTab === "test" && workflowId && (
+          <div className="h-full p-4 overflow-auto">
+            <TestPanel workflowId={workflowId} />
+          </div>
+        )}
       </div>
     </div>
   )
