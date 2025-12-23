@@ -29,7 +29,8 @@ export function getApiUrl(): string {
   const isLocalhost =
     apiUrl.includes("localhost") || apiUrl.includes("127.0.0.1")
 
-  // Convert HTTP to HTTPS for production domains (always, regardless of window.location)
+  // CRITICAL: Convert HTTP to HTTPS for production domains IMMEDIATELY
+  // This must happen before any API calls to prevent Mixed Content errors
   if (isProductionDomain && apiUrl.startsWith("http://")) {
     apiUrl = apiUrl.replace("http://", "https://")
     console.warn(
@@ -38,6 +39,19 @@ export function getApiUrl(): string {
       "(original:",
       `${import.meta.env.VITE_API_URL})`,
     )
+  }
+  
+  // Also ensure HTTPS if we're in a browser HTTPS context (double safety)
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    if (apiUrl.startsWith("http://") && !isLocalhost) {
+      apiUrl = apiUrl.replace("http://", "https://")
+      console.warn(
+        "[API] Converted HTTP API URL to HTTPS (browser HTTPS context):",
+        apiUrl,
+        "(original:",
+        `${import.meta.env.VITE_API_URL})`,
+      )
+    }
   }
 
   // In browser context, also check window.location.protocol as a safety net
@@ -109,11 +123,12 @@ export async function apiRequest<T = unknown>(
 
   const isLocalhost = url.includes("localhost") || url.includes("127.0.0.1")
 
-  // Always convert HTTP to HTTPS for production domains
+  // CRITICAL: Always convert HTTP to HTTPS for production domains
+  // This is the absolute last line of defense against Mixed Content errors
   if (isProductionDomain && url.startsWith("http://")) {
     url = url.replace("http://", "https://")
-    console.warn(
-      "[apiRequest] Converted HTTP URL to HTTPS (production domain check):",
+    console.error(
+      "[apiRequest] CRITICAL: Converted HTTP URL to HTTPS (production domain check):",
       url,
       "(original path:",
       `${path})`,
@@ -124,8 +139,8 @@ export async function apiRequest<T = unknown>(
   if (typeof window !== "undefined" && window.location.protocol === "https:") {
     if (url.startsWith("http://") && !isLocalhost) {
       url = url.replace("http://", "https://")
-      console.warn(
-        "[apiRequest] Converted HTTP URL to HTTPS (browser check):",
+      console.error(
+        "[apiRequest] CRITICAL: Converted HTTP URL to HTTPS (browser check):",
         url,
         "(original path:",
         `${path})`,

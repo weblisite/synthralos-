@@ -114,10 +114,13 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
 		}
 	}
 
-	const url = baseUrl + path;
+	// Ensure baseUrl doesn't have trailing slash (path will start with /)
+	const cleanBaseUrl = baseUrl.replace(/\/$/, "");
+	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+	const url = cleanBaseUrl + normalizedPath;
 	const finalUrl = options.query ? url + getQueryString(options.query) : url;
 	
-	// Double-check the final URL and convert if needed
+	// CRITICAL: Double-check the final URL and convert HTTP to HTTPS if needed
 	const finalIsProductionDomain =
 		finalUrl.includes(".onrender.com") ||
 		finalUrl.includes(".vercel.app") ||
@@ -127,23 +130,24 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
 
 	const finalIsLocalhost = finalUrl.includes("localhost") || finalUrl.includes("127.0.0.1");
 
-	// Always convert HTTP to HTTPS for production domains
+	// CRITICAL: Always convert HTTP to HTTPS for production domains
+	// This is the last line of defense against Mixed Content errors
 	if (finalIsProductionDomain && finalUrl.startsWith("http://")) {
 		const httpsUrl = finalUrl.replace("http://", "https://");
-		console.warn(
-			"[OpenAPI SDK] Converted final HTTP URL to HTTPS (production domain):",
+		console.error(
+			"[OpenAPI SDK] CRITICAL: Converted final HTTP URL to HTTPS (production domain):",
 			httpsUrl,
 			"(original:", finalUrl + ")"
 		);
 		return httpsUrl;
 	}
 
-	// Also check window.location.protocol
+	// Also check window.location.protocol as additional safety net
 	if (typeof window !== "undefined" && window.location.protocol === "https:") {
 		if (finalUrl.startsWith("http://") && !finalIsLocalhost) {
 			const httpsUrl = finalUrl.replace("http://", "https://");
-			console.warn(
-				"[OpenAPI SDK] Converted final HTTP URL to HTTPS (browser check):",
+			console.error(
+				"[OpenAPI SDK] CRITICAL: Converted final HTTP URL to HTTPS (browser check):",
 				httpsUrl,
 				"(original:", finalUrl + ")"
 			);
