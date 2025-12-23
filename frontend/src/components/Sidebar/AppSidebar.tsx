@@ -40,6 +40,7 @@ const baseItems: Item[] = [
   { icon: Code, title: "Code", path: "/code" },
   { icon: Folder, title: "Storage", path: "/storage" },
   { icon: MessageSquare, title: "Chat", path: "/chat" },
+  { icon: Users, title: "Teams", path: "/teams" },
 ]
 
 export function AppSidebar() {

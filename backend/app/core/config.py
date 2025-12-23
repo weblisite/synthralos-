@@ -194,12 +194,13 @@ class Settings(BaseSettings):
 
                         match = re.search(r":([^@]+)@", db_url)
                         if match:
-                            password = match.group(1)
+                            _password = match.group(1)  # noqa: F841
                             # Use pooler connection instead (more reliable for serverless)
                             warnings.warn(
                                 "Using direct connection (port 5432). Consider using pooler connection "
                                 "(port 6543) from Supabase dashboard for better serverless compatibility. "
-                                "Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
+                                "Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres",
+                                stacklevel=2,
                             )
                 except Exception:
                     pass  # Continue with original connection string
@@ -232,7 +233,8 @@ class Settings(BaseSettings):
                     warnings.warn(
                         "Using direct Supabase connection (port 5432). For Render/serverless deployments, "
                         "use the connection pooler (port 6543) from Supabase dashboard to avoid IPv6 issues. "
-                        "Get it from: Settings > Database > Connection string > Connection pooling"
+                        "Get it from: Settings > Database > Connection string > Connection pooling",
+                        stacklevel=2,
                     )
                     return PostgresDsn.build(
                         scheme="postgresql+psycopg",
@@ -244,7 +246,8 @@ class Settings(BaseSettings):
                     )
             except Exception as e:
                 warnings.warn(
-                    f"Failed to build Supabase connection string: {e}. Falling back to legacy config."
+                    f"Failed to build Supabase connection string: {e}. Falling back to legacy config.",
+                    stacklevel=2,
                 )
 
         # Option 3: Legacy PostgreSQL configuration (backward compatibility)
@@ -281,9 +284,15 @@ class Settings(BaseSettings):
 
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
 
+    # Resend Configuration
+    RESEND_API_KEY: str | None = None
+    USE_RESEND: bool = False  # Set to True to use Resend instead of SMTP
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def emails_enabled(self) -> bool:
+        if self.USE_RESEND:
+            return bool(self.RESEND_API_KEY and self.EMAILS_FROM_EMAIL)
         return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
 
     EMAIL_TEST_USER: EmailStr = "test@synthralos.ai"

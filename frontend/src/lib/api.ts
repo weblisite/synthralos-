@@ -40,7 +40,7 @@ export function getApiUrl(): string {
       `${import.meta.env.VITE_API_URL})`,
     )
   }
-  
+
   // Also ensure HTTPS if we're in a browser HTTPS context (double safety)
   if (typeof window !== "undefined" && window.location.protocol === "https:") {
     if (apiUrl.startsWith("http://") && !isLocalhost) {

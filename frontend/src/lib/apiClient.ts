@@ -151,6 +151,244 @@ export const apiClient = {
     healthCheck: async () => {
       return UtilsService.healthCheck()
     },
+
+    /**
+     * Test email
+     * Uses OpenAPI SDK for type safety
+     */
+    testEmail: async (email: string): Promise<Message> => {
+      return UtilsService.testEmail({ emailTo: email })
+    },
+  },
+
+  /**
+   * Teams API
+   * Uses apiRequest for flexibility
+   */
+  teams: {
+    /**
+     * Create a new team
+     */
+    create: async (data: {
+      name: string
+      slug?: string
+      description?: string
+    }) => {
+      return apiRequest("/teams", {
+        method: "POST",
+        body: JSON.stringify(data),
+      })
+    },
+
+    /**
+     * List all teams for current user
+     */
+    list: async () => {
+      return apiRequest("/teams", { method: "GET" })
+    },
+
+    /**
+     * Get team by ID
+     */
+    getById: async (teamId: string) => {
+      return apiRequest(`/teams/${teamId}`, { method: "GET" })
+    },
+
+    /**
+     * Update team
+     */
+    update: async (
+      teamId: string,
+      data: { name?: string; description?: string; is_active?: boolean },
+    ) => {
+      return apiRequest(`/teams/${teamId}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      })
+    },
+
+    /**
+     * Delete team
+     */
+    delete: async (teamId: string) => {
+      return apiRequest(`/teams/${teamId}`, { method: "DELETE" })
+    },
+
+    /**
+     * List team members
+     */
+    listMembers: async (teamId: string) => {
+      return apiRequest(`/teams/${teamId}/members`, { method: "GET" })
+    },
+
+    /**
+     * Add team member
+     */
+    addMember: async (
+      teamId: string,
+      data: { user_id: string; role: string },
+    ) => {
+      return apiRequest(`/teams/${teamId}/members`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      })
+    },
+
+    /**
+     * Remove team member
+     */
+    removeMember: async (teamId: string, userId: string) => {
+      return apiRequest(`/teams/${teamId}/members/${userId}`, {
+        method: "DELETE",
+      })
+    },
+
+    /**
+     * Update member role
+     */
+    updateMemberRole: async (teamId: string, userId: string, role: string) => {
+      return apiRequest(`/teams/${teamId}/members/${userId}/role`, {
+        method: "PATCH",
+        body: JSON.stringify({ role }),
+      })
+    },
+
+    /**
+     * Create invitation
+     */
+    createInvitation: async (
+      teamId: string,
+      data: { email: string; role: string; expires_in_hours?: number },
+    ) => {
+      return apiRequest(`/teams/${teamId}/invitations`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      })
+    },
+
+    /**
+     * List team invitations
+     */
+    listInvitations: async (teamId: string, includeAccepted = false) => {
+      return apiRequest(
+        `/teams/${teamId}/invitations?include_accepted=${includeAccepted}`,
+        { method: "GET" },
+      )
+    },
+
+    /**
+     * Accept invitation
+     */
+    acceptInvitation: async (token: string) => {
+      return apiRequest("/teams/invitations/accept", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      })
+    },
+
+    /**
+     * Revoke invitation
+     */
+    revokeInvitation: async (invitationId: string) => {
+      return apiRequest(`/teams/invitations/${invitationId}`, {
+        method: "DELETE",
+      })
+    },
+  },
+
+  /**
+   * Email Templates API
+   * Uses apiRequest for flexibility
+   */
+  emailTemplates: {
+    /**
+     * Create email template
+     */
+    create: async (data: {
+      name: string
+      slug?: string
+      subject: string
+      html_content: string
+      text_content?: string
+      category?: string
+      variables?: Record<string, any>
+    }) => {
+      return apiRequest("/email-templates", {
+        method: "POST",
+        body: JSON.stringify(data),
+      })
+    },
+
+    /**
+     * List email templates
+     */
+    list: async (params?: {
+      category?: string
+      is_active?: boolean
+      include_system?: boolean
+    }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.category) queryParams.append("category", params.category)
+      if (params?.is_active !== undefined)
+        queryParams.append("is_active", String(params.is_active))
+      if (params?.include_system !== undefined)
+        queryParams.append("include_system", String(params.include_system))
+      const query = queryParams.toString()
+      return apiRequest(`/email-templates${query ? `?${query}` : ""}`, {
+        method: "GET",
+      })
+    },
+
+    /**
+     * Get email template by ID
+     */
+    getById: async (templateId: string) => {
+      return apiRequest(`/email-templates/${templateId}`, { method: "GET" })
+    },
+
+    /**
+     * Get email template by slug
+     */
+    getBySlug: async (slug: string) => {
+      return apiRequest(`/email-templates/slug/${slug}`, { method: "GET" })
+    },
+
+    /**
+     * Update email template
+     */
+    update: async (
+      templateId: string,
+      data: {
+        name?: string
+        subject?: string
+        html_content?: string
+        text_content?: string
+        category?: string
+        variables?: Record<string, any>
+        is_active?: boolean
+      },
+    ) => {
+      return apiRequest(`/email-templates/${templateId}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      })
+    },
+
+    /**
+     * Delete email template
+     */
+    delete: async (templateId: string) => {
+      return apiRequest(`/email-templates/${templateId}`, { method: "DELETE" })
+    },
+
+    /**
+     * Initialize default templates
+     */
+    initializeDefaults: async () => {
+      return apiRequest("/email-templates/initialize-defaults", {
+        method: "POST",
+      })
+    },
   },
 
   /**

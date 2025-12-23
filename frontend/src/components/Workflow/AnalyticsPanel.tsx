@@ -9,7 +9,19 @@
  */
 
 import { useQuery } from "@tanstack/react-query"
-import { BarChart3, DollarSign } from "lucide-react"
+import { BarChart3, DollarSign, Wifi } from "lucide-react"
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -18,9 +30,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket"
 import { apiRequest } from "@/lib/api"
 
 interface AnalyticsPanelProps {
@@ -59,6 +71,8 @@ interface CostEstimate {
 }
 
 export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
+  const { isConnected, usePollingFallback } = useDashboardWebSocket()
+
   const { data: stats, isLoading: statsLoading } = useQuery<ExecutionStats>({
     queryKey: ["workflowStats", workflowId, days],
     queryFn: async () => {
@@ -69,6 +83,8 @@ export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
         `/api/v1/workflows/analytics/stats?${params}`,
       )
     },
+    // WebSocket will trigger updates, no polling needed
+    refetchInterval: false,
   })
 
   const { data: performance, isLoading: perfLoading } =
@@ -127,14 +143,24 @@ export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
-          Workflow Analytics
-        </CardTitle>
-        <CardDescription>
-          {workflowId ? `Analytics for workflow` : "Overall analytics"} ({days}{" "}
-          days)
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Workflow Analytics
+            </CardTitle>
+            <CardDescription>
+              {workflowId ? `Analytics for workflow` : "Overall analytics"} (
+              {days} days)
+            </CardDescription>
+          </div>
+          {isConnected && !usePollingFallback && (
+            <Badge variant="outline" className="gap-1">
+              <Wifi className="h-3 w-3" />
+              Real-time
+            </Badge>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="stats">
@@ -222,6 +248,50 @@ export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
                     </CardContent>
                   </Card>
                 </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">
+                      Performance Metrics
+                    </CardTitle>
+                    <CardDescription>
+                      Visual breakdown of execution performance
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <AreaChart
+                        data={[
+                          {
+                            name: "Completed",
+                            value: performance.completed,
+                            fill: "#82ca9d",
+                          },
+                          {
+                            name: "Failed",
+                            value: performance.failed,
+                            fill: "#ff7300",
+                          },
+                          {
+                            name: "Running",
+                            value: performance.running,
+                            fill: "#8884d8",
+                          },
+                        ]}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#8884d8"
+                          fill="#8884d8"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </TabsContent>
@@ -232,34 +302,110 @@ export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
                 <div className="text-sm text-muted-foreground">
                   Usage trends over {days} days
                 </div>
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-2">
-                    {trends.trends.map((trend, idx) => (
-                      <Card key={idx}>
-                        <CardContent className="pt-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">{trend.date}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {trend.total_executions} executions
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <Badge variant="default">
-                                {trend.completed} completed
-                              </Badge>
-                              {trend.failed > 0 && (
-                                <Badge variant="destructive" className="ml-2">
-                                  {trend.failed} failed
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Execution Trends</CardTitle>
+                    <CardDescription>
+                      Total, completed, and failed executions over time
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <AreaChart data={trends.trends}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 12 }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                        />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip
+                          labelStyle={{ color: "#000" }}
+                          contentStyle={{ backgroundColor: "#fff" }}
+                        />
+                        <Legend />
+                        <Area
+                          type="monotone"
+                          dataKey="total_executions"
+                          stackId="1"
+                          stroke="#8884d8"
+                          fill="#8884d8"
+                          name="Total Executions"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="completed"
+                          stackId="1"
+                          stroke="#82ca9d"
+                          fill="#82ca9d"
+                          name="Completed"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="failed"
+                          stackId="1"
+                          stroke="#ff7300"
+                          fill="#ff7300"
+                          name="Failed"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">
+                      Success Rate Trend
+                    </CardTitle>
+                    <CardDescription>
+                      Success rate percentage over time
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={trends.trends}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 12 }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 12 }}
+                          domain={[0, 100]}
+                          label={{
+                            value: "Success Rate (%)",
+                            angle: -90,
+                            position: "insideLeft",
+                          }}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => `${value.toFixed(1)}%`}
+                          labelStyle={{ color: "#000" }}
+                          contentStyle={{ backgroundColor: "#fff" }}
+                        />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="success_rate"
+                          stroke="#8884d8"
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          name="Success Rate (%)"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            {trends && trends.trends.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No trend data available for the selected period
               </div>
             )}
           </TabsContent>

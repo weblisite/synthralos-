@@ -25,3 +25,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+
+def generate_token(length: int = 32) -> str:
+    """Generate a secure random token"""
+    import secrets
+
+    return secrets.token_urlsafe(length)

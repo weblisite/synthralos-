@@ -9,7 +9,9 @@ from app.api.routes import (
     chat,
     code,
     connectors,
+    dashboard_realtime,
     dashboard_ws,
+    email_templates,
     login,
     ocr,
     osint,
@@ -18,6 +20,7 @@ from app.api.routes import (
     scraping,
     stats,
     storage,
+    teams,
     users,
     utils,
     workflows,
@@ -45,6 +48,9 @@ api_router.include_router(chat.ws_router)
 api_router.include_router(stats.router)
 api_router.include_router(storage.router)
 api_router.include_router(dashboard_ws.router)
+api_router.include_router(dashboard_realtime.router)
+api_router.include_router(teams.router)
+api_router.include_router(email_templates.router)
 
 
 if settings.ENVIRONMENT == "local":

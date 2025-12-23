@@ -7,6 +7,7 @@ import AddUser from "@/components/Admin/AddUser"
 import { AdminConnectorManagement } from "@/components/Admin/AdminConnectorManagement"
 import { AdminDashboard } from "@/components/Admin/AdminDashboard"
 import { columns, type UserTableData } from "@/components/Admin/columns"
+import { EmailTemplateManagement } from "@/components/Admin/EmailTemplateManagement"
 import { PlatformSettings } from "@/components/Admin/PlatformSettings"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingUsers from "@/components/Pending/PendingUsers"
@@ -79,10 +80,11 @@ function Admin() {
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="connectors">Connectors</TabsTrigger>
+          <TabsTrigger value="email-templates">Email Templates</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -105,6 +107,10 @@ function Admin() {
 
         <TabsContent value="connectors" className="space-y-4">
           <AdminConnectorManagement />
+        </TabsContent>
+
+        <TabsContent value="email-templates" className="space-y-4">
+          <EmailTemplateManagement />
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">

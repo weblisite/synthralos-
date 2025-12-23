@@ -62,6 +62,9 @@ class User(UserBase, table=True):
     api_keys: list["UserAPIKey"] = Relationship(
         back_populates="user", cascade_delete=True
     )
+    owned_teams: list["Team"] = Relationship(back_populates="owner")
+    team_memberships: list["TeamMember"] = Relationship()
+    sent_invitations: list["TeamInvitation"] = Relationship()
 
 
 # Properties to return via API, id is always required
@@ -695,6 +698,106 @@ class CodeSandbox(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     owner: User | None = Relationship(back_populates="code_sandboxes")
+
+
+# ============================================================================
+# TEAM MANAGEMENT MODELS
+# ============================================================================
+
+
+class Team(SQLModel, table=True):
+    """Team/Organization model"""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(max_length=255, index=True)
+    slug: str = Field(unique=True, index=True, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    is_active: bool = Field(default=True)
+    settings: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
+
+    owner: User | None = Relationship()
+    members: list["TeamMember"] = Relationship(
+        back_populates="team", cascade_delete=True
+    )
+    invitations: list["TeamInvitation"] = Relationship(
+        back_populates="team", cascade_delete=True
+    )
+
+
+class TeamMember(SQLModel, table=True):
+    """Team member with role"""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    team_id: uuid.UUID = Field(
+        foreign_key="team.id", nullable=False, ondelete="CASCADE"
+    )
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    role: str = Field(default="member", max_length=50)  # owner, admin, member, viewer
+    joined_at: datetime = Field(default_factory=datetime.utcnow)
+    invited_by: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
+    )
+
+    team: Team | None = Relationship(back_populates="members")
+    user: User | None = Relationship()
+
+
+class TeamInvitation(SQLModel, table=True):
+    """Team invitation"""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    team_id: uuid.UUID = Field(
+        foreign_key="team.id", nullable=False, ondelete="CASCADE"
+    )
+    email: EmailStr = Field(max_length=255, index=True)
+    token: str = Field(unique=True, index=True, max_length=255)
+    role: str = Field(default="member", max_length=50)  # admin, member, viewer
+    invited_by: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    expires_at: datetime = Field(nullable=False)
+    accepted_at: datetime | None = Field(default=None)
+    revoked_at: datetime | None = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    team: Team | None = Relationship(back_populates="invitations")
+    inviter: User | None = Relationship()
+
+
+# ============================================================================
+# EMAIL TEMPLATE MODELS
+# ============================================================================
+
+
+class EmailTemplate(SQLModel, table=True):
+    """Email template for platform notifications"""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(unique=True, index=True, max_length=255)
+    slug: str = Field(unique=True, index=True, max_length=100)
+    subject: str = Field(max_length=500)
+    html_content: str = Field(sa_column=Column(JSON))  # Store as JSON for flexibility
+    text_content: str | None = Field(default=None, sa_column=Column(JSON))
+    category: str = Field(
+        default="general", max_length=50
+    )  # invitation, notification, workflow, system
+    variables: dict[str, Any] = Field(
+        default_factory=dict, sa_column=Column(JSONB)
+    )  # Available template variables
+    is_active: bool = Field(default=True)
+    is_system: bool = Field(default=False)  # System templates cannot be deleted
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_by: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
+    )
 
 
 # ============================================================================

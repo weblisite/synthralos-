@@ -13,8 +13,21 @@ import {
   Search,
   Server,
   Users,
+  Wifi,
+  WifiOff,
   Workflow,
 } from "lucide-react"
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Card,
   CardContent,
@@ -24,6 +37,7 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
+import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket"
 import { apiClient } from "@/lib/apiClient"
 
 interface SystemMetrics {
@@ -64,6 +78,7 @@ async function fetchSystemMetrics(): Promise<SystemMetrics> {
 
 export function SystemMetrics() {
   const { showErrorToast } = useCustomToast()
+  const { isConnected, usePollingFallback } = useDashboardWebSocket()
 
   const {
     data: metrics,
@@ -72,7 +87,8 @@ export function SystemMetrics() {
   } = useQuery<SystemMetrics>({
     queryKey: ["systemMetrics"],
     queryFn: fetchSystemMetrics,
-    refetchInterval: 60000, // Refresh every minute
+    // Only poll if WebSocket is not connected (fallback mode)
+    refetchInterval: usePollingFallback ? 60000 : false,
   })
 
   if (error) {
@@ -170,6 +186,25 @@ export function SystemMetrics() {
         </p>
       </div>
 
+      {/* Connection Status Indicator */}
+      {usePollingFallback && (
+        <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+          <WifiOff className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+            Real-time updates unavailable. Using polling fallback (updates every
+            60s).
+          </AlertDescription>
+        </Alert>
+      )}
+      {isConnected && !usePollingFallback && (
+        <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+          <Wifi className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800 dark:text-green-200">
+            Real-time updates active.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, index) => {
           const Icon = stat.icon
@@ -236,24 +271,73 @@ export function SystemMetrics() {
             <CardTitle>Resource Usage</CardTitle>
             <CardDescription>Platform resource statistics</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">OCR Jobs</span>
-              <span className="font-medium">
-                {metrics?.resources?.ocr_jobs ?? 0}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Scrape Jobs</span>
-              <span className="font-medium">
-                {metrics?.resources?.scrape_jobs ?? 0}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Code Tools</span>
-              <span className="font-medium">
-                {metrics?.resources?.code_tools ?? 0}
-              </span>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={[
+                  {
+                    name: "RAG Indexes",
+                    value: metrics.resources.rag_indexes,
+                  },
+                  {
+                    name: "Connectors",
+                    value: metrics.resources.connectors,
+                  },
+                  {
+                    name: "OCR Jobs",
+                    value: metrics.resources.ocr_jobs,
+                  },
+                  {
+                    name: "Scrape Jobs",
+                    value: metrics.resources.scrape_jobs,
+                  },
+                  {
+                    name: "Browser Sessions",
+                    value: metrics.resources.browser_sessions,
+                  },
+                  {
+                    name: "OSINT Streams",
+                    value: metrics.resources.osint_streams,
+                  },
+                  {
+                    name: "Code Tools",
+                    value: metrics.resources.code_tools,
+                  },
+                ]}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="value" fill="#8884d8" name="Count" />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">OCR Jobs</span>
+                <span className="font-medium">
+                  {metrics?.resources?.ocr_jobs ?? 0}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Scrape Jobs</span>
+                <span className="font-medium">
+                  {metrics?.resources?.scrape_jobs ?? 0}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Code Tools</span>
+                <span className="font-medium">
+                  {metrics?.resources?.code_tools ?? 0}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>

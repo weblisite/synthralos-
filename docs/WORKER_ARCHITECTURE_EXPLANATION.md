@@ -1,5 +1,15 @@
 # Workflow Worker Architecture Explanation
 
+## ⚠️ Important: Development vs Production
+
+- **Local Development**: Worker runs manually via `python -m scripts.start_worker` (see `docs/LOCAL_WORKER_SETUP.md`)
+- **Production (Render)**: Worker runs automatically as a Render Background Worker service defined in `render.yaml`
+  - Service name: `synthralos-workflow-worker`
+  - Deployed via Render Blueprint alongside backend and frontend
+  - Uses the same codebase (`backend/app/workflows/worker.py`) but runs in Render's infrastructure
+
+**Note**: When making changes to worker code, those changes will apply to both local development and production after deployment. Only the deployment/running mechanism differs.
+
 ## Overview
 
 Your platform uses a **distributed architecture** with three separate services that communicate through **Supabase PostgreSQL** as the shared database:

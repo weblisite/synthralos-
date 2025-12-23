@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutWorkflowsRouteImport } from './routes/_layout/workflows'
+import { Route as LayoutTeamsRouteImport } from './routes/_layout/teams'
 import { Route as LayoutStorageRouteImport } from './routes/_layout/storage'
 import { Route as LayoutSocialMonitoringRouteImport } from './routes/_layout/social-monitoring'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
@@ -62,6 +63,11 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
 const LayoutWorkflowsRoute = LayoutWorkflowsRouteImport.update({
   id: '/workflows',
   path: '/workflows',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutTeamsRoute = LayoutTeamsRouteImport.update({
+  id: '/teams',
+  path: '/teams',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutStorageRoute = LayoutStorageRouteImport.update({
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof LayoutSettingsRoute
   '/social-monitoring': typeof LayoutSocialMonitoringRoute
   '/storage': typeof LayoutStorageRoute
+  '/teams': typeof LayoutTeamsRoute
   '/workflows': typeof LayoutWorkflowsRoute
   '/': typeof LayoutIndexRoute
 }
@@ -169,6 +176,7 @@ export interface FileRoutesByTo {
   '/settings': typeof LayoutSettingsRoute
   '/social-monitoring': typeof LayoutSocialMonitoringRoute
   '/storage': typeof LayoutStorageRoute
+  '/teams': typeof LayoutTeamsRoute
   '/workflows': typeof LayoutWorkflowsRoute
   '/': typeof LayoutIndexRoute
 }
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/social-monitoring': typeof LayoutSocialMonitoringRoute
   '/_layout/storage': typeof LayoutStorageRoute
+  '/_layout/teams': typeof LayoutTeamsRoute
   '/_layout/workflows': typeof LayoutWorkflowsRoute
   '/_layout/': typeof LayoutIndexRoute
 }
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/social-monitoring'
     | '/storage'
+    | '/teams'
     | '/workflows'
     | '/'
   fileRoutesByTo: FileRoutesByTo
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/social-monitoring'
     | '/storage'
+    | '/teams'
     | '/workflows'
     | '/'
   id:
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/_layout/settings'
     | '/_layout/social-monitoring'
     | '/_layout/storage'
+    | '/_layout/teams'
     | '/_layout/workflows'
     | '/_layout/'
   fileRoutesById: FileRoutesById
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/workflows'
       fullPath: '/workflows'
       preLoaderRoute: typeof LayoutWorkflowsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/teams': {
+      id: '/_layout/teams'
+      path: '/teams'
+      fullPath: '/teams'
+      preLoaderRoute: typeof LayoutTeamsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/storage': {
@@ -429,6 +448,7 @@ interface LayoutRouteChildren {
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutSocialMonitoringRoute: typeof LayoutSocialMonitoringRoute
   LayoutStorageRoute: typeof LayoutStorageRoute
+  LayoutTeamsRoute: typeof LayoutTeamsRoute
   LayoutWorkflowsRoute: typeof LayoutWorkflowsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
@@ -447,6 +467,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutSocialMonitoringRoute: LayoutSocialMonitoringRoute,
   LayoutStorageRoute: LayoutStorageRoute,
+  LayoutTeamsRoute: LayoutTeamsRoute,
   LayoutWorkflowsRoute: LayoutWorkflowsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }

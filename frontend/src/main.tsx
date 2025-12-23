@@ -49,7 +49,7 @@ if (typeof window !== "undefined") {
 
       // CRITICAL: Convert HTTP to HTTPS for production domains
       // Check and fix baseURL
-      if (config.baseURL && config.baseURL.startsWith("http://")) {
+      if (config.baseURL?.startsWith("http://")) {
         if (
           isProductionDomain ||
           (window.location.protocol === "https:" && !isLocalhost)
@@ -59,7 +59,7 @@ if (typeof window !== "undefined") {
             "[Axios Interceptor] CRITICAL: Converting baseURL HTTP to HTTPS:",
             config.baseURL,
             "(original:",
-            originalBaseURL + ")",
+            `${originalBaseURL})`,
             "| Full URL:",
             `${config.baseURL}${originalUrl}`,
             "| Stack:",
@@ -69,7 +69,7 @@ if (typeof window !== "undefined") {
       }
 
       // Check and fix url if it's a full URL
-      if (config.url && config.url.startsWith("http://")) {
+      if (config.url?.startsWith("http://")) {
         if (
           isProductionDomain ||
           (window.location.protocol === "https:" && !isLocalhost)
@@ -79,7 +79,7 @@ if (typeof window !== "undefined") {
             "[Axios Interceptor] CRITICAL: Converting url HTTP to HTTPS:",
             config.url,
             "(original:",
-            originalUrl + ")",
+            `${originalUrl})`,
             "| Stack:",
             new Error().stack?.split("\n").slice(0, 5).join("\n"),
           )
@@ -87,7 +87,7 @@ if (typeof window !== "undefined") {
       }
 
       // Also fix axios.defaults.baseURL if it's HTTP
-      if (axios.defaults.baseURL && axios.defaults.baseURL.startsWith("http://")) {
+      if (axios.defaults.baseURL?.startsWith("http://")) {
         if (
           isProductionDomain ||
           (window.location.protocol === "https:" && !isLocalhost)
@@ -161,7 +161,8 @@ if (typeof window !== "undefined") {
 
     // Check if we need to convert HTTP to HTTPS
     if (
-      (isProductionDomain || (window.location.protocol === "https:" && !isLocalhost)) &&
+      (isProductionDomain ||
+        (window.location.protocol === "https:" && !isLocalhost)) &&
       url.startsWith("http://")
     ) {
       const httpsUrl = url.replace("http://", "https://")
@@ -169,7 +170,7 @@ if (typeof window !== "undefined") {
         "[Global Fetch Interceptor] CRITICAL: Converting HTTP to HTTPS:",
         httpsUrl,
         "(original:",
-        url + ")",
+        `${url})`,
         "| Stack:",
         new Error().stack?.split("\n").slice(0, 5).join("\n"),
       )
@@ -188,7 +189,7 @@ if (typeof window !== "undefined") {
           if (input.body && input.bodyUsed === false) {
             bodyToUse = input.body
           }
-        } catch (e) {
+        } catch (_e) {
           // If cloning fails, try to get body from init
           bodyToUse = init?.body || null
         }
@@ -230,12 +231,16 @@ const setOpenApiBase = () => {
     finalUrl.includes(".herokuapp.com") ||
     finalUrl.includes(".fly.dev")
 
-  const isLocalhost = finalUrl.includes("localhost") || finalUrl.includes("127.0.0.1")
+  const isLocalhost =
+    finalUrl.includes("localhost") || finalUrl.includes("127.0.0.1")
 
   // Force HTTPS for production domains (CRITICAL FIX)
   if (isProductionDomain && finalUrl.startsWith("http://")) {
     finalUrl = finalUrl.replace("http://", "https://")
-    console.warn("[main.tsx] CRITICAL: Converted OpenAPI.BASE HTTP to HTTPS:", finalUrl)
+    console.warn(
+      "[main.tsx] CRITICAL: Converted OpenAPI.BASE HTTP to HTTPS:",
+      finalUrl,
+    )
   }
 
   // Also check window.location.protocol as additional safety net

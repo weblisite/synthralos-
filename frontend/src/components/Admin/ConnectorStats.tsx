@@ -7,6 +7,14 @@
 import { useQuery } from "@tanstack/react-query"
 import { Database, Package, Users } from "lucide-react"
 import {
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts"
+import {
   Card,
   CardContent,
   CardDescription,
@@ -15,6 +23,17 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { apiClient } from "@/lib/apiClient"
+
+const COLORS = [
+  "#0088FE",
+  "#00C49F",
+  "#FFBB28",
+  "#FF8042",
+  "#8884d8",
+  "#82ca9d",
+  "#ffc658",
+  "#ff7300",
+]
 
 interface ConnectorStats {
   total_connectors: number
@@ -103,14 +122,55 @@ export function ConnectorStats() {
             <CardDescription>Connector distribution by status</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {Object.entries(stats.by_status).map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between">
-                  <span className="text-sm capitalize">{status}</span>
-                  <span className="text-sm font-medium">{count}</span>
+            {Object.keys(stats.by_status).length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={Object.entries(stats.by_status).map(
+                        ([name, value]) => ({
+                          name: name.charAt(0).toUpperCase() + name.slice(1),
+                          value,
+                        }),
+                      )}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {Object.entries(stats.by_status).map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="mt-4 space-y-2">
+                  {Object.entries(stats.by_status).map(([status, count]) => (
+                    <div
+                      key={status}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="capitalize">{status}</span>
+                      <span className="font-medium">{count}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <div className="text-sm text-muted-foreground text-center py-8">
+                No status data available
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -122,17 +182,57 @@ export function ConnectorStats() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {Object.entries(stats.by_category).map(([category, count]) => (
-                <div
-                  key={category}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm">{category}</span>
-                  <span className="text-sm font-medium">{count}</span>
+            {Object.keys(stats.by_category).length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={Object.entries(stats.by_category).map(
+                        ([name, value]) => ({
+                          name,
+                          value,
+                        }),
+                      )}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {Object.entries(stats.by_category).map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="mt-4 space-y-2">
+                  {Object.entries(stats.by_category).map(
+                    ([category, count]) => (
+                      <div
+                        key={category}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <span>{category}</span>
+                        <span className="font-medium">{count}</span>
+                      </div>
+                    ),
+                  )}
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <div className="text-sm text-muted-foreground text-center py-8">
+                No category data available
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

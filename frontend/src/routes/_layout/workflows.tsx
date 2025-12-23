@@ -236,7 +236,11 @@ function WorkflowsPage() {
           </div>
           <div className="flex items-center gap-4">
             {/* Tabs moved to top header */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex-shrink-0"
+            >
               <TabsList>
                 <TabsTrigger value="builder">Builder</TabsTrigger>
                 <TabsTrigger value="executions">Executions</TabsTrigger>
