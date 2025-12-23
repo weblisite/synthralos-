@@ -533,7 +533,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
   }, [])
 
   return (
-    <div className="w-64 h-full bg-background border-r flex flex-col flex-shrink-0" style={{ maxHeight: '100%' }}>
+    <div className="w-64 bg-background border-r flex flex-col flex-shrink-0" style={{ height: '100%', maxHeight: '100%', overflow: 'hidden' }}>
       <div className="p-4 border-b flex-shrink-0">
         <h2 className="text-lg font-semibold">Node Palette</h2>
         <p className="text-sm text-muted-foreground">
@@ -541,7 +541,7 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
         </p>
       </div>
 
-      <div className="p-2 space-y-4 overflow-y-auto flex-1 min-h-0" style={{ height: 0 }}>
+      <div className="p-2 space-y-4 overflow-y-auto flex-1" style={{ minHeight: 0, maxHeight: '100%' }}>
         {Object.entries(groupedNodes).map(([category, nodes]) => (
           <div key={category} className="space-y-2">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2">
