@@ -533,15 +533,15 @@ export function NodePalette({ onNodeAdd }: NodePaletteProps) {
   }, [])
 
   return (
-    <div className="w-64 h-full bg-background border-r overflow-y-auto flex-shrink-0">
-      <div className="p-4 border-b">
+    <div className="w-64 h-full bg-background border-r flex flex-col flex-shrink-0 overflow-hidden">
+      <div className="p-4 border-b flex-shrink-0">
         <h2 className="text-lg font-semibold">Node Palette</h2>
         <p className="text-sm text-muted-foreground">
           Drag or click to add nodes
         </p>
       </div>
 
-      <div className="p-2 space-y-4">
+      <div className="p-2 space-y-4 overflow-y-auto flex-1 min-h-0">
         {Object.entries(groupedNodes).map(([category, nodes]) => (
           <div key={category} className="space-y-2">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2">

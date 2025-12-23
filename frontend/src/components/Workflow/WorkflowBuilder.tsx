@@ -205,7 +205,7 @@ export function WorkflowBuilder({
   const showExecutionDetails = showExecutionPanel && !showNodeConfig
 
   return (
-    <div className="flex h-full relative">
+    <div className="flex h-full relative overflow-hidden">
       <NodePalette onNodeAdd={handleNodeAddWithPosition} />
       <div
         ref={reactFlowWrapper}
