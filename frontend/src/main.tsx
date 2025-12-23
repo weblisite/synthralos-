@@ -24,13 +24,17 @@ if (typeof window !== "undefined") {
     init?: RequestInit,
   ): Promise<Response> {
     let url: string
+    let modifiedInput: RequestInfo | URL = input
 
+    // Extract URL from input
     if (typeof input === "string") {
       url = input
     } else if (input instanceof URL) {
       url = input.toString()
-    } else {
+    } else if (input instanceof Request) {
       url = input.url
+    } else {
+      url = String(input)
     }
 
     // CRITICAL: Convert HTTP to HTTPS for production domains
@@ -43,7 +47,11 @@ if (typeof window !== "undefined") {
 
     const isLocalhost = url.includes("localhost") || url.includes("127.0.0.1")
 
-    if (isProductionDomain && url.startsWith("http://")) {
+    // Check if we need to convert HTTP to HTTPS
+    if (
+      (isProductionDomain || (window.location.protocol === "https:" && !isLocalhost)) &&
+      url.startsWith("http://")
+    ) {
       const httpsUrl = url.replace("http://", "https://")
       console.error(
         "[Global Fetch Interceptor] CRITICAL: Converting HTTP to HTTPS:",
@@ -52,40 +60,30 @@ if (typeof window !== "undefined") {
         url + ")",
       )
 
-      // Update the URL in the input
+      // Create new input with HTTPS URL
       if (typeof input === "string") {
-        input = httpsUrl
+        modifiedInput = httpsUrl
       } else if (input instanceof URL) {
-        input = new URL(httpsUrl)
-      } else {
-        input = new Request(httpsUrl, input)
+        modifiedInput = new URL(httpsUrl)
+      } else if (input instanceof Request) {
+        // Create new Request with HTTPS URL, preserving all other properties
+        modifiedInput = new Request(httpsUrl, {
+          method: input.method,
+          headers: input.headers,
+          body: input.body,
+          mode: input.mode,
+          credentials: input.credentials,
+          cache: input.cache,
+          redirect: input.redirect,
+          referrer: input.referrer,
+          integrity: input.integrity,
+          keepalive: input.keepalive,
+          signal: input.signal,
+        })
       }
-      url = httpsUrl
-    } else if (
-      typeof window !== "undefined" &&
-      window.location.protocol === "https:" &&
-      url.startsWith("http://") &&
-      !isLocalhost
-    ) {
-      const httpsUrl = url.replace("http://", "https://")
-      console.error(
-        "[Global Fetch Interceptor] CRITICAL: Converting HTTP to HTTPS (browser check):",
-        httpsUrl,
-        "(original:",
-        url + ")",
-      )
-
-      if (typeof input === "string") {
-        input = httpsUrl
-      } else if (input instanceof URL) {
-        input = new URL(httpsUrl)
-      } else {
-        input = new Request(httpsUrl, input)
-      }
-      url = httpsUrl
     }
 
-    return originalFetch.call(this, input, init)
+    return originalFetch.call(this, modifiedInput, init)
   }
 }
 
