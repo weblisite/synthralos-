@@ -725,6 +725,82 @@ export function NodeConfigPanel({
           </>
         )}
 
+        {node.type === "agent" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="agent-id">Agent ID</Label>
+              <Input
+                id="agent-id"
+                value={config.agent_id || ""}
+                onChange={(e) => handleConfigUpdate("agent_id", e.target.value)}
+                placeholder="Enter agent ID"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="agent-task">Task</Label>
+              <Textarea
+                id="agent-task"
+                value={config.task || ""}
+                onChange={(e) => handleConfigUpdate("task", e.target.value)}
+                placeholder="Enter task description"
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="agent-config">Agent Config (JSON)</Label>
+              <Textarea
+                id="agent-config"
+                value={JSON.stringify(config.agent_config || {}, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const agentConfig = JSON.parse(e.target.value)
+                    handleConfigUpdate("agent_config", agentConfig)
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder='{"framework": "openai", "model": "gpt-4"}'
+                rows={4}
+                className="font-mono text-sm"
+              />
+            </div>
+          </>
+        )}
+
+        {(node.type === "sub_workflow" || node.type === "sub-workflow") && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="sub-workflow-id">Sub Workflow ID</Label>
+              <Input
+                id="sub-workflow-id"
+                value={config.workflow_id || ""}
+                onChange={(e) =>
+                  handleConfigUpdate("workflow_id", e.target.value)
+                }
+                placeholder="Enter workflow ID"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sub-workflow-input">Input Data (JSON)</Label>
+              <Textarea
+                id="sub-workflow-input"
+                value={JSON.stringify(config.input_data || {}, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const inputData = JSON.parse(e.target.value)
+                    handleConfigUpdate("input_data", inputData)
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder='{"key": "value"}'
+                rows={4}
+                className="font-mono text-sm"
+              />
+            </div>
+          </>
+        )}
+
         {/* Personalization Values - Available for all node types except trigger */}
         {node.type !== "trigger" && availableFields.length > 0 && (
           <div className="space-y-2 border-t pt-4">

@@ -22,6 +22,7 @@ import {
 import { useCallback, useEffect } from "react"
 import "@xyflow/react/dist/style.css"
 
+import { AgentNode } from "./nodes/AgentNode"
 import { AINode } from "./nodes/AINode"
 import { BrowserNode } from "./nodes/BrowserNode"
 import { CodeNode } from "./nodes/CodeNode"
@@ -31,11 +32,13 @@ import { LogicNode } from "./nodes/LogicNode"
 import { OCRSwitchNode } from "./nodes/OCRSwitchNode"
 import { RAGSwitchNode } from "./nodes/RAGSwitchNode"
 import { ScrapingNode } from "./nodes/ScrapingNode"
+import { SubWorkflowNode } from "./nodes/SubWorkflowNode"
 import { TriggerNode } from "./nodes/TriggerNode"
 
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
   ai_prompt: AINode,
+  agent: AgentNode,
   connector: ConnectorNode,
   code: CodeNode,
   condition: LogicNode,
@@ -45,6 +48,8 @@ const nodeTypes: NodeTypes = {
   scraping: ScrapingNode,
   browser: BrowserNode,
   http_request: HTTPRequestNode,
+  sub_workflow: SubWorkflowNode,
+  "sub-workflow": SubWorkflowNode, // Alias with hyphen
 }
 
 interface WorkflowCanvasProps {

@@ -38,6 +38,7 @@ export interface WorkflowConfig {
 export type NodeType =
   | "trigger"
   | "ai_prompt"
+  | "agent"
   | "connector"
   | "code"
   | "condition"
@@ -47,3 +48,5 @@ export type NodeType =
   | "scraping"
   | "browser"
   | "http_request"
+  | "sub_workflow"
+  | "sub-workflow"

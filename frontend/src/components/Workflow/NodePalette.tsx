@@ -6,6 +6,7 @@
 
 import type { Node } from "@xyflow/react"
 import {
+  Bot,
   Brain,
   ChevronDown,
   ChevronRight,
@@ -18,6 +19,7 @@ import {
   Network,
   Play,
   Plug,
+  Workflow,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
@@ -115,6 +117,20 @@ const baseNodeTypes: NodeType[] = [
     icon: Network,
     category: "Core",
     description: "HTTP API call",
+  },
+  {
+    type: "agent",
+    label: "Agent",
+    icon: Bot,
+    category: "AI",
+    description: "AI agent execution",
+  },
+  {
+    type: "sub_workflow",
+    label: "Sub Workflow",
+    icon: Workflow,
+    category: "Core",
+    description: "Execute nested workflow",
   },
 ]
 
