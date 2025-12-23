@@ -21,46 +21,31 @@ import { routeTree } from "./routeTree.gen"
 if (typeof window !== "undefined") {
   axios.interceptors.request.use(
     (config) => {
-      // Check both baseURL and url - axios can use either
-      let fullUrl = config.url || ""
-      if (config.baseURL) {
-        // If baseURL is set, construct the full URL
-        const baseUrl = config.baseURL.endsWith("/")
-          ? config.baseURL.slice(0, -1)
-          : config.baseURL
-        const path = fullUrl.startsWith("/") ? fullUrl : `/${fullUrl}`
-        fullUrl = `${baseUrl}${path}`
-      } else if (fullUrl && !fullUrl.startsWith("http")) {
-        // Relative URL - check if axios.defaults.baseURL is set
-        if (axios.defaults.baseURL) {
-          const baseUrl = axios.defaults.baseURL.endsWith("/")
-            ? axios.defaults.baseURL.slice(0, -1)
-            : axios.defaults.baseURL
-          const path = fullUrl.startsWith("/") ? fullUrl : `/${fullUrl}`
-          fullUrl = `${baseUrl}${path}`
-        }
-      }
+      // Log all axios requests for debugging
+      const originalUrl = config.url || ""
+      const originalBaseURL = config.baseURL || ""
+      const fullUrl = originalBaseURL
+        ? `${originalBaseURL}${originalUrl.startsWith("/") ? "" : "/"}${originalUrl}`
+        : originalUrl
 
-      // Also check baseURL directly
-      const baseURL = config.baseURL || axios.defaults.baseURL || ""
-
+      // Check if this is a production domain request
       const isProductionDomain =
         fullUrl.includes(".onrender.com") ||
         fullUrl.includes(".vercel.app") ||
         fullUrl.includes(".netlify.app") ||
         fullUrl.includes(".herokuapp.com") ||
         fullUrl.includes(".fly.dev") ||
-        baseURL.includes(".onrender.com") ||
-        baseURL.includes(".vercel.app") ||
-        baseURL.includes(".netlify.app") ||
-        baseURL.includes(".herokuapp.com") ||
-        baseURL.includes(".fly.dev")
+        originalBaseURL.includes(".onrender.com") ||
+        originalBaseURL.includes(".vercel.app") ||
+        originalBaseURL.includes(".netlify.app") ||
+        originalBaseURL.includes(".herokuapp.com") ||
+        originalBaseURL.includes(".fly.dev")
 
       const isLocalhost =
         fullUrl.includes("localhost") ||
         fullUrl.includes("127.0.0.1") ||
-        baseURL.includes("localhost") ||
-        baseURL.includes("127.0.0.1")
+        originalBaseURL.includes("localhost") ||
+        originalBaseURL.includes("127.0.0.1")
 
       // CRITICAL: Convert HTTP to HTTPS for production domains
       // Check and fix baseURL
@@ -73,6 +58,10 @@ if (typeof window !== "undefined") {
           console.error(
             "[Axios Interceptor] CRITICAL: Converting baseURL HTTP to HTTPS:",
             config.baseURL,
+            "(original:",
+            originalBaseURL + ")",
+            "| Full URL:",
+            `${config.baseURL}${originalUrl}`,
             "| Stack:",
             new Error().stack?.split("\n").slice(0, 5).join("\n"),
           )
@@ -89,6 +78,8 @@ if (typeof window !== "undefined") {
           console.error(
             "[Axios Interceptor] CRITICAL: Converting url HTTP to HTTPS:",
             config.url,
+            "(original:",
+            originalUrl + ")",
             "| Stack:",
             new Error().stack?.split("\n").slice(0, 5).join("\n"),
           )
@@ -110,6 +101,21 @@ if (typeof window !== "undefined") {
             axios.defaults.baseURL,
           )
         }
+      }
+
+      // Log all axios requests to production domains for debugging
+      if (isProductionDomain && !isLocalhost) {
+        const finalUrl = config.baseURL
+          ? `${config.baseURL}${config.url?.startsWith("/") ? "" : "/"}${config.url || ""}`
+          : config.url || ""
+        console.log(
+          "[Axios Interceptor] Request to production domain:",
+          finalUrl,
+          "| baseURL:",
+          config.baseURL || "none",
+          "| url:",
+          config.url || "none",
+        )
       }
 
       return config
