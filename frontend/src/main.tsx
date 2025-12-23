@@ -5,6 +5,7 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query"
 import { createRouter, RouterProvider } from "@tanstack/react-router"
+import axios from "axios"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 import { ApiError, OpenAPI } from "./client"
@@ -14,6 +15,50 @@ import { getApiUrl } from "./lib/api"
 import { supabase } from "./lib/supabase"
 import "./index.css"
 import { routeTree } from "./routeTree.gen"
+
+// CRITICAL: Axios interceptor to catch and convert ANY HTTP requests to HTTPS
+// The OpenAPI SDK uses axios, not fetch, so we need this interceptor too
+if (typeof window !== "undefined") {
+  axios.interceptors.request.use(
+    (config) => {
+      if (config.url) {
+        const url = config.url
+        const isProductionDomain =
+          url.includes(".onrender.com") ||
+          url.includes(".vercel.app") ||
+          url.includes(".netlify.app") ||
+          url.includes(".herokuapp.com") ||
+          url.includes(".fly.dev")
+
+        const isLocalhost =
+          url.includes("localhost") || url.includes("127.0.0.1")
+
+        // CRITICAL: Convert HTTP to HTTPS for production domains
+        if (
+          (isProductionDomain ||
+            (window.location.protocol === "https:" && !isLocalhost)) &&
+          url.startsWith("http://")
+        ) {
+          const httpsUrl = url.replace("http://", "https://")
+          console.error(
+            "[Axios Interceptor] CRITICAL: Converting HTTP to HTTPS:",
+            httpsUrl,
+            "(original:",
+            url + ")",
+            "| Stack:",
+            new Error().stack?.split("\n").slice(0, 5).join("\n"),
+          )
+          config.url = httpsUrl
+        }
+      }
+      return config
+    },
+    (error) => {
+      return Promise.reject(error)
+    },
+  )
+  console.log("[Axios Interceptor] Installed successfully")
+}
 
 // CRITICAL: Global fetch interceptor to catch and convert ANY HTTP requests to HTTPS
 // This is the ultimate safety net to prevent Mixed Content errors
