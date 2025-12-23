@@ -261,7 +261,10 @@ export function OCRJobManager() {
       if (!urlToUse) {
         throw new Error("Please upload a file or provide a document URL")
       }
-      return createOCRJob(urlToUse, selectedEngine === "auto" ? undefined : selectedEngine)
+      return createOCRJob(
+        urlToUse,
+        selectedEngine === "auto" ? undefined : selectedEngine,
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ocrJobs"] })
@@ -288,7 +291,10 @@ export function OCRJobManager() {
       if (urls.length > 100) {
         throw new Error("Maximum 100 URLs allowed per batch")
       }
-      return batchExtractOCR(urls, batchEngine === "auto" ? undefined : batchEngine)
+      return batchExtractOCR(
+        urls,
+        batchEngine === "auto" ? undefined : batchEngine,
+      )
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["ocrJobs"] })

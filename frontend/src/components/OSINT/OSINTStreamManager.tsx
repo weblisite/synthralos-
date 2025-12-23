@@ -498,7 +498,11 @@ export function OSINTStreamManager() {
         .split(",")
         .map((k) => k.trim())
         .filter((k) => k.length > 0)
-      return createOSINTStream(platform, keywords, selectedEngine === "auto" ? undefined : selectedEngine)
+      return createOSINTStream(
+        platform,
+        keywords,
+        selectedEngine === "auto" ? undefined : selectedEngine,
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["osintStreams"] })

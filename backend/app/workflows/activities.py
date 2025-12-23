@@ -6,6 +6,9 @@ These will be called by the workflow engine when executing nodes.
 """
 
 from typing import Any
+from uuid import UUID
+
+from sqlmodel import Session
 
 from app.workflows.state import NodeExecutionResult
 
@@ -28,6 +31,8 @@ class ActivityHandler:
         node_id: str,
         node_config: dict[str, Any],
         input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
     ) -> NodeExecutionResult:
         """
         Execute an activity.
@@ -36,6 +41,8 @@ class ActivityHandler:
             node_id: Node ID
             node_config: Node configuration
             input_data: Input data for the node
+            execution_id: Optional execution ID (for handlers that need it)
+            session: Optional database session (for handlers that need it)
 
         Returns:
             NodeExecutionResult
@@ -51,6 +58,8 @@ class TriggerActivityHandler(ActivityHandler):
         node_id: str,
         node_config: dict[str, Any],
         input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
     ) -> NodeExecutionResult:
         """Execute trigger node."""
         # Trigger nodes typically just pass through input data
@@ -74,6 +83,8 @@ class HTTPRequestActivityHandler(ActivityHandler):
         node_id: str,
         node_config: dict[str, Any],
         input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
     ) -> NodeExecutionResult:
         """Execute HTTP request node."""
         import json
@@ -208,6 +219,8 @@ class CodeActivityHandler(ActivityHandler):
         node_id: str,
         node_config: dict[str, Any],
         input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
     ) -> NodeExecutionResult:
         """Execute code node."""
         from datetime import datetime
@@ -314,6 +327,8 @@ class RAGSwitchActivityHandler(ActivityHandler):
         node_id: str,
         node_config: dict[str, Any],
         input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
     ) -> NodeExecutionResult:
         """
         Execute RAG switch node.
@@ -389,6 +404,8 @@ class OCRSwitchActivityHandler(ActivityHandler):
         node_id: str,
         node_config: dict[str, Any],
         input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
     ) -> NodeExecutionResult:
         """
         Execute OCR switch node.
@@ -531,6 +548,587 @@ class OCRSwitchActivityHandler(ActivityHandler):
         return "; ".join(reasons)
 
 
+class ConnectorActivityHandler(ActivityHandler):
+    """Handler for connector nodes."""
+
+    def execute(
+        self,
+        node_id: str,
+        node_config: dict[str, Any],
+        input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
+    ) -> NodeExecutionResult:
+        """Execute connector node."""
+        from datetime import datetime
+
+        if not session:
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="failed",
+                output={},
+                error="Database session required for connector execution",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+        try:
+            from app.connectors.loader import default_connector_loader
+            from app.connectors.oauth import default_oauth_service
+            from app.connectors.registry import default_connector_registry
+            from app.models import Workflow, WorkflowExecution
+
+            # Get connector slug and action from node config
+            connector_slug = node_config.get("connector_slug") or node_config.get(
+                "connector_id"
+            )
+            action = node_config.get("action") or node_config.get("action_id")
+
+            if not connector_slug:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error="connector_slug is required for connector node",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+            if not action:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error="action is required for connector node",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+            # Get user_id from execution -> workflow -> owner_id
+            user_id = None
+            if execution_id:
+                execution = session.get(WorkflowExecution, execution_id)
+                if execution:
+                    workflow = session.get(Workflow, execution.workflow_id)
+                    if workflow:
+                        user_id = workflow.owner_id
+
+            if not user_id:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error="Could not determine user_id from execution context",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+            # Get connector version
+            connector_version = default_connector_registry.get_connector(
+                session=session, slug=connector_slug
+            )
+
+            # Get OAuth tokens if connector requires OAuth
+            credentials = None
+            manifest = connector_version.manifest
+            oauth_config = manifest.get("oauth", {})
+
+            if oauth_config:
+                tokens = default_oauth_service.get_tokens(
+                    connector_slug=connector_slug, user_id=user_id
+                )
+
+                if tokens:
+                    credentials = {
+                        "access_token": tokens.get("access_token"),
+                        "refresh_token": tokens.get("refresh_token"),
+                        "token_type": tokens.get("token_type", "Bearer"),
+                    }
+
+                    # Add additional credential fields from manifest
+                    credential_fields = oauth_config.get("credential_fields", {})
+                    for field_name, field_config in credential_fields.items():
+                        if field_config.get("source") == "infisical":
+                            secret_key = field_config.get(
+                                "secret_key",
+                                f"connector_{connector_slug}_user_{user_id}_{field_name}",
+                            )
+                            try:
+                                from app.services.secrets import (
+                                    default_secrets_service,
+                                )
+
+                                value = default_secrets_service.get_secret(
+                                    secret_key=secret_key,
+                                    environment="prod",
+                                    path=f"/connectors/{connector_slug}/users/{user_id}",
+                                )
+                                credentials[field_name] = value
+                            except Exception:
+                                pass
+
+            # Prepare input data (merge node_config and input_data)
+            action_input = {**input_data}
+            if "input_data" in node_config:
+                action_input.update(node_config["input_data"])
+
+            # Invoke connector action
+            result = default_connector_loader.invoke_action(
+                connector_version=connector_version,
+                action_id=action,
+                input_data=action_input,
+                credentials=credentials,
+            )
+
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="success",
+                output={
+                    "connector_slug": connector_slug,
+                    "action": action,
+                    "result": result,
+                },
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+        except Exception as e:
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="failed",
+                output={},
+                error=f"Connector execution failed: {str(e)}",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+
+class ConditionActivityHandler(ActivityHandler):
+    """Handler for condition/if-else nodes."""
+
+    def execute(
+        self,
+        node_id: str,
+        node_config: dict[str, Any],
+        input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
+    ) -> NodeExecutionResult:
+        """Execute condition node."""
+        from datetime import datetime
+
+        try:
+            # Get condition expression from config
+            condition_expr = node_config.get("condition") or node_config.get(
+                "expression"
+            )
+            condition_type = node_config.get(
+                "condition_type", "javascript"
+            )  # javascript, python, jsonpath
+
+            if not condition_expr:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error="condition expression is required for condition node",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+            # Evaluate condition
+            result = self._evaluate_condition(
+                condition_expr, condition_type, input_data
+            )
+
+            # Determine which branch to take
+            branch = "true" if result else "false"
+
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="success",
+                output={
+                    "condition_result": result,
+                    "branch": branch,
+                    "condition_expr": condition_expr,
+                },
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+        except Exception as e:
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="failed",
+                output={},
+                error=f"Condition evaluation failed: {str(e)}",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+    def _evaluate_condition(
+        self, condition_expr: str, condition_type: str, input_data: dict[str, Any]
+    ) -> bool:
+        """Evaluate a condition expression."""
+        if condition_type == "javascript":
+            # Simple JavaScript-like evaluation
+            # Replace variable references with values from input_data
+            try:
+                # Simple evaluation: replace ${var} with values
+                eval_expr = condition_expr
+                for key, value in input_data.items():
+                    eval_expr = eval_expr.replace(f"${{{key}}}", str(value))
+                    eval_expr = eval_expr.replace(f"${{data.{key}}}", str(value))
+
+                # Evaluate as Python expression (limited safety)
+                # In production, use a proper expression evaluator
+                result = eval(eval_expr, {"__builtins__": {}}, {})
+                return bool(result)
+            except Exception:
+                # Fallback: try direct evaluation
+                return bool(eval(condition_expr, {"__builtins__": {}}, input_data))
+
+        elif condition_type == "python":
+            # Python expression evaluation
+            try:
+                result = eval(condition_expr, {"__builtins__": {}}, input_data)
+                return bool(result)
+            except Exception:
+                return False
+
+        elif condition_type == "jsonpath":
+            # JSONPath evaluation (simplified)
+            # For full JSONPath, use jsonpath-ng library
+            try:
+                # Simple path evaluation: data.path.to.value
+                parts = condition_expr.split(".")
+                value = input_data
+                for part in parts:
+                    if isinstance(value, dict):
+                        value = value.get(part)
+                    else:
+                        return False
+                return bool(value)
+            except Exception:
+                return False
+
+        else:
+            # Default: try Python evaluation
+            try:
+                result = eval(condition_expr, {"__builtins__": {}}, input_data)
+                return bool(result)
+            except Exception:
+                return False
+
+
+class AgentActivityHandler(ActivityHandler):
+    """Handler for agent nodes."""
+
+    def execute(
+        self,
+        node_id: str,
+        node_config: dict[str, Any],
+        input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
+    ) -> NodeExecutionResult:
+        """Execute agent node."""
+        from datetime import datetime
+
+        if not session:
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="failed",
+                output={},
+                error="Database session required for agent execution",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+        try:
+            from app.agents.router import AgentRouter
+            from app.models import Workflow, WorkflowExecution
+
+            # Get user_id from execution -> workflow -> owner_id
+            user_id = None
+            if execution_id:
+                execution = session.get(WorkflowExecution, execution_id)
+                if execution:
+                    workflow = session.get(Workflow, execution.workflow_id)
+                    if workflow:
+                        user_id = workflow.owner_id
+
+            if not user_id:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error="Could not determine user_id from execution context",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+            # Get agent configuration
+            agent_framework = node_config.get("framework") or node_config.get(
+                "agent_framework"
+            )
+            task_type = node_config.get("task_type") or node_config.get("task")
+            task_requirements = node_config.get("task_requirements", {})
+            agent_id = node_config.get("agent_id")
+
+            if not task_type:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error="task_type is required for agent node",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+            # Prepare task input data
+            task_input = {**input_data}
+            if "input_data" in node_config:
+                task_input.update(node_config["input_data"])
+
+            # Add user_id to task input
+            task_input["user_id"] = str(user_id)
+
+            # Execute agent task
+            router = AgentRouter()
+            task = router.execute_task(
+                session=session,
+                framework=agent_framework,
+                task_type=task_type,
+                input_data=task_input,
+                agent_id=agent_id,
+                user_id=user_id,
+            )
+
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="success",
+                output={
+                    "task_id": str(task.id),
+                    "framework": agent_framework or "auto",
+                    "task_type": task_type,
+                    "result": task.result,
+                    "status": task.status,
+                },
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+        except Exception as e:
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="failed",
+                output={},
+                error=f"Agent execution failed: {str(e)}",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+
+class SubWorkflowActivityHandler(ActivityHandler):
+    """Handler for sub-workflow nodes."""
+
+    def execute(
+        self,
+        node_id: str,
+        node_config: dict[str, Any],
+        input_data: dict[str, Any],
+        execution_id: UUID | None = None,
+        session: Session | None = None,
+    ) -> NodeExecutionResult:
+        """Execute sub-workflow node."""
+        from datetime import datetime
+        from uuid import UUID as UUIDType
+
+        if not session:
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="failed",
+                output={},
+                error="Database session required for sub-workflow execution",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+        try:
+            from app.models import Workflow
+            from app.workflows.engine import WorkflowEngine
+
+            # Get sub-workflow ID from config
+            sub_workflow_id_str = node_config.get("workflow_id") or node_config.get(
+                "sub_workflow_id"
+            )
+
+            if not sub_workflow_id_str:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error="workflow_id is required for sub-workflow node",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+            # Parse workflow ID
+            try:
+                sub_workflow_id = UUIDType(sub_workflow_id_str)
+            except ValueError:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error=f"Invalid workflow_id format: {sub_workflow_id_str}",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+            # Verify sub-workflow exists
+            sub_workflow = session.get(Workflow, sub_workflow_id)
+            if not sub_workflow:
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={},
+                    error=f"Sub-workflow {sub_workflow_id} not found",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+            # Create execution for sub-workflow
+            engine = WorkflowEngine()
+            sub_execution = engine.create_execution(
+                session=session,
+                workflow_id=sub_workflow_id,
+                trigger_data=input_data,
+            )
+
+            # Check if synchronous execution is requested
+            wait_for_completion = node_config.get("wait_for_completion", False)
+
+            if wait_for_completion:
+                # Wait for sub-workflow to complete
+                import time
+
+                from app.models import WorkflowExecution as WorkflowExecutionModel
+
+                max_wait_seconds = node_config.get(
+                    "timeout_seconds", 3600
+                )  # Default 1 hour
+                poll_interval = 1.0  # Poll every second
+                waited_seconds = 0
+
+                while waited_seconds < max_wait_seconds:
+                    # Check sub-workflow status
+                    sub_exec = session.get(WorkflowExecutionModel, sub_execution.id)
+                    if not sub_exec:
+                        return NodeExecutionResult(
+                            node_id=node_id,
+                            status="failed",
+                            output={},
+                            error=f"Sub-workflow execution {sub_execution.id} not found",
+                            started_at=datetime.utcnow(),
+                            completed_at=datetime.utcnow(),
+                            duration_ms=0,
+                        )
+
+                    if sub_exec.status in ("completed", "failed"):
+                        # Sub-workflow completed
+                        sub_state = engine.get_execution_state(
+                            session, sub_execution.id
+                        )
+                        return NodeExecutionResult(
+                            node_id=node_id,
+                            status="success"
+                            if sub_exec.status == "completed"
+                            else "failed",
+                            output={
+                                "sub_workflow_id": str(sub_workflow_id),
+                                "sub_execution_id": sub_execution.execution_id,
+                                "sub_execution_uuid": str(sub_execution.id),
+                                "status": sub_exec.status,
+                                "result": sub_state.execution_data
+                                if sub_exec.status == "completed"
+                                else None,
+                                "error": sub_exec.error_message
+                                if sub_exec.status == "failed"
+                                else None,
+                            },
+                            started_at=datetime.utcnow(),
+                            completed_at=datetime.utcnow(),
+                            duration_ms=int(waited_seconds * 1000),
+                        )
+
+                    # Wait before next poll
+                    time.sleep(poll_interval)
+                    waited_seconds += poll_interval
+                    session.refresh(sub_exec)
+
+                # Timeout
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="failed",
+                    output={
+                        "sub_workflow_id": str(sub_workflow_id),
+                        "sub_execution_id": sub_execution.execution_id,
+                        "status": "timeout",
+                    },
+                    error=f"Sub-workflow execution timed out after {max_wait_seconds} seconds",
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=int(waited_seconds * 1000),
+                )
+            else:
+                # Asynchronous execution (original behavior)
+                return NodeExecutionResult(
+                    node_id=node_id,
+                    status="success",
+                    output={
+                        "sub_workflow_id": str(sub_workflow_id),
+                        "sub_execution_id": sub_execution.execution_id,
+                        "sub_execution_uuid": str(sub_execution.id),
+                        "status": "started",
+                        "note": "Sub-workflow execution started asynchronously",
+                    },
+                    started_at=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                    duration_ms=0,
+                )
+
+        except Exception as e:
+            return NodeExecutionResult(
+                node_id=node_id,
+                status="failed",
+                output={},
+                error=f"Sub-workflow execution failed: {str(e)}",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                duration_ms=0,
+            )
+
+
 # Activity handler registry
 ACTIVITY_HANDLERS: dict[str, ActivityHandler] = {
     "trigger": TriggerActivityHandler(),
@@ -538,6 +1136,13 @@ ACTIVITY_HANDLERS: dict[str, ActivityHandler] = {
     "code": CodeActivityHandler(),
     "rag_switch": RAGSwitchActivityHandler(),
     "ocr_switch": OCRSwitchActivityHandler(),
+    "connector": ConnectorActivityHandler(),
+    "condition": ConditionActivityHandler(),
+    "if": ConditionActivityHandler(),  # Alias for condition
+    "switch": ConditionActivityHandler(),  # Alias for condition
+    "agent": AgentActivityHandler(),
+    "sub_workflow": SubWorkflowActivityHandler(),
+    "sub-workflow": SubWorkflowActivityHandler(),  # Alias with hyphen
 }
 
 

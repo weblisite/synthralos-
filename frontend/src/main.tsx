@@ -18,19 +18,37 @@ import { routeTree } from "./routeTree.gen"
 // Use getApiUrl() to ensure HTTPS in production (prevents Mixed Content errors)
 // Set OpenAPI.BASE dynamically to ensure HTTPS conversion applies
 const setOpenApiBase = () => {
-  OpenAPI.BASE = getApiUrl()
+  const apiUrl = getApiUrl()
+  // Force HTTPS conversion if needed
+  let finalUrl = apiUrl
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    if (
+      finalUrl.startsWith("http://") &&
+      !finalUrl.includes("localhost") &&
+      !finalUrl.includes("127.0.0.1")
+    ) {
+      finalUrl = finalUrl.replace("http://", "https://")
+      console.warn("[main.tsx] Converted OpenAPI.BASE HTTP to HTTPS:", finalUrl)
+    }
+  }
+  OpenAPI.BASE = finalUrl
 }
+
+// Set immediately
 setOpenApiBase()
 
 // Re-set OpenAPI.BASE after DOM is ready to ensure HTTPS conversion works
 if (typeof window !== "undefined") {
   // Set immediately if window is available
   setOpenApiBase()
-  
+
   // Also set on DOMContentLoaded as a fallback
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", setOpenApiBase)
   }
+
+  // Also set on window load as final fallback
+  window.addEventListener("load", setOpenApiBase)
 }
 OpenAPI.TOKEN = async () => {
   try {

@@ -14,8 +14,8 @@ import {
   useRef,
   useState,
 } from "react"
-import { apiClient } from "@/lib/apiClient"
 import { getApiUrl } from "@/lib/api"
+import { apiClient } from "@/lib/apiClient"
 import { supabase } from "@/lib/supabase"
 
 interface ChatMessage {

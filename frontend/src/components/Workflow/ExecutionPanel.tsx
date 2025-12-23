@@ -5,7 +5,7 @@
  */
 
 import type { Edge, Node } from "@xyflow/react"
-import { Clock, Pause, Play, RefreshCw, Square, X } from "lucide-react"
+import { Bug, Clock, Pause, Play, RefreshCw, Square, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
+import { DebugPanel } from "./DebugPanel"
 import { ExecutionTimeline } from "./ExecutionTimeline"
 
 interface ExecutionLog {
@@ -411,6 +412,23 @@ export function ExecutionPanel({
                 </DialogDescription>
               </DialogHeader>
               {executionId && <ExecutionTimeline executionId={executionId} />}
+            </DialogContent>
+          </Dialog>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Bug className="h-3 w-3 mr-1" />
+                Debug
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Debug Panel</DialogTitle>
+                <DialogDescription>
+                  Debug workflow execution step-by-step
+                </DialogDescription>
+              </DialogHeader>
+              {executionId && <DebugPanel executionId={executionId} />}
             </DialogContent>
           </Dialog>
         </div>

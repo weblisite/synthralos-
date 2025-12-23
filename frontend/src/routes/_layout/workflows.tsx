@@ -11,6 +11,9 @@ import { useCallback, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AnalyticsPanel } from "@/components/Workflow/AnalyticsPanel"
+import { TestPanel } from "@/components/Workflow/TestPanel"
 import { WorkflowBuilder } from "@/components/Workflow/WorkflowBuilder"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
@@ -264,20 +267,43 @@ function WorkflowsPage() {
       </div>
 
       <div className="flex-1 overflow-hidden min-h-0">
-        <WorkflowBuilder
-          workflowId={workflowId}
-          executionId={executionId}
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={handleEdgesChange}
-          onConnect={handleConnect}
-          onNodeAdd={handleNodeAdd}
-          onNodeSelect={handleNodeSelect}
-          selectedNode={selectedNode}
-          onNodeUpdate={handleNodeUpdate}
-          onNodeDelete={handleNodeDelete}
-        />
+        <Tabs defaultValue="builder" className="h-full flex flex-col">
+          <TabsList className="mx-4 mt-4">
+            <TabsTrigger value="builder">Builder</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            {workflowId && <TabsTrigger value="test">Test</TabsTrigger>}
+          </TabsList>
+
+          <TabsContent value="builder" className="flex-1 m-0">
+            <WorkflowBuilder
+              workflowId={workflowId}
+              executionId={executionId}
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onConnect={handleConnect}
+              onNodeAdd={handleNodeAdd}
+              onNodeSelect={handleNodeSelect}
+              selectedNode={selectedNode}
+              onNodeUpdate={handleNodeUpdate}
+              onNodeDelete={handleNodeDelete}
+            />
+          </TabsContent>
+
+          <TabsContent
+            value="analytics"
+            className="flex-1 m-0 p-4 overflow-auto"
+          >
+            <AnalyticsPanel workflowId={workflowId || undefined} />
+          </TabsContent>
+
+          {workflowId && (
+            <TabsContent value="test" className="flex-1 m-0 p-4 overflow-auto">
+              <TestPanel workflowId={workflowId} />
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
     </div>
   )

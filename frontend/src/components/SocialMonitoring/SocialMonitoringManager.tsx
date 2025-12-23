@@ -563,7 +563,11 @@ export function SocialMonitoringManager() {
         .split(",")
         .map((k) => k.trim())
         .filter((k) => k.length > 0)
-      return createDigest(digestPlatform, keywords, digestEngine === "auto" ? undefined : digestEngine)
+      return createDigest(
+        digestPlatform,
+        keywords,
+        digestEngine === "auto" ? undefined : digestEngine,
+      )
     },
     onSuccess: (data) => {
       setDigestResults(data.signals || [])

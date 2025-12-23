@@ -71,6 +71,7 @@ class WorkflowEngine:
         session: Session,
         workflow_id: uuid.UUID,
         trigger_data: dict[str, Any] | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> WorkflowExecution:
         """
         Create a new workflow execution.
@@ -87,6 +88,18 @@ class WorkflowEngine:
         workflow = session.get(Workflow, workflow_id)
         if not workflow:
             raise WorkflowNotFoundError(f"Workflow {workflow_id} not found")
+
+        # Check resource limits if user_id provided
+        if user_id:
+            from app.workflows.resource_limits import (
+                ResourceLimitError,
+                default_resource_limits_manager,
+            )
+
+            try:
+                default_resource_limits_manager.enforce_user_limits(session, user_id)
+            except ResourceLimitError as e:
+                raise WorkflowEngineError(str(e))
 
         # Generate execution ID
         execution_id = f"exec-{uuid.uuid4().hex[:12]}"
@@ -124,6 +137,16 @@ class WorkflowEngine:
             "info",
             f"Workflow execution started: {execution_id}",
         )
+
+        # Record monitoring event
+        try:
+            from app.workflows.monitoring import default_workflow_monitor
+
+            default_workflow_monitor.record_execution_start(
+                execution.id, workflow_id, user_id
+            )
+        except Exception:
+            pass  # Monitoring not critical
 
         return execution
 
@@ -262,6 +285,11 @@ class WorkflowEngine:
         """
         Execute a single workflow node.
 
+        Sets node timeout if configured in node_config.
+        """
+        """
+        Execute a single workflow node.
+
         This is a placeholder that will be extended with actual node execution logic.
         For now, it just records the execution.
 
@@ -287,37 +315,77 @@ class WorkflowEngine:
         )
 
         try:
-            # TODO: Actual node execution will be implemented in Phase 1.5 (LangGraph integration)
-            # For now, simulate successful execution
-            output = {
-                "status": "success",
-                "node_id": node_id,
-                "node_type": node_config.get("node_type", "unknown"),
-                "input_received": True,
-            }
+            # Get node type from config
+            node_type = node_config.get("node_type", "unknown")
 
-            completed_at = datetime.utcnow()
-            duration_ms = int((completed_at - started_at).total_seconds() * 1000)
+            # Get activity handler for this node type
+            from app.workflows.activities import get_activity_handler
 
-            result = NodeExecutionResult(
-                node_id=node_id,
-                status="success",
-                output=output,
-                started_at=started_at,
-                completed_at=completed_at,
-                duration_ms=duration_ms,
-            )
+            handler = get_activity_handler(node_type)
 
-            # Log success
-            self._log_execution(
-                session,
-                execution_id,
-                node_id,
-                "info",
-                f"Node {node_id} completed successfully",
-            )
+            if handler:
+                # Use activity handler to execute node
+                # Pass execution_id and session for handlers that need them
+                result = handler.execute(
+                    node_id=node_id,
+                    node_config=node_config,
+                    input_data=input_data,
+                    execution_id=execution_id,
+                    session=session,
+                )
 
-            return result
+                # Ensure result has started_at if not set
+                if not result.started_at:
+                    result.started_at = started_at
+                if not result.completed_at:
+                    result.completed_at = datetime.utcnow()
+                if result.duration_ms == 0:
+                    result.duration_ms = int(
+                        (result.completed_at - started_at).total_seconds() * 1000
+                    )
+
+                # Log success
+                self._log_execution(
+                    session,
+                    execution_id,
+                    node_id,
+                    "info",
+                    f"Node {node_id} completed successfully",
+                )
+
+                return result
+            else:
+                # No handler found, simulate successful execution
+                output = {
+                    "status": "success",
+                    "node_id": node_id,
+                    "node_type": node_type,
+                    "input_received": True,
+                    "warning": f"No activity handler found for node type: {node_type}",
+                }
+
+                completed_at = datetime.utcnow()
+                duration_ms = int((completed_at - started_at).total_seconds() * 1000)
+
+                result = NodeExecutionResult(
+                    node_id=node_id,
+                    status="success",
+                    output=output,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                    duration_ms=duration_ms,
+                )
+
+                # Log warning
+                self._log_execution(
+                    session,
+                    execution_id,
+                    node_id,
+                    "warning",
+                    f"No activity handler found for node type: {node_type}",
+                )
+
+                return result
 
         except Exception as e:
             completed_at = datetime.utcnow()

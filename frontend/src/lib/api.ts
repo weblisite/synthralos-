@@ -10,31 +10,38 @@ import { supabase } from "./supabase"
 /**
  * Get the base API URL from environment variable
  * Falls back to localhost for development
- * 
+ *
  * Automatically converts HTTP to HTTPS in production (browser context)
  * to prevent Mixed Content errors when frontend is served over HTTPS
  */
 export function getApiUrl(): string {
   let apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000"
-  
+
   // In browser context (production), ensure HTTPS is used if frontend is HTTPS
   // This prevents Mixed Content errors
   if (typeof window !== "undefined") {
-    const isHttps = window.location.protocol === "https:"
-    const isHttp = apiUrl.startsWith("http://")
-    const isNotLocalhost = !apiUrl.includes("localhost")
-    
-    // Convert HTTP to HTTPS for production deployments
-    if (isHttps && isHttp && isNotLocalhost) {
-      apiUrl = apiUrl.replace("http://", "https://")
-      console.warn(
-        "[API] Converted HTTP API URL to HTTPS to prevent Mixed Content errors:",
-        apiUrl,
-        "(original:", import.meta.env.VITE_API_URL + ")"
-      )
+    try {
+      const isHttps = window.location.protocol === "https:"
+      const isHttp = apiUrl.startsWith("http://")
+      const isNotLocalhost =
+        !apiUrl.includes("localhost") && !apiUrl.includes("127.0.0.1")
+
+      // Convert HTTP to HTTPS for production deployments
+      if (isHttps && isHttp && isNotLocalhost) {
+        apiUrl = apiUrl.replace("http://", "https://")
+        console.warn(
+          "[API] Converted HTTP API URL to HTTPS to prevent Mixed Content errors:",
+          apiUrl,
+          "(original:",
+          `${import.meta.env.VITE_API_URL})`,
+        )
+      }
+    } catch (e) {
+      // If window.location is not available yet, log but don't fail
+      console.warn("[API] Could not check window.location.protocol:", e)
     }
   }
-  
+
   // Remove trailing slash if present
   return apiUrl.replace(/\/$/, "")
 }
@@ -69,7 +76,25 @@ export async function apiRequest<T = unknown>(
     throw new Error("You must be logged in to make API requests")
   }
 
-  const url = getApiPath(path)
+  let url = getApiPath(path)
+
+  // Double-check HTTPS conversion at request time (safety net)
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    if (
+      url.startsWith("http://") &&
+      !url.includes("localhost") &&
+      !url.includes("127.0.0.1")
+    ) {
+      url = url.replace("http://", "https://")
+      console.warn(
+        "[apiRequest] Converted HTTP URL to HTTPS at request time:",
+        url,
+        "(original path:",
+        `${path})`,
+      )
+    }
+  }
+
   const headers = new Headers(options.headers)
   headers.set("Authorization", `Bearer ${session.access_token}`)
 

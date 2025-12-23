@@ -13,7 +13,7 @@ from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.core.db import engine
-from app.models import WorkflowExecution
+from app.models import Workflow, WorkflowExecution
 from app.workflows.engine import WorkflowEngine
 from app.workflows.scheduler import WorkflowScheduler
 from app.workflows.signals import SignalHandler
@@ -83,16 +83,19 @@ class WorkflowWorker:
     def _process_cycle(self) -> None:
         """Process one cycle of work."""
         with Session(engine) as session:
-            # 1. Process scheduled executions
+            # 1. Check for timeouts
+            self._check_timeouts(session)
+
+            # 2. Process scheduled executions
             self._process_scheduled_executions(session)
 
-            # 2. Process retry executions
+            # 3. Process retry executions
             self._process_retry_executions(session)
 
-            # 3. Process signal-waiting executions
+            # 4. Process signal-waiting executions
             self._process_signal_executions(session)
 
-            # 4. Process running executions
+            # 5. Process running executions
             self._process_running_executions(session)
 
     def _process_scheduled_executions(self, session: Session) -> None:
@@ -171,16 +174,15 @@ class WorkflowWorker:
                 print(f"⚠️  Error processing signal execution {execution.id}: {e}")
 
     def _process_running_executions(self, session: Session) -> None:
-        """Process running executions."""
-        query = (
-            select(WorkflowExecution)
-            .where(
-                WorkflowExecution.status == "running",
-            )
-            .limit(settings.WORKFLOW_WORKER_CONCURRENCY)
-        )
+        """Process running executions (prioritized)."""
+        from app.workflows.prioritization import default_prioritization_manager
 
-        executions = session.exec(query).all()
+        # Get prioritized executions
+        executions = default_prioritization_manager.get_prioritized_executions(
+            session,
+            status="running",
+            limit=settings.WORKFLOW_WORKER_CONCURRENCY,
+        )
 
         for execution in executions:
             try:
@@ -206,8 +208,8 @@ class WorkflowWorker:
         """
         Execute one step of a workflow.
 
-        This is a simplified version that will be enhanced when LangGraph integration
-        is complete. For now, it handles basic node execution.
+        Uses LangGraph for complex workflows if available, otherwise falls back to
+        simplified sequential execution.
         """
         state = self.workflow_engine.get_execution_state(session, execution_id)
         workflow_state = self.workflow_engine.get_workflow_state(
@@ -215,6 +217,72 @@ class WorkflowWorker:
             state.workflow_id,
             state.workflow_version,
         )
+
+        # Check if workflow should use LangGraph
+        # Use LangGraph if:
+        # 1. LangGraph is available
+        # 2. Workflow has complex structure (multiple branches, loops, etc.)
+        # 3. Or explicitly enabled in workflow config
+        use_langgraph = False
+        try:
+            from app.workflows.langgraph_engine import LangGraphEngine
+
+            langgraph_engine = LangGraphEngine()
+            if langgraph_engine.langgraph_available:
+                # Check if workflow has complex structure
+                workflow = session.get(Workflow, state.workflow_id)
+                if workflow:
+                    graph_config = workflow.graph_config or {}
+                    # Use LangGraph if workflow has complex features
+                    has_conditions = any(
+                        node.get("node_type") in ("condition", "if", "switch")
+                        for node in workflow_state.nodes.values()
+                    )
+                    has_parallel = (
+                        len(workflow_state.edges) > len(workflow_state.nodes) - 1
+                    )
+                    use_langgraph = (
+                        has_conditions
+                        or has_parallel
+                        or graph_config.get("use_langgraph", False)
+                    )
+
+                    if use_langgraph:
+                        # Execute using LangGraph
+                        try:
+                            final_state = langgraph_engine.execute_workflow(
+                                session=session,
+                                execution_id=execution_id,
+                            )
+                            # LangGraph handles state updates internally
+                            return
+                        except Exception as e:
+                            # Fallback to simple execution if LangGraph fails
+                            print(
+                                f"⚠️  LangGraph execution failed, falling back to simple execution: {e}"
+                            )
+                            use_langgraph = False
+        except ImportError:
+            # LangGraph not available, use simple execution
+            pass
+        except Exception as e:
+            print(f"⚠️  Error checking LangGraph availability: {e}")
+
+        # Use simplified sequential execution
+        self._execute_workflow_step_simple(session, execution_id, state, workflow_state)
+
+    def _execute_workflow_step_simple(
+        self,
+        session: Session,
+        execution_id: uuid.UUID,
+        state: Any,
+        workflow_state: Any,
+    ) -> None:
+        """
+        Execute one step using simplified sequential execution.
+
+        This is the original implementation for basic workflows.
+        """
 
         # Determine next node to execute
         current_node_id = state.current_node_id
@@ -258,13 +326,153 @@ class WorkflowWorker:
         if result.status == "success":
             state.execution_data[f"{current_node_id}_output"] = result.output
 
-        # Determine next node
+        # Determine next node(s)
         if result.status == "success":
-            next_nodes = workflow_state.get_next_nodes(current_node_id)
+            # Check if node output indicates a branch (for condition nodes)
+            branch = None
+            if isinstance(result.output, dict):
+                branch = result.output.get(
+                    "branch"
+                )  # "true" or "false" from condition node
 
-            if next_nodes:
-                # Continue to next node
-                next_node_id = next_nodes[0]  # Simple: take first next node
+            # Get next nodes (filtered by branch if condition node)
+            next_nodes = workflow_state.get_next_nodes(current_node_id, branch=branch)
+
+            # Check if we should execute nodes in parallel
+            # If multiple next nodes and no explicit sequential flag, execute in parallel
+            execute_parallel = (
+                len(next_nodes) > 1
+                and not node_config.get("sequential", False)
+                and node_config.get(
+                    "parallel", True
+                )  # Default to parallel for multiple outputs
+            )
+
+            if execute_parallel:
+                # Execute all next nodes in parallel using ParallelExecutionManager
+                from app.workflows.parallel import default_parallel_manager
+
+                # Get parallel execution configuration
+                parallel_group_id = f"{current_node_id}_parallel"
+                wait_mode = node_config.get(
+                    "parallel_wait_mode", "all"
+                )  # "all", "any", "n_of_m"
+                wait_n = node_config.get("parallel_wait_n")
+
+                # Prepare node configs for parallel execution
+                node_configs = {}
+                for next_node_id in next_nodes:
+                    node_configs[next_node_id] = (
+                        workflow_state.get_node_config(next_node_id) or {}
+                    )
+
+                # Track parallel execution
+                state.parallel_nodes[parallel_group_id] = next_nodes
+                state.parallel_wait_mode[parallel_group_id] = wait_mode
+                if wait_n:
+                    state.parallel_wait_n[parallel_group_id] = wait_n
+
+                # Execute nodes in parallel
+                if wait_mode == "all":
+                    aggregated = default_parallel_manager.wait_for_all(
+                        session,
+                        execution_id,
+                        next_nodes,
+                        node_configs,
+                        state.execution_data,
+                    )
+                elif wait_mode == "any":
+                    aggregated = default_parallel_manager.wait_for_any(
+                        session,
+                        execution_id,
+                        next_nodes,
+                        node_configs,
+                        state.execution_data,
+                    )
+                elif wait_mode == "n_of_m" and wait_n:
+                    aggregated = default_parallel_manager.wait_for_n_of_m(
+                        session,
+                        execution_id,
+                        next_nodes,
+                        node_configs,
+                        state.execution_data,
+                        wait_n,
+                    )
+                else:
+                    # Default to "all"
+                    aggregated = default_parallel_manager.wait_for_all(
+                        session,
+                        execution_id,
+                        next_nodes,
+                        node_configs,
+                        state.execution_data,
+                    )
+
+                # Store parallel results
+                # Note: Results are already stored by execute_node, but we aggregate them here
+                state.parallel_results[parallel_group_id] = {
+                    node_id: state.node_results.get(node_id)
+                    for node_id in next_nodes
+                    if node_id in state.node_results
+                }
+
+                # Check if all parallel nodes completed successfully
+                all_success = (
+                    aggregated.get("all_completed", False)
+                    if wait_mode == "all"
+                    else True
+                )
+
+                if not all_success and wait_mode == "all":
+                    # Some parallel nodes failed
+                    failed_count = aggregated.get("failed_count", 0)
+                    self.workflow_engine.fail_execution(
+                        session,
+                        execution_id,
+                        f"Parallel execution failed: {failed_count} of {len(next_nodes)} nodes failed",
+                        schedule_retry=True,
+                    )
+                    return
+
+                # Aggregate results into execution_data
+                aggregation_type = node_config.get("parallel_aggregation", "merge")
+                aggregated_output = default_parallel_manager.aggregate_results(
+                    state.parallel_results[parallel_group_id],
+                    aggregation_type,
+                )
+                state.execution_data[f"{parallel_group_id}_result"] = aggregated_output
+
+                # Get next nodes after parallel execution
+                # Find nodes that come after ALL parallel nodes (fan-in)
+                fan_in_nodes = []
+                for parallel_node_id in next_nodes:
+                    fan_in_nodes.extend(workflow_state.get_next_nodes(parallel_node_id))
+
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_fan_in_nodes = []
+                for node_id in fan_in_nodes:
+                    if node_id not in seen:
+                        seen.add(node_id)
+                        unique_fan_in_nodes.append(node_id)
+
+                if unique_fan_in_nodes:
+                    # Continue to fan-in nodes
+                    state.set_current_node(unique_fan_in_nodes[0])
+                    if len(unique_fan_in_nodes) > 1:
+                        # Multiple fan-in nodes, will be handled in next iteration
+                        state.execution_data["_fan_in_queue"] = unique_fan_in_nodes[1:]
+                else:
+                    # No fan-in nodes, workflow complete
+                    self.workflow_engine.complete_execution(
+                        session,
+                        execution_id,
+                        final_data=state.execution_data,
+                    )
+                    return
+            elif next_nodes:
+                # Sequential execution: take first next node
+                next_node_id = next_nodes[0]
                 state.set_current_node(next_node_id)
             else:
                 # No more nodes, workflow complete
@@ -286,6 +494,16 @@ class WorkflowWorker:
 
         # Save updated state
         self.workflow_engine.save_execution_state(session, execution_id, state)
+
+        # Check if we need to process parallel nodes
+        if state.execution_data.get(f"{current_node_id}_parallel_executing"):
+            parallel_queue = state.execution_data.get("_parallel_queue", [])
+            if parallel_queue:
+                # Process next parallel node
+                next_parallel_node = parallel_queue[0]
+                state.execution_data["_parallel_queue"] = parallel_queue[1:]
+                state.set_current_node(next_parallel_node)
+                self.workflow_engine.save_execution_state(session, execution_id, state)
 
 
 def run_worker() -> None:

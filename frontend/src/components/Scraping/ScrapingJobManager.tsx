@@ -296,7 +296,11 @@ export function ScrapingJobManager() {
 
   const createJobMutation = useMutation({
     mutationFn: () =>
-      createScrapeJob(url, selectedEngine === "auto" ? undefined : selectedEngine, autoSelectProxy),
+      createScrapeJob(
+        url,
+        selectedEngine === "auto" ? undefined : selectedEngine,
+        autoSelectProxy,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scrapeJobs"] })
       showSuccessToast("Job started successfully")
@@ -319,7 +323,10 @@ export function ScrapingJobManager() {
       if (urls.length === 0) {
         throw new Error("Please provide at least one URL")
       }
-      return createCrawlJobs(urls, crawlEngine === "auto" ? undefined : crawlEngine)
+      return createCrawlJobs(
+        urls,
+        crawlEngine === "auto" ? undefined : crawlEngine,
+      )
     },
     onSuccess: (jobs) => {
       queryClient.invalidateQueries({ queryKey: ["scrapeJobs"] })

@@ -457,7 +457,12 @@ export function NodeConfigPanel({
               <Label htmlFor="code-runtime">Runtime (Optional)</Label>
               <Select
                 value={config.runtime || "auto"}
-                onValueChange={(value) => handleConfigUpdate("runtime", value === "auto" ? undefined : value)}
+                onValueChange={(value) =>
+                  handleConfigUpdate(
+                    "runtime",
+                    value === "auto" ? undefined : value,
+                  )
+                }
               >
                 <SelectTrigger id="code-runtime">
                   <SelectValue placeholder="Auto-select" />

@@ -6,9 +6,10 @@ Endpoints for managing workflows and executions.
 
 import logging
 import uuid
+from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, WebSocket
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlmodel import select
 
@@ -538,6 +539,591 @@ def resume_execution(
         return {"status": "running", "execution_id": execution.execution_id}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Resume failed: {str(e)}")
+
+
+@router.websocket("/executions/{execution_id}/ws")
+async def execution_websocket(
+    websocket: WebSocket,
+    execution_id: uuid.UUID,
+    token: str | None = Query(None),
+) -> None:
+    """
+    WebSocket endpoint for real-time execution updates.
+    """
+    from app.workflows.websocket import websocket_endpoint
+
+    # TODO: Validate token and get user_id
+    await websocket_endpoint(websocket, str(execution_id), None)
+
+
+@router.post("/webhooks/{webhook_path:path}")
+async def webhook_trigger(
+    webhook_path: str,
+    request: Request,
+    session: SessionDep,
+) -> Any:
+    """
+    Webhook trigger endpoint for workflows.
+
+    Accepts webhook requests and triggers associated workflows.
+    """
+    from app.workflows.webhook_triggers import (
+        WebhookTriggerError,
+        default_webhook_trigger_manager,
+    )
+
+    try:
+        # Get payload
+        payload = await request.json()
+
+        # Get headers
+        headers = dict(request.headers)
+
+        # Get signature from header (common patterns)
+        signature = (
+            headers.get("x-signature")
+            or headers.get("x-hub-signature-256")
+            or headers.get("x-webhook-signature")
+            or headers.get("signature")
+        )
+
+        # Trigger workflow
+        execution_id = default_webhook_trigger_manager.trigger_workflow_from_webhook(
+            session,
+            f"/{webhook_path}",
+            payload,
+            headers,
+            signature,
+        )
+
+        return {
+            "status": "triggered",
+            "execution_id": str(execution_id),
+            "webhook_path": webhook_path,
+        }
+
+    except WebhookTriggerError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Webhook trigger error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/webhooks/subscriptions", status_code=201)
+def create_webhook_subscription(
+    workflow_id: uuid.UUID = Body(...),
+    webhook_path: str = Body(...),
+    secret: str | None = Body(None),
+    headers: dict[str, str] | None = Body(None),
+    filters: dict[str, Any] | None = Body(None),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """
+    Create a webhook subscription for a workflow.
+    """
+    from app.workflows.webhook_triggers import (
+        WebhookTriggerError,
+        default_webhook_trigger_manager,
+    )
+
+    # Verify workflow ownership
+    workflow = session.get(Workflow, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    if workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    try:
+        subscription = default_webhook_trigger_manager.create_webhook_subscription(
+            session,
+            workflow_id,
+            webhook_path,
+            secret,
+            headers,
+            filters,
+        )
+
+        return {
+            "id": str(subscription.id),
+            "workflow_id": str(subscription.workflow_id),
+            "webhook_path": subscription.webhook_path,
+            "is_active": subscription.is_active,
+            "created_at": subscription.created_at.isoformat(),
+        }
+
+    except WebhookTriggerError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creating webhook subscription: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ============================================================================
+# Debugging Endpoints
+# ============================================================================
+
+
+@router.post("/executions/{execution_id}/debug/enable", status_code=200)
+def enable_debug_mode(
+    execution_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """Enable debug mode for an execution."""
+    from app.workflows.debugging import DebuggerError, default_debugger
+
+    execution = session.get(WorkflowExecution, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    workflow = session.get(Workflow, execution.workflow_id)
+    if not workflow or workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    try:
+        default_debugger.enable_debug_mode(session, execution_id)
+        return {"status": "debug_enabled", "execution_id": str(execution_id)}
+    except DebuggerError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/executions/{execution_id}/debug/disable", status_code=200)
+def disable_debug_mode(
+    execution_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """Disable debug mode for an execution."""
+    from app.workflows.debugging import DebuggerError, default_debugger
+
+    execution = session.get(WorkflowExecution, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    workflow = session.get(Workflow, execution.workflow_id)
+    if not workflow or workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    try:
+        default_debugger.disable_debug_mode(session, execution_id)
+        return {"status": "debug_disabled", "execution_id": str(execution_id)}
+    except DebuggerError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/executions/{execution_id}/debug/step", status_code=200)
+def debug_step(
+    execution_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """Execute next step in debug mode."""
+    from app.workflows.debugging import DebuggerError, default_debugger
+
+    execution = session.get(WorkflowExecution, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    workflow = session.get(Workflow, execution.workflow_id)
+    if not workflow or workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    try:
+        result = default_debugger.step_over(session, execution_id)
+        return result
+    except DebuggerError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/executions/{execution_id}/debug/breakpoint", status_code=200)
+def set_breakpoint(
+    execution_id: uuid.UUID,
+    node_id: str = Body(...),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Set breakpoint at a node."""
+    from app.workflows.debugging import default_debugger
+
+    execution = session.get(WorkflowExecution, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    workflow = session.get(Workflow, execution.workflow_id)
+    if not workflow or workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    default_debugger.set_breakpoint(execution_id, node_id)
+    return {
+        "status": "breakpoint_set",
+        "execution_id": str(execution_id),
+        "node_id": node_id,
+    }
+
+
+@router.delete("/executions/{execution_id}/debug/breakpoint/{node_id}", status_code=200)
+def remove_breakpoint(
+    execution_id: uuid.UUID,
+    node_id: str,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """Remove breakpoint at a node."""
+    from app.workflows.debugging import default_debugger
+
+    execution = session.get(WorkflowExecution, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    workflow = session.get(Workflow, execution.workflow_id)
+    if not workflow or workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    default_debugger.remove_breakpoint(execution_id, node_id)
+    return {
+        "status": "breakpoint_removed",
+        "execution_id": str(execution_id),
+        "node_id": node_id,
+    }
+
+
+@router.get("/executions/{execution_id}/debug/variables", status_code=200)
+def get_debug_variables(
+    execution_id: uuid.UUID,
+    scope: str | None = Query(None),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Inspect variables in execution."""
+    from app.workflows.debugging import default_debugger
+
+    execution = session.get(WorkflowExecution, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    workflow = session.get(Workflow, execution.workflow_id)
+    if not workflow or workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    variables = default_debugger.inspect_variables(session, execution_id, scope)
+    return {"execution_id": str(execution_id), "scope": scope, "variables": variables}
+
+
+@router.get("/executions/{execution_id}/debug/state", status_code=200)
+def get_debug_state(
+    execution_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """Inspect execution state."""
+    from app.workflows.debugging import default_debugger
+
+    execution = session.get(WorkflowExecution, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    workflow = session.get(Workflow, execution.workflow_id)
+    if not workflow or workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    state = default_debugger.inspect_execution_state(session, execution_id)
+    return state
+
+
+# ============================================================================
+# Testing Endpoints
+# ============================================================================
+
+
+@router.post("/{workflow_id}/test", status_code=201)
+def test_workflow(
+    workflow_id: uuid.UUID,
+    test_data: dict[str, Any] | None = Body(None),
+    mock_nodes: dict[str, dict[str, Any]] | None = Body(None),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Run workflow in test mode."""
+    from app.workflows.testing import TestExecutionError, default_test_runner
+
+    workflow = session.get(Workflow, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    if workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    try:
+        result = default_test_runner.run_test(
+            session, workflow_id, test_data, mock_nodes
+        )
+        return result
+    except TestExecutionError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/executions/{execution_id}/test/validate", status_code=200)
+def validate_test_result(
+    execution_id: uuid.UUID,
+    expected_outputs: dict[str, Any] | None = Body(None),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Validate test execution result."""
+    from app.workflows.testing import default_test_runner
+
+    execution = session.get(WorkflowExecution, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    workflow = session.get(Workflow, execution.workflow_id)
+    if not workflow or workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    result = default_test_runner.validate_test_result(
+        session, execution_id, expected_outputs
+    )
+    return result
+
+
+# ============================================================================
+# Analytics Endpoints
+# ============================================================================
+
+
+@router.get("/analytics/stats", status_code=200)
+def get_execution_stats(
+    workflow_id: uuid.UUID | None = Query(None),
+    start_date: datetime | None = Query(None),
+    end_date: datetime | None = Query(None),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Get execution statistics."""
+    from app.workflows.analytics import default_analytics
+
+    # Filter by user's workflows if workflow_id not specified
+    if workflow_id:
+        workflow = session.get(Workflow, workflow_id)
+        if not workflow or workflow.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+    else:
+        # Get all user's workflows
+        from sqlmodel import select
+
+        user_workflows = session.exec(
+            select(Workflow).where(Workflow.owner_id == current_user.id)
+        ).all()
+        if not user_workflows:
+            return {
+                "total_executions": 0,
+                "completed": 0,
+                "failed": 0,
+                "running": 0,
+                "success_rate": 0,
+                "failure_rate": 0,
+                "avg_duration_seconds": 0,
+            }
+
+    stats = default_analytics.get_execution_stats(
+        session, workflow_id, start_date, end_date
+    )
+    return stats
+
+
+@router.get("/analytics/performance", status_code=200)
+def get_performance_metrics(
+    workflow_id: uuid.UUID | None = Query(None),
+    days: int = Query(7, ge=1, le=365),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Get performance metrics."""
+    from app.workflows.analytics import default_analytics
+
+    if workflow_id:
+        workflow = session.get(Workflow, workflow_id)
+        if not workflow or workflow.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    metrics = default_analytics.get_performance_metrics(session, workflow_id, days)
+    return metrics
+
+
+@router.get("/analytics/trends", status_code=200)
+def get_usage_trends(
+    workflow_id: uuid.UUID | None = Query(None),
+    days: int = Query(30, ge=1, le=365),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Get usage trends over time."""
+    from app.workflows.analytics import default_analytics
+
+    if workflow_id:
+        workflow = session.get(Workflow, workflow_id)
+        if not workflow or workflow.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    trends = default_analytics.get_usage_trends(session, workflow_id, days)
+    return {"trends": trends}
+
+
+@router.get("/analytics/cost", status_code=200)
+def get_cost_estimate(
+    workflow_id: uuid.UUID | None = Query(None),
+    days: int = Query(30, ge=1, le=365),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Get cost estimate."""
+    from app.workflows.analytics import default_analytics
+
+    if workflow_id:
+        workflow = session.get(Workflow, workflow_id)
+        if not workflow or workflow.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    cost = default_analytics.get_cost_estimate(session, workflow_id, days)
+    return cost
+
+
+# ============================================================================
+# Dependency Endpoints
+# ============================================================================
+
+
+@router.post("/{workflow_id}/dependencies", status_code=200)
+def add_workflow_dependency(
+    workflow_id: uuid.UUID,
+    depends_on_workflow_id: uuid.UUID = Body(...),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Add a dependency to a workflow."""
+    from app.workflows.dependencies import DependencyError, default_dependency_manager
+
+    workflow = session.get(Workflow, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    if workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    try:
+        default_dependency_manager.add_dependency(
+            session, workflow_id, depends_on_workflow_id
+        )
+        return {
+            "status": "dependency_added",
+            "workflow_id": str(workflow_id),
+            "depends_on": str(depends_on_workflow_id),
+        }
+    except DependencyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/{workflow_id}/dependencies/{depends_on_workflow_id}", status_code=200)
+def remove_workflow_dependency(
+    workflow_id: uuid.UUID,
+    depends_on_workflow_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """Remove a dependency from a workflow."""
+    from app.workflows.dependencies import default_dependency_manager
+
+    workflow = session.get(Workflow, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    if workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    default_dependency_manager.remove_dependency(
+        session, workflow_id, depends_on_workflow_id
+    )
+    return {
+        "status": "dependency_removed",
+        "workflow_id": str(workflow_id),
+        "depends_on": str(depends_on_workflow_id),
+    }
+
+
+@router.get("/{workflow_id}/dependencies", status_code=200)
+def get_workflow_dependencies(
+    workflow_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """Get dependencies for a workflow."""
+    from app.workflows.dependencies import default_dependency_manager
+
+    workflow = session.get(Workflow, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    if workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    dependencies = default_dependency_manager.get_workflow_dependencies(
+        session, workflow_id
+    )
+    return {
+        "workflow_id": str(workflow_id),
+        "dependencies": [str(dep_id) for dep_id in dependencies],
+    }
+
+
+@router.post("/{workflow_id}/dependencies/validate", status_code=200)
+def validate_dependencies(
+    workflow_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """Validate dependency graph for a workflow."""
+    from app.workflows.dependencies import default_dependency_manager
+
+    workflow = session.get(Workflow, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    if workflow.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    is_valid, errors = default_dependency_manager.validate_dependency_graph(
+        session, workflow_id
+    )
+    return {"is_valid": is_valid, "errors": errors}
+
+
+# ============================================================================
+# Monitoring Endpoints
+# ============================================================================
+
+
+@router.get("/monitoring/metrics", status_code=200)
+def get_monitoring_metrics(
+    workflow_id: uuid.UUID | None = Query(None),
+    start_date: datetime | None = Query(None),
+    end_date: datetime | None = Query(None),
+    session: SessionDep = Depends(),
+    current_user: CurrentUser = Depends(),
+) -> Any:
+    """Get monitoring metrics."""
+    from app.workflows.monitoring import default_workflow_monitor
+
+    if workflow_id:
+        workflow = session.get(Workflow, workflow_id)
+        if not workflow or workflow.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    metrics = default_workflow_monitor.get_execution_metrics(
+        session, workflow_id, start_date, end_date
+    )
+    return metrics
 
 
 @router.post("/executions/{execution_id}/terminate", status_code=200)

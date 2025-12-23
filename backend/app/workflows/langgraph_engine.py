@@ -84,17 +84,42 @@ class LangGraphEngine:
         # Create LangGraph StateGraph
         graph = self.StateGraph(dict)  # State is a simple dict for now
 
+        # Get execution_id and session for node function closure
+        exec_id = (
+            execution_id or workflow_id
+        )  # Use provided execution_id or workflow_id as fallback
+        session_ref = session
+
         # Add nodes
         for node_id, node_config in workflow_state.nodes.items():
             node_type = node_config.get("node_type", "unknown")
 
-            # Create node function
+            # Create node function with closure over exec_id and session_ref
             def make_node_func(n_id: str, n_config: dict[str, Any]):
                 def node_func(state: dict[str, Any]) -> dict[str, Any]:
+                    # Get execution UUID from state if available
+                    exec_uuid_str = state.get("_execution_uuid")
+                    exec_uuid = None
+                    if exec_uuid_str:
+                        try:
+                            exec_uuid = uuid.UUID(exec_uuid_str)
+                        except (ValueError, TypeError):
+                            pass
+
+                    # Use execution_id from closure or state
+                    final_exec_id = exec_uuid or exec_id
+
                     # Get activity handler
                     handler = get_activity_handler(n_config.get("node_type", "unknown"))
                     if handler:
-                        result = handler.execute(n_id, n_config, state.get("data", {}))
+                        # Pass execution_id and session to handler
+                        result = handler.execute(
+                            node_id=n_id,
+                            node_config=n_config,
+                            input_data=state.get("data", {}),
+                            execution_id=final_exec_id,
+                            session=session_ref,
+                        )
                         # Update state with node output
                         if result.status == "success":
                             state["data"] = state.get("data", {})
@@ -225,11 +250,12 @@ class LangGraphEngine:
         engine = WorkflowEngine()
         execution_state = engine.get_execution_state(session, execution_id)
 
-        # Build graph
+        # Build graph with execution_id
         graph = self.build_graph(
             session,
             execution_state.workflow_id,
             execution_state.workflow_version,
+            execution_id=execution_id,
         )
 
         # Prepare initial state
