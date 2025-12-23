@@ -8,6 +8,7 @@ This worker runs continuously, polling for work and executing workflow steps.
 import time
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlmodel import Session, select
 
