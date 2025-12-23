@@ -18,6 +18,7 @@ from app.models import Workflow, WorkflowExecution
 from app.workflows.engine import WorkflowEngine
 from app.workflows.scheduler import WorkflowScheduler
 from app.workflows.signals import SignalHandler
+from app.workflows.timeout import TimeoutManager
 
 
 class WorkerError(Exception):
@@ -56,6 +57,7 @@ class WorkflowWorker:
         self.workflow_engine = workflow_engine or WorkflowEngine()
         self.scheduler = scheduler or WorkflowScheduler(self.workflow_engine)
         self.signal_handler = signal_handler or SignalHandler()
+        self.timeout_manager = TimeoutManager(self.workflow_engine)
         self.poll_interval = poll_interval
         self.running = False
 
@@ -98,6 +100,50 @@ class WorkflowWorker:
 
             # 5. Process running executions
             self._process_running_executions(session)
+
+    def _check_timeouts(self, session: Session) -> None:
+        """Check for timed-out executions and handle them."""
+        try:
+            # Get all running executions
+            query = select(WorkflowExecution).where(
+                WorkflowExecution.status == "running"
+            )
+            executions = session.exec(query).all()
+
+            for execution in executions:
+                try:
+                    # Check workflow timeout
+                    if self.timeout_manager.check_workflow_timeout(
+                        session, execution.id
+                    ):
+                        self.timeout_manager.handle_workflow_timeout(
+                            session, execution.id
+                        )
+                        print(f"⏱️  Workflow execution {execution.id} timed out")
+
+                    # Check node timeout if there's a current node
+                    state = self.workflow_engine.get_execution_state(
+                        session, execution.id
+                    )
+                    if state.current_node_id:
+                        if self.timeout_manager.check_node_timeout(
+                            session, execution.id, state.current_node_id
+                        ):
+                            self.timeout_manager.handle_node_timeout(
+                                session,
+                                execution.id,
+                                state.current_node_id,
+                                retry=False,
+                            )
+                            print(
+                                f"⏱️  Node {state.current_node_id} in execution {execution.id} timed out"
+                            )
+                except Exception as e:
+                    print(
+                        f"⚠️  Error checking timeout for execution {execution.id}: {e}"
+                    )
+        except Exception as e:
+            print(f"⚠️  Error checking timeouts: {e}")
 
     def _process_scheduled_executions(self, session: Session) -> None:
         """Process due scheduled executions."""
