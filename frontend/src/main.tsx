@@ -21,36 +21,97 @@ import { routeTree } from "./routeTree.gen"
 if (typeof window !== "undefined") {
   axios.interceptors.request.use(
     (config) => {
-      if (config.url) {
-        const url = config.url
-        const isProductionDomain =
-          url.includes(".onrender.com") ||
-          url.includes(".vercel.app") ||
-          url.includes(".netlify.app") ||
-          url.includes(".herokuapp.com") ||
-          url.includes(".fly.dev")
+      // Check both baseURL and url - axios can use either
+      let fullUrl = config.url || ""
+      if (config.baseURL) {
+        // If baseURL is set, construct the full URL
+        const baseUrl = config.baseURL.endsWith("/")
+          ? config.baseURL.slice(0, -1)
+          : config.baseURL
+        const path = fullUrl.startsWith("/") ? fullUrl : `/${fullUrl}`
+        fullUrl = `${baseUrl}${path}`
+      } else if (fullUrl && !fullUrl.startsWith("http")) {
+        // Relative URL - check if axios.defaults.baseURL is set
+        if (axios.defaults.baseURL) {
+          const baseUrl = axios.defaults.baseURL.endsWith("/")
+            ? axios.defaults.baseURL.slice(0, -1)
+            : axios.defaults.baseURL
+          const path = fullUrl.startsWith("/") ? fullUrl : `/${fullUrl}`
+          fullUrl = `${baseUrl}${path}`
+        }
+      }
 
-        const isLocalhost =
-          url.includes("localhost") || url.includes("127.0.0.1")
+      // Also check baseURL directly
+      const baseURL = config.baseURL || axios.defaults.baseURL || ""
 
-        // CRITICAL: Convert HTTP to HTTPS for production domains
+      const isProductionDomain =
+        fullUrl.includes(".onrender.com") ||
+        fullUrl.includes(".vercel.app") ||
+        fullUrl.includes(".netlify.app") ||
+        fullUrl.includes(".herokuapp.com") ||
+        fullUrl.includes(".fly.dev") ||
+        baseURL.includes(".onrender.com") ||
+        baseURL.includes(".vercel.app") ||
+        baseURL.includes(".netlify.app") ||
+        baseURL.includes(".herokuapp.com") ||
+        baseURL.includes(".fly.dev")
+
+      const isLocalhost =
+        fullUrl.includes("localhost") ||
+        fullUrl.includes("127.0.0.1") ||
+        baseURL.includes("localhost") ||
+        baseURL.includes("127.0.0.1")
+
+      // CRITICAL: Convert HTTP to HTTPS for production domains
+      // Check and fix baseURL
+      if (config.baseURL && config.baseURL.startsWith("http://")) {
         if (
-          (isProductionDomain ||
-            (window.location.protocol === "https:" && !isLocalhost)) &&
-          url.startsWith("http://")
+          isProductionDomain ||
+          (window.location.protocol === "https:" && !isLocalhost)
         ) {
-          const httpsUrl = url.replace("http://", "https://")
+          config.baseURL = config.baseURL.replace("http://", "https://")
           console.error(
-            "[Axios Interceptor] CRITICAL: Converting HTTP to HTTPS:",
-            httpsUrl,
-            "(original:",
-            url + ")",
+            "[Axios Interceptor] CRITICAL: Converting baseURL HTTP to HTTPS:",
+            config.baseURL,
             "| Stack:",
             new Error().stack?.split("\n").slice(0, 5).join("\n"),
           )
-          config.url = httpsUrl
         }
       }
+
+      // Check and fix url if it's a full URL
+      if (config.url && config.url.startsWith("http://")) {
+        if (
+          isProductionDomain ||
+          (window.location.protocol === "https:" && !isLocalhost)
+        ) {
+          config.url = config.url.replace("http://", "https://")
+          console.error(
+            "[Axios Interceptor] CRITICAL: Converting url HTTP to HTTPS:",
+            config.url,
+            "| Stack:",
+            new Error().stack?.split("\n").slice(0, 5).join("\n"),
+          )
+        }
+      }
+
+      // Also fix axios.defaults.baseURL if it's HTTP
+      if (axios.defaults.baseURL && axios.defaults.baseURL.startsWith("http://")) {
+        if (
+          isProductionDomain ||
+          (window.location.protocol === "https:" && !isLocalhost)
+        ) {
+          axios.defaults.baseURL = axios.defaults.baseURL.replace(
+            "http://",
+            "https://",
+          )
+          console.error(
+            "[Axios Interceptor] CRITICAL: Converting axios.defaults.baseURL HTTP to HTTPS:",
+            axios.defaults.baseURL,
+          )
+        }
+      }
+
       return config
     },
     (error) => {
