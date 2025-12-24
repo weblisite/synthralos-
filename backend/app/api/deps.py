@@ -42,6 +42,7 @@ TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(security_scheme)]
 def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
     """
     Verify Supabase JWT token and get the current user from the database.
+    Uses Supabase API first for reliable token verification.
     """
     token = credentials.credentials
 
@@ -53,118 +54,103 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
         )
 
     try:
-        # First, try to get user info from Supabase using the token
-        # This is the most reliable way to get user details
-        # Let Supabase handle token validation - it can handle various token formats
+        # Use Supabase API first - this is the most reliable way to verify tokens
+        # Supabase handles all token validation and user retrieval
         supabase = get_supabase_client()
         user_email = None
         full_name = None
+        supabase_user_id = None
 
-        # Decode JWT token directly (Supabase tokens are JWTs)
-        # Supabase access tokens contain user info in the JWT payload
         try:
-            # Basic JWT format check before decoding
-            token_parts = token.split(".")
-            if len(token_parts) != 3:
+            # Use Supabase's get_user() API - this validates the token and returns user info
+            user_response = supabase.auth.get_user(token)
+            
+            if not user_response.user:
+                logger.error("Supabase get_user() returned no user")
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Invalid token format: Not enough segments (expected 3, got {len(token_parts)}). Please ensure you're using a valid Supabase access token.",
+                    detail="Invalid authentication token - user not found",
                 )
 
-            # Decode without verification (we'll verify by checking the user exists in DB)
-            # Supabase tokens are signed, but we don't need to verify here since we're checking
-            # against our database anyway
-            payload = jwt.decode(token, options={"verify_signature": False})
-
-            # Check token expiration
-            import time
-
-            exp = payload.get("exp")
-            if exp and exp < time.time():
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Token has expired. Please refresh your session.",
-                )
-
-            # Extract user info from the JWT payload
-            # Supabase JWT structure: { "sub": "user-id", "email": "user@synthralos.ai", "user_metadata": {...}, ... }
-            user_email = payload.get("email")
-            supabase_user_id = payload.get("sub")  # Subject (user ID)
-
-            # Try to get email from user_metadata if not directly in payload
-            if not user_email:
-                user_metadata = payload.get("user_metadata", {})
-                if isinstance(user_metadata, dict):
-                    user_email = user_metadata.get("email")
-                    full_name = user_metadata.get("full_name")
-
-            # Try app_metadata as last resort
-            if not user_email:
-                app_metadata = payload.get("app_metadata", {})
-                if isinstance(app_metadata, dict):
-                    user_email = app_metadata.get("email")
-
-            # If still no email, try using the "sub" (user ID) to look up the user
-            # This is a fallback for tokens that don't include email
-            if not user_email and supabase_user_id:
-                # Try to find user by Supabase user ID stored in a custom field
-                # Note: This requires storing supabase_user_id in the User model
-                # For now, we'll just log and fail
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(
-                    f"Email not found in token, sub: {supabase_user_id}, payload keys: {list(payload.keys())}"
-                )
+            # Extract user info from Supabase response
+            user_email = user_response.user.email
+            supabase_user_id = user_response.user.id
+            
+            # Extract full_name from user_metadata if available
+            if user_response.user.user_metadata:
+                full_name = user_response.user.user_metadata.get("full_name")
+            
+            logger.info(
+                f"Token verified via Supabase API: user_id={supabase_user_id}, email={user_email}"
+            )
 
         except HTTPException:
             # Re-raise HTTP exceptions
             raise
-        except jwt.DecodeError as e:
-            # More detailed error message
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.error(
-                f"JWT decode error: {str(e)}, token length: {len(token)}, token preview: {token[:50]}..."
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Invalid token format: {str(e)}. Please ensure you're using a valid Supabase access token.",
-            )
         except Exception as e:
-            # Log unexpected errors
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.error(f"Unexpected error decoding token: {str(e)}", exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Could not decode token: {str(e)}",
+            # Log the error and try fallback JWT decoding
+            logger.warning(
+                f"Supabase get_user() failed: {str(e)}, attempting JWT decode fallback"
             )
-
-        if not user_email:
-            # Log the payload for debugging
-            logger.error(
-                f"Email not found in token payload. Payload keys: {list(payload.keys())}, sub: {payload.get('sub')}"
-            )
-            # Try to use Supabase API to get user info as fallback
+            
+            # Fallback: Try to decode JWT directly if Supabase API fails
             try:
-                supabase = get_supabase_client()
+                # Basic JWT format check
+                token_parts = token.split(".")
+                if len(token_parts) != 3:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Invalid token format: Not enough segments (expected 3, got {len(token_parts)})",
+                    )
+
+                # Decode without verification
+                payload = jwt.decode(token, options={"verify_signature": False})
+
+                # Check token expiration
+                import time
+                exp = payload.get("exp")
+                if exp and exp < time.time():
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Token has expired. Please refresh your session.",
+                    )
+
+                # Extract user info from JWT payload
+                user_email = payload.get("email")
                 supabase_user_id = payload.get("sub")
-                if supabase_user_id:
-                    # Try to get user from Supabase using admin API
-                    # Note: This requires admin privileges or the user's access token
-                    user_response = supabase.auth.get_user(token)
-                    if user_response.user and user_response.user.email:
-                        user_email = user_response.user.email
-                        logger.info(f"Retrieved email from Supabase API: {user_email}")
-            except Exception as supabase_error:
-                logger.warning(f"Failed to get email from Supabase API: {str(supabase_error)}")
+
+                # Try user_metadata
+                if not user_email:
+                    user_metadata = payload.get("user_metadata", {})
+                    if isinstance(user_metadata, dict):
+                        user_email = user_metadata.get("email")
+                        full_name = user_metadata.get("full_name")
+
+                # Try app_metadata
+                if not user_email:
+                    app_metadata = payload.get("app_metadata", {})
+                    if isinstance(app_metadata, dict):
+                        user_email = app_metadata.get("email")
+
+                if user_email:
+                    logger.info(
+                        f"Token decoded via JWT fallback: user_id={supabase_user_id}, email={user_email}"
+                    )
+
+            except HTTPException:
+                raise
+            except Exception as jwt_error:
+                logger.error(
+                    f"JWT decode fallback also failed: {str(jwt_error)}", exc_info=True
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Could not verify token: {str(e)}",
+                )
 
         if not user_email:
             logger.error(
-                f"Email not found in token payload. Payload keys: {list(payload.keys())}, sub: {payload.get('sub')}"
+                f"Email not found after all attempts. user_id={supabase_user_id}"
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
