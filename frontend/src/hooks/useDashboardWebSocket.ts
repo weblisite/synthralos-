@@ -5,7 +5,7 @@
  * Automatically falls back to polling if WebSocket connection fails.
  */
 
-import { useQueryClient } from "@tanstack/react-query"
+import { QueryClient, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { getApiUrl } from "@/lib/api"
 import { supabase } from "@/lib/supabase"
@@ -24,8 +24,8 @@ export function useDashboardWebSocket() {
   const [usePollingFallback, setUsePollingFallback] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   // TypeScript incorrectly requires an argument for useQueryClient despite it being optional
-  // Using undefined to satisfy the type checker
-  const queryClient = useQueryClient(undefined!)
+  // Pass undefined with proper type cast to satisfy TypeScript
+  const queryClient = useQueryClient(undefined as QueryClient | undefined)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
