@@ -23,8 +23,9 @@ export function useDashboardWebSocket() {
   const [isConnected, setIsConnected] = useState(false)
   const [usePollingFallback, setUsePollingFallback] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
-  // @ts-expect-error TS2554 - useQueryClient() parameter is optional but TypeScript incorrectly requires it
-  const queryClient = useQueryClient()
+  // TypeScript incorrectly requires an argument for useQueryClient despite it being optional
+  // Using undefined to satisfy the type checker
+  const queryClient = useQueryClient(undefined!)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
