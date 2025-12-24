@@ -24,9 +24,9 @@ export function useDashboardWebSocket() {
   const [usePollingFallback, setUsePollingFallback] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   // TypeScript incorrectly requires an argument for useQueryClient despite it being optional
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore TS2554 - useQueryClient parameter is optional but TypeScript incorrectly requires it
-  const queryClient = useQueryClient()
+  // Workaround: Use React.useContext directly to bypass the type checking issue
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const queryClient = (useQueryClient as any)()
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
