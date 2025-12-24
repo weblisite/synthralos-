@@ -23,6 +23,7 @@ export function useDashboardWebSocket() {
   const [isConnected, setIsConnected] = useState(false)
   const [usePollingFallback, setUsePollingFallback] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
+  // @ts-expect-error - useQueryClient() takes 0 args but TypeScript types may be incorrect
   const queryClient = useQueryClient()
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
   const reconnectAttemptsRef = useRef(0)

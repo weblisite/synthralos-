@@ -21,6 +21,7 @@ const searchSchema = z.object({
   token: z.string().min(1, "Invitation token is required"),
 })
 
+// @ts-expect-error - Route path is valid but TypeScript doesn't recognize it yet
 export const Route = createFileRoute("/teams/invitations/accept")({
   component: AcceptInvitation,
   validateSearch: searchSchema,
