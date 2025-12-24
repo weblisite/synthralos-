@@ -5,7 +5,7 @@
  * Automatically falls back to polling if WebSocket connection fails.
  */
 
-import { QueryClient, useQueryClient } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { getApiUrl } from "@/lib/api"
 import { supabase } from "@/lib/supabase"
