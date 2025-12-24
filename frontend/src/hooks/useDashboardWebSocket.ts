@@ -23,8 +23,8 @@ export function useDashboardWebSocket() {
   const [isConnected, setIsConnected] = useState(false)
   const [usePollingFallback, setUsePollingFallback] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const queryClient = useQueryClient(undefined as any)
+  // @ts-expect-error - useQueryClient() takes optional parameter but TypeScript types require it
+  const queryClient = useQueryClient()
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
