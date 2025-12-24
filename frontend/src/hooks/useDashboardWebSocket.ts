@@ -25,8 +25,11 @@ export function useDashboardWebSocket() {
   const wsRef = useRef<WebSocket | null>(null)
   // TypeScript incorrectly requires an argument for useQueryClient despite it being optional
   // Workaround: Use double type assertion to bypass type checking
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-ts-comment
+  // @ts-expect-error TS2554 - useQueryClient parameter is optional but TypeScript incorrectly requires it
   const queryClient = ((useQueryClient as unknown) as () => ReturnType<typeof useQueryClient>)()
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error TS2554 - TypeScript incorrectly reports error on this line
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
