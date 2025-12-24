@@ -91,11 +91,20 @@ export function useDashboardWebSocket() {
           setIsConnected(false)
         }
 
-        ws.onclose = () => {
+        ws.onclose = (event) => {
           setIsConnected(false)
           wsRef.current = null
 
-          // Reconnect logic
+          // Don't reconnect if closed due to authentication failure (code 1008)
+          if (event.code === 1008) {
+            console.warn(
+              "[WebSocket] Connection closed due to authentication failure, not reconnecting",
+            )
+            setUsePollingFallback(true)
+            return
+          }
+
+          // Reconnect logic for other close reasons
           if (reconnectAttemptsRef.current < maxReconnectAttempts) {
             reconnectAttemptsRef.current += 1
             const delay = Math.min(

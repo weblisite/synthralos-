@@ -317,9 +317,21 @@ OpenAPI.TOKEN = async () => {
 }
 
 const handleApiError = (error: Error) => {
-  if (error instanceof ApiError && [401, 403].includes(error.status)) {
+  // Don't auto-redirect on 403 errors - they might be temporary backend issues
+  // Only redirect on 401 (Unauthorized) which indicates session is invalid
+  if (error instanceof ApiError && error.status === 401) {
+    console.warn("[API Error Handler] 401 Unauthorized, signing out")
     supabase.auth.signOut()
-    window.location.href = "/login"
+    // Use a small delay to prevent immediate redirect loops
+    setTimeout(() => {
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login"
+      }
+    }, 100)
+  }
+  // For 403 errors, log but don't redirect - let the component handle it
+  if (error instanceof ApiError && error.status === 403) {
+    console.warn("[API Error Handler] 403 Forbidden - likely backend auth issue")
   }
 }
 const queryClient = new QueryClient({

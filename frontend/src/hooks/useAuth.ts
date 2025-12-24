@@ -119,8 +119,11 @@ export const useAuth = () => {
           hasEverHadSessionRef.current = true
           setHasSession(true)
           // Only invalidate if we have a new session (not just a refresh)
+          // Use a small delay to prevent rapid invalidations
           if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-            queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+            setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+            }, 500)
           }
         } else if (hasEverHadSessionRef.current) {
           // If we've ever had a session, preserve true state even if current check fails
