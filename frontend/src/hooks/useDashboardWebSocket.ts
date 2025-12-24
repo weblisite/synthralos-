@@ -16,6 +16,7 @@ interface WebSocketMessage {
   data?: any
   timestamp?: string
   user_id?: string
+  status?: string
 }
 
 export function useDashboardWebSocket() {

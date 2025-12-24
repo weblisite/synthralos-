@@ -288,8 +288,10 @@ export function CostAnalytics() {
                               />
                               <YAxis tick={{ fontSize: 10 }} />
                               <Tooltip
-                                formatter={(value: number) =>
-                                  `$${value.toFixed(4)}`
+                                formatter={(value: number | undefined) =>
+                                  value !== undefined
+                                    ? `$${value.toFixed(4)}`
+                                    : "$0.00"
                                 }
                                 labelStyle={{ color: "#000" }}
                                 contentStyle={{ backgroundColor: "#fff" }}

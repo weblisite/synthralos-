@@ -155,17 +155,6 @@ export function TeamMembers({ teamId }: { teamId: string }) {
     }
   }
 
-  const _getRoleColor = (role: string) => {
-    switch (role) {
-      case "owner":
-        return "default"
-      case "admin":
-        return "secondary"
-      default:
-        return "outline"
-    }
-  }
-
   return (
     <Card>
       <CardHeader>

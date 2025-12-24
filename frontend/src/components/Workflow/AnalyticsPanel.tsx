@@ -384,7 +384,9 @@ export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
                           }}
                         />
                         <Tooltip
-                          formatter={(value: number) => `${value.toFixed(1)}%`}
+                          formatter={(value: number | undefined) =>
+                            value !== undefined ? `${value.toFixed(1)}%` : "0%"
+                          }
                           labelStyle={{ color: "#000" }}
                           contentStyle={{ backgroundColor: "#fff" }}
                         />
