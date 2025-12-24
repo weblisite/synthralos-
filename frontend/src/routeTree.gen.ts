@@ -30,6 +30,7 @@ import { Route as LayoutChatRouteImport } from './routes/_layout/chat'
 import { Route as LayoutBrowserRouteImport } from './routes/_layout/browser'
 import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as TeamsInvitationsAcceptRouteImport } from './routes/teams/invitations/accept'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -135,6 +136,11 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const TeamsInvitationsAcceptRoute = TeamsInvitationsAcceptRouteImport.update({
+  id: '/teams/invitations/accept',
+  path: '/teams/invitations/accept',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/teams': typeof LayoutTeamsRoute
   '/workflows': typeof LayoutWorkflowsRoute
   '/': typeof LayoutIndexRoute
+  '/teams/invitations/accept': typeof TeamsInvitationsAcceptRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/teams': typeof LayoutTeamsRoute
   '/workflows': typeof LayoutWorkflowsRoute
   '/': typeof LayoutIndexRoute
+  '/teams/invitations/accept': typeof TeamsInvitationsAcceptRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/_layout/teams': typeof LayoutTeamsRoute
   '/_layout/workflows': typeof LayoutWorkflowsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/teams/invitations/accept': typeof TeamsInvitationsAcceptRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -227,6 +236,7 @@ export interface FileRouteTypes {
     | '/teams'
     | '/workflows'
     | '/'
+    | '/teams/invitations/accept'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/teams'
     | '/workflows'
     | '/'
+    | '/teams/invitations/accept'
   id:
     | '__root__'
     | '/_layout'
@@ -272,6 +283,7 @@ export interface FileRouteTypes {
     | '/_layout/teams'
     | '/_layout/workflows'
     | '/_layout/'
+    | '/teams/invitations/accept'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -280,6 +292,7 @@ export interface RootRouteChildren {
   RecoverPasswordRoute: typeof RecoverPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  TeamsInvitationsAcceptRoute: typeof TeamsInvitationsAcceptRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -431,6 +444,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/teams/invitations/accept': {
+      id: '/teams/invitations/accept'
+      path: '/teams/invitations/accept'
+      fullPath: '/teams/invitations/accept'
+      preLoaderRoute: typeof TeamsInvitationsAcceptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -481,6 +501,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecoverPasswordRoute: RecoverPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  TeamsInvitationsAcceptRoute: TeamsInvitationsAcceptRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
