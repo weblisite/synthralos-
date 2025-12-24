@@ -244,10 +244,15 @@ export const useAuth = () => {
           if (!verifySession) {
             // Only clear if session is actually gone
             userDataRef.current = null
+            // Don't throw - return null to stop retries
+            return null
           }
-          // Otherwise keep cached data - might be a temporary API issue
-          // Re-throw to trigger retry
-          throw error
+          // If we have a session but still get 403, it's likely a backend issue
+          // Don't retry - return cached data or null to prevent infinite loops
+          console.warn(
+            "[useAuth] 403 error with valid session - likely backend auth issue, stopping retries",
+          )
+          return userDataRef.current
         }
 
         // Return cached data if available, otherwise null
@@ -255,14 +260,17 @@ export const useAuth = () => {
       }
     },
     enabled: hasSession, // Only enable when we have a session
-    // Retry logic for transient 403 errors
+    // Retry logic - never retry 403 errors to prevent infinite loops
     retry: (failureCount, error: any) => {
-      // Don't retry if it's a 403 and we've already tried 2 times
-      if (error?.status === 403 && failureCount >= 2) {
+      // Never retry 403 errors - they indicate auth issues that won't resolve with retries
+      if (error?.status === 403) {
+        console.warn(
+          "[useAuth] 403 error detected, stopping retries to prevent infinite loop",
+        )
         return false
       }
-      // Retry up to 3 times for other errors
-      return failureCount < 3
+      // Retry up to 2 times for other errors (reduced from 3 to prevent loops)
+      return failureCount < 2
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     // Use cached ref data as initial data to prevent null returns
@@ -278,10 +286,10 @@ export const useAuth = () => {
     staleTime: 5 * 60 * 1000,
     // Keep data in cache for 10 minutes even when component unmounts
     gcTime: 10 * 60 * 1000,
-    // Refetch on window focus to ensure data is up to date
-    refetchOnWindowFocus: true,
-    // Refetch on reconnect
-    refetchOnReconnect: true,
+    // Disable refetch on window focus to prevent loops when auth is failing
+    refetchOnWindowFocus: false,
+    // Disable refetch on reconnect to prevent loops
+    refetchOnReconnect: false,
   })
 
   // Update ref when user data changes (always keep it updated)
