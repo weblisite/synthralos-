@@ -30,7 +30,12 @@ async def verify_websocket_token(
     Returns:
         Decoded token payload or None if invalid
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     if not token:
+        logger.warning("WebSocket connection missing authentication token")
         await websocket.close(code=1008, reason="Missing authentication token")
         return None
 
@@ -42,16 +47,23 @@ async def verify_websocket_token(
         )
 
         # Verify token with Supabase
+        # Note: get_user() expects an access token, not a refresh token
         user_response = supabase.auth.get_user(token)
         if not user_response.user:
+            logger.warning(f"WebSocket token verification failed: no user in response")
             await websocket.close(code=1008, reason="Invalid authentication token")
             return None
+
+        logger.info(
+            f"WebSocket token verified for user: {user_response.user.id} ({user_response.user.email})"
+        )
 
         return {
             "user_id": user_response.user.id,
             "email": user_response.user.email,
         }
-    except Exception:
+    except Exception as e:
+        logger.error(f"WebSocket token verification error: {str(e)}", exc_info=True)
         await websocket.close(code=1008, reason="Authentication failed")
         return None
 

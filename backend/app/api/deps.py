@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from typing import Annotated
+import logging
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -10,6 +11,8 @@ from supabase import Client, create_client
 from app.core.config import settings
 from app.core.db import engine
 from app.models import User
+
+logger = logging.getLogger(__name__)
 
 # Use HTTPBearer instead of OAuth2PasswordBearer for Supabase tokens
 security_scheme = HTTPBearer()
@@ -142,9 +145,24 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
 
         if not user_email:
             # Log the payload for debugging
-            import logging
+            logger.error(
+                f"Email not found in token payload. Payload keys: {list(payload.keys())}, sub: {payload.get('sub')}"
+            )
+            # Try to use Supabase API to get user info as fallback
+            try:
+                supabase = get_supabase_client()
+                supabase_user_id = payload.get("sub")
+                if supabase_user_id:
+                    # Try to get user from Supabase using admin API
+                    # Note: This requires admin privileges or the user's access token
+                    user_response = supabase.auth.get_user(token)
+                    if user_response.user and user_response.user.email:
+                        user_email = user_response.user.email
+                        logger.info(f"Retrieved email from Supabase API: {user_email}")
+            except Exception as supabase_error:
+                logger.warning(f"Failed to get email from Supabase API: {str(supabase_error)}")
 
-            logger = logging.getLogger(__name__)
+        if not user_email:
             logger.error(
                 f"Email not found in token payload. Payload keys: {list(payload.keys())}, sub: {payload.get('sub')}"
             )
