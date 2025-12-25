@@ -14,28 +14,14 @@ import {
   FileText,
   Globe,
   Plug,
-  Wifi,
-  WifiOff,
   Workflow,
   Zap,
 } from "lucide-react"
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket"
 import { apiClient } from "@/lib/apiClient"
 
 interface DashboardStats {
@@ -179,9 +165,6 @@ const ActivityItem = ({
 }
 
 export function DashboardStats() {
-  // WebSocket connection with polling fallback
-  const { isConnected, usePollingFallback } = useDashboardWebSocket()
-
   const {
     data: stats,
     isLoading,
@@ -189,8 +172,7 @@ export function DashboardStats() {
   } = useQuery({
     queryKey: ["dashboardStats"],
     queryFn: fetchDashboardStats,
-    // Only poll if WebSocket is not connected (fallback mode)
-    refetchInterval: usePollingFallback ? 30000 : false,
+    refetchInterval: 30000, // Refresh every 30 seconds
   })
 
   if (isLoading) {
@@ -224,25 +206,6 @@ export function DashboardStats() {
 
   return (
     <div className="space-y-6">
-      {/* Connection Status Indicator */}
-      {usePollingFallback && (
-        <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
-          <WifiOff className="h-4 w-4 text-yellow-600" />
-          <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-            Real-time updates unavailable. Using polling fallback (updates every
-            30s).
-          </AlertDescription>
-        </Alert>
-      )}
-      {isConnected && !usePollingFallback && (
-        <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-          <Wifi className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800 dark:text-green-200">
-            Real-time updates active. Dashboard will update instantly.
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Main Statistics Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard

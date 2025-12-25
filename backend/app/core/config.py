@@ -194,13 +194,12 @@ class Settings(BaseSettings):
 
                         match = re.search(r":([^@]+)@", db_url)
                         if match:
-                            _password = match.group(1)  # noqa: F841
+                            password = match.group(1)
                             # Use pooler connection instead (more reliable for serverless)
                             warnings.warn(
                                 "Using direct connection (port 5432). Consider using pooler connection "
                                 "(port 6543) from Supabase dashboard for better serverless compatibility. "
-                                "Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres",
-                                stacklevel=2,
+                                "Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
                             )
                 except Exception:
                     pass  # Continue with original connection string
@@ -233,8 +232,7 @@ class Settings(BaseSettings):
                     warnings.warn(
                         "Using direct Supabase connection (port 5432). For Render/serverless deployments, "
                         "use the connection pooler (port 6543) from Supabase dashboard to avoid IPv6 issues. "
-                        "Get it from: Settings > Database > Connection string > Connection pooling",
-                        stacklevel=2,
+                        "Get it from: Settings > Database > Connection string > Connection pooling"
                     )
                     return PostgresDsn.build(
                         scheme="postgresql+psycopg",
@@ -246,8 +244,7 @@ class Settings(BaseSettings):
                     )
             except Exception as e:
                 warnings.warn(
-                    f"Failed to build Supabase connection string: {e}. Falling back to legacy config.",
-                    stacklevel=2,
+                    f"Failed to build Supabase connection string: {e}. Falling back to legacy config."
                 )
 
         # Option 3: Legacy PostgreSQL configuration (backward compatibility)

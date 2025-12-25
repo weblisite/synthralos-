@@ -216,8 +216,7 @@ class TeamService:
             return existing_invitation
 
         # Generate invitation token
-            from app.core.security import generate_token
-            token = generate_token()
+        token = generate_token()
 
         invitation = TeamInvitation(
             team_id=team_id,
@@ -266,12 +265,10 @@ class TeamService:
                     "role": invitation.role,
                     "project_name": settings.PROJECT_NAME,
                 }
-                from app.services.email_template_service import EmailTemplateService
-                template_service_instance = EmailTemplateService(self.session)
-                subject = template_service_instance.render_template(
+                subject = template_service.render_template(
                     template=template, field="subject", context=context
                 )
-                html_content = template_service_instance.render_template(
+                html_content = template_service.render_template(
                     template=template, field="html_content", context=context
                 )
 

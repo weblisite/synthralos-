@@ -165,69 +165,6 @@ class WorkflowEngine:
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to send execution started notification: {e}")
 
-        # Broadcast WebSocket event (async, non-blocking)
-        try:
-            from app.workflows.websocket import default_websocket_manager
-
-            if workflow and workflow.owner_id:
-                # Broadcast to workflow owner
-                import asyncio
-
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-
-                if loop.is_running():
-                    # If loop is running, schedule coroutine
-                    asyncio.create_task(
-                        default_websocket_manager.broadcast_to_user(
-                            str(workflow.owner_id),
-                            "execution-started",
-                            {
-                                "execution_id": str(execution.id),
-                                "workflow_id": str(execution.workflow_id),
-                                "workflow_name": workflow.name,
-                                "status": "running",
-                            },
-                        )
-                    )
-                    # Also broadcast dashboard stats update
-                    asyncio.create_task(
-                        default_websocket_manager.broadcast_to_user(
-                            str(workflow.owner_id),
-                            "dashboard-stats-update",
-                            {"refresh": True},
-                        )
-                    )
-                else:
-                    # If loop not running, run coroutine
-                    loop.run_until_complete(
-                        default_websocket_manager.broadcast_to_user(
-                            str(workflow.owner_id),
-                            "execution-started",
-                            {
-                                "execution_id": str(execution.id),
-                                "workflow_id": str(execution.workflow_id),
-                                "workflow_name": workflow.name,
-                                "status": "running",
-                            },
-                        )
-                    )
-                    loop.run_until_complete(
-                        default_websocket_manager.broadcast_to_user(
-                            str(workflow.owner_id),
-                            "dashboard-stats-update",
-                            {"refresh": True},
-                        )
-                    )
-        except Exception as e:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to broadcast execution started event: {e}")
-
         return execution
 
     def get_execution_state(
@@ -827,66 +764,6 @@ class WorkflowEngine:
 
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to send execution completed notification: {e}")
-
-        # Broadcast WebSocket event (async, non-blocking)
-        try:
-            from app.workflows.websocket import default_websocket_manager
-
-            if workflow and workflow.owner_id:
-                import asyncio
-
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-
-                if loop.is_running():
-                    asyncio.create_task(
-                        default_websocket_manager.broadcast_to_user(
-                            str(workflow.owner_id),
-                            "execution-completed",
-                            {
-                                "execution_id": str(execution_id),
-                                "workflow_id": str(execution.workflow_id),
-                                "workflow_name": workflow.name,
-                                "status": "completed",
-                            },
-                        )
-                    )
-                    # Also broadcast dashboard stats update
-                    asyncio.create_task(
-                        default_websocket_manager.broadcast_to_user(
-                            str(workflow.owner_id),
-                            "dashboard-stats-update",
-                            {"refresh": True},
-                        )
-                    )
-                else:
-                    loop.run_until_complete(
-                        default_websocket_manager.broadcast_to_user(
-                            str(workflow.owner_id),
-                            "execution-completed",
-                            {
-                                "execution_id": str(execution_id),
-                                "workflow_id": str(execution.workflow_id),
-                                "workflow_name": workflow.name,
-                                "status": "completed",
-                            },
-                        )
-                    )
-                    loop.run_until_complete(
-                        default_websocket_manager.broadcast_to_user(
-                            str(workflow.owner_id),
-                            "dashboard-stats-update",
-                            {"refresh": True},
-                        )
-                    )
-        except Exception as e:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to broadcast execution completed event: {e}")
 
     def fail_execution(
         self,

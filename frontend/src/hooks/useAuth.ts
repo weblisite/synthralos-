@@ -119,11 +119,8 @@ export const useAuth = () => {
           hasEverHadSessionRef.current = true
           setHasSession(true)
           // Only invalidate if we have a new session (not just a refresh)
-          // Use a small delay to prevent rapid invalidations
           if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-            setTimeout(() => {
-              queryClient.invalidateQueries({ queryKey: ["currentUser"] })
-            }, 500)
+            queryClient.invalidateQueries({ queryKey: ["currentUser"] })
           }
         } else if (hasEverHadSessionRef.current) {
           // If we've ever had a session, preserve true state even if current check fails
@@ -247,15 +244,10 @@ export const useAuth = () => {
           if (!verifySession) {
             // Only clear if session is actually gone
             userDataRef.current = null
-            // Don't throw - return null to stop retries
-            return null
           }
-          // If we have a session but still get 403, it's likely a backend issue
-          // Don't retry - return cached data or null to prevent infinite loops
-          console.warn(
-            "[useAuth] 403 error with valid session - likely backend auth issue, stopping retries",
-          )
-          return userDataRef.current
+          // Otherwise keep cached data - might be a temporary API issue
+          // Re-throw to trigger retry
+          throw error
         }
 
         // Return cached data if available, otherwise null
@@ -263,17 +255,14 @@ export const useAuth = () => {
       }
     },
     enabled: hasSession, // Only enable when we have a session
-    // Retry logic - never retry 403 errors to prevent infinite loops
+    // Retry logic for transient 403 errors
     retry: (failureCount, error: any) => {
-      // Never retry 403 errors - they indicate auth issues that won't resolve with retries
-      if (error?.status === 403) {
-        console.warn(
-          "[useAuth] 403 error detected, stopping retries to prevent infinite loop",
-        )
+      // Don't retry if it's a 403 and we've already tried 2 times
+      if (error?.status === 403 && failureCount >= 2) {
         return false
       }
-      // Retry up to 2 times for other errors (reduced from 3 to prevent loops)
-      return failureCount < 2
+      // Retry up to 3 times for other errors
+      return failureCount < 3
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     // Use cached ref data as initial data to prevent null returns
@@ -289,10 +278,10 @@ export const useAuth = () => {
     staleTime: 5 * 60 * 1000,
     // Keep data in cache for 10 minutes even when component unmounts
     gcTime: 10 * 60 * 1000,
-    // Disable refetch on window focus to prevent loops when auth is failing
-    refetchOnWindowFocus: false,
-    // Disable refetch on reconnect to prevent loops
-    refetchOnReconnect: false,
+    // Refetch on window focus to ensure data is up to date
+    refetchOnWindowFocus: true,
+    // Refetch on reconnect
+    refetchOnReconnect: true,
   })
 
   // Update ref when user data changes (always keep it updated)

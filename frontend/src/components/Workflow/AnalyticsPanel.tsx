@@ -9,7 +9,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query"
-import { BarChart3, DollarSign, Wifi } from "lucide-react"
+import { BarChart3, DollarSign } from "lucide-react"
 import {
   Area,
   AreaChart,
@@ -22,7 +22,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -32,7 +31,6 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket"
 import { apiRequest } from "@/lib/api"
 
 interface AnalyticsPanelProps {
@@ -71,8 +69,6 @@ interface CostEstimate {
 }
 
 export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
-  const { isConnected, usePollingFallback } = useDashboardWebSocket()
-
   const { data: stats, isLoading: statsLoading } = useQuery<ExecutionStats>({
     queryKey: ["workflowStats", workflowId, days],
     queryFn: async () => {
@@ -83,8 +79,6 @@ export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
         `/api/v1/workflows/analytics/stats?${params}`,
       )
     },
-    // WebSocket will trigger updates, no polling needed
-    refetchInterval: false,
   })
 
   const { data: performance, isLoading: perfLoading } =
@@ -143,24 +137,14 @@ export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Workflow Analytics
-            </CardTitle>
-            <CardDescription>
-              {workflowId ? `Analytics for workflow` : "Overall analytics"} (
-              {days} days)
-            </CardDescription>
-          </div>
-          {isConnected && !usePollingFallback && (
-            <Badge variant="outline" className="gap-1">
-              <Wifi className="h-3 w-3" />
-              Real-time
-            </Badge>
-          )}
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Workflow Analytics
+        </CardTitle>
+        <CardDescription>
+          {workflowId ? `Analytics for workflow` : "Overall analytics"} ({days}{" "}
+          days)
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="stats">
@@ -384,9 +368,7 @@ export function AnalyticsPanel({ workflowId, days = 30 }: AnalyticsPanelProps) {
                           }}
                         />
                         <Tooltip
-                          formatter={(value: number | undefined) =>
-                            value !== undefined ? `${value.toFixed(1)}%` : "0%"
-                          }
+                          formatter={(value: number) => `${value.toFixed(1)}%`}
                           labelStyle={{ color: "#000" }}
                           contentStyle={{ backgroundColor: "#fff" }}
                         />

@@ -459,3 +459,8 @@ def revoke_invitation(
         team_service.revoke_invitation(invitation_id=invitation_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+import logging
+
+logger = logging.getLogger(__name__)

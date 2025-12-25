@@ -13,8 +13,6 @@ import {
   Search,
   Server,
   Users,
-  Wifi,
-  WifiOff,
   Workflow,
 } from "lucide-react"
 import {
@@ -27,7 +25,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Card,
   CardContent,
@@ -37,7 +34,6 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
-import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket"
 import { apiClient } from "@/lib/apiClient"
 
 interface SystemMetrics {
@@ -78,7 +74,6 @@ async function fetchSystemMetrics(): Promise<SystemMetrics> {
 
 export function SystemMetrics() {
   const { showErrorToast } = useCustomToast()
-  const { isConnected, usePollingFallback } = useDashboardWebSocket()
 
   const {
     data: metrics,
@@ -87,8 +82,7 @@ export function SystemMetrics() {
   } = useQuery<SystemMetrics>({
     queryKey: ["systemMetrics"],
     queryFn: fetchSystemMetrics,
-    // Only poll if WebSocket is not connected (fallback mode)
-    refetchInterval: usePollingFallback ? 60000 : false,
+    refetchInterval: 60000, // Refresh every minute
   })
 
   if (error) {
@@ -185,25 +179,6 @@ export function SystemMetrics() {
           Real-time statistics and usage metrics
         </p>
       </div>
-
-      {/* Connection Status Indicator */}
-      {usePollingFallback && (
-        <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
-          <WifiOff className="h-4 w-4 text-yellow-600" />
-          <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-            Real-time updates unavailable. Using polling fallback (updates every
-            60s).
-          </AlertDescription>
-        </Alert>
-      )}
-      {isConnected && !usePollingFallback && (
-        <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-          <Wifi className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800 dark:text-green-200">
-            Real-time updates active.
-          </AlertDescription>
-        </Alert>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, index) => {

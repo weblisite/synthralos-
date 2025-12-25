@@ -55,7 +55,7 @@ def create_email_template(
 def list_email_templates(
     *,
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
+    current_user: CurrentUser,
     category: str | None = None,
     is_active: bool | None = None,
     include_system: bool = True,
@@ -74,7 +74,7 @@ def list_email_templates(
 def get_email_template(
     *,
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
+    current_user: CurrentUser,
     template_id: uuid.UUID,
 ) -> Any:
     """Get email template by ID"""
@@ -93,7 +93,7 @@ def get_email_template(
 def get_email_template_by_slug(
     *,
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
+    current_user: CurrentUser,
     slug: str,
 ) -> Any:
     """Get email template by slug"""

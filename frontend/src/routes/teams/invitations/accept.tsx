@@ -52,8 +52,7 @@ export const Route = createFileRoute("/teams/invitations/accept")({
 function AcceptInvitation() {
   const navigate = useNavigate()
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const search = Route.useSearch()
-  const token = "token" in search ? search.token : ""
+  const { token } = Route.useSearch()
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle")
   const [errorMessage, setErrorMessage] = useState<string>("")
 

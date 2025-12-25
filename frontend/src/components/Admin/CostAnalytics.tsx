@@ -4,7 +4,6 @@
  * Displays cost analytics dashboard with charts and metrics.
  */
 
-import { Wifi, WifiOff } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import {
   Bar,
@@ -21,7 +20,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Card,
   CardContent,
@@ -30,7 +28,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import useCustomToast from "@/hooks/useCustomToast"
-import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket"
 import { apiClient } from "@/lib/apiClient"
 
 interface CostMetrics {
@@ -62,7 +59,6 @@ export function CostAnalytics() {
   const [metrics, setMetrics] = useState<CostMetrics | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { showErrorToast } = useCustomToast()
-  const { isConnected, usePollingFallback } = useDashboardWebSocket()
 
   const fetchCostMetrics = useCallback(async () => {
     setIsLoading(true)
@@ -90,14 +86,6 @@ export function CostAnalytics() {
     fetchCostMetrics()
   }, [fetchCostMetrics])
 
-  // Refetch when WebSocket triggers update
-  useEffect(() => {
-    if (isConnected && !usePollingFallback) {
-      // WebSocket will trigger React Query invalidation, which will refetch
-      // This effect is just for initial load
-    }
-  }, [isConnected, usePollingFallback])
-
   if (isLoading) {
     return <div>Loading cost analytics...</div>
   }
@@ -108,25 +96,7 @@ export function CostAnalytics() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Cost Analytics</h2>
-        {usePollingFallback && (
-          <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950 max-w-md">
-            <WifiOff className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="text-yellow-800 dark:text-yellow-200 text-sm">
-              Using polling fallback
-            </AlertDescription>
-          </Alert>
-        )}
-        {isConnected && !usePollingFallback && (
-          <Alert className="border-green-500 bg-green-50 dark:bg-green-950 max-w-md">
-            <Wifi className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800 dark:text-green-200 text-sm">
-              Real-time updates active
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
+      <h2 className="text-2xl font-semibold">Cost Analytics</h2>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -186,9 +156,7 @@ export function CostAnalytics() {
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip
-                    formatter={(value: number | undefined) =>
-                      value !== undefined ? `$${value.toFixed(2)}` : "$0.00"
-                    }
+                    formatter={(value: number) => `$${value.toFixed(2)}`}
                     labelStyle={{ color: "#000" }}
                     contentStyle={{ backgroundColor: "#fff" }}
                   />
@@ -216,7 +184,7 @@ export function CostAnalytics() {
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) =>
-                      `${name}: ${percent !== undefined ? (percent * 100).toFixed(0) : 0}%`
+                      `${name}: ${(percent * 100).toFixed(0)}%`
                     }
                     outerRadius={100}
                     fill="#8884d8"
@@ -240,9 +208,7 @@ export function CostAnalytics() {
                     })}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number | undefined) =>
-                      value !== undefined ? `$${value.toFixed(2)}` : "$0.00"
-                    }
+                    formatter={(value: number) => `$${value.toFixed(2)}`}
                   />
                   <Legend />
                 </PieChart>
@@ -292,10 +258,8 @@ export function CostAnalytics() {
                               />
                               <YAxis tick={{ fontSize: 10 }} />
                               <Tooltip
-                                formatter={(value: number | undefined) =>
-                                  value !== undefined
-                                    ? `$${value.toFixed(4)}`
-                                    : "$0.00"
+                                formatter={(value: number) =>
+                                  `$${value.toFixed(4)}`
                                 }
                                 labelStyle={{ color: "#000" }}
                                 contentStyle={{ backgroundColor: "#fff" }}
