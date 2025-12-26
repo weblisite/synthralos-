@@ -81,11 +81,22 @@ export function ProfileSection() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
   // Fetch preferences
-  const { data: preferences, isLoading: preferencesLoading } =
-    useQuery<UserPreferences>({
-      queryKey: ["user-preferences"],
-      queryFn: () => apiClient.users.getPreferences(),
-    })
+  const {
+    data: preferences,
+    isLoading: preferencesLoading,
+    error: preferencesError,
+  } = useQuery<UserPreferences>({
+    queryKey: ["user-preferences"],
+    queryFn: () => apiClient.users.getPreferences(),
+    retry: 1,
+    onError: (error: any) => {
+      console.error("[ProfileSection] Error fetching preferences:", error)
+      showErrorToast(
+        error.message || "Failed to load preferences",
+        "Error loading profile",
+      )
+    },
+  })
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -212,7 +223,51 @@ export function ProfileSection() {
   }
 
   if (preferencesLoading) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-muted-foreground">Loading profile...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (preferencesError) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center space-y-2">
+          <div className="text-destructive font-medium">
+            Failed to load profile
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {preferencesError instanceof Error
+              ? preferencesError.message
+              : "An error occurred while loading your profile"}
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ["user-preferences"] })
+            }}
+            className="mt-4"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-muted-foreground">
+            Please log in to view your profile
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
