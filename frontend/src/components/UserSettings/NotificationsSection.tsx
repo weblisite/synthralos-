@@ -19,12 +19,13 @@ import {
 import { Switch } from "@/components/ui/switch"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
+import type { UserPreferences } from "@/types/api"
 
 export function NotificationsSection() {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
 
-  const { data: preferences, isLoading } = useQuery({
+  const { data: preferences, isLoading } = useQuery<UserPreferences>({
     queryKey: ["user-preferences"],
     queryFn: () => apiClient.users.getPreferences(),
   })

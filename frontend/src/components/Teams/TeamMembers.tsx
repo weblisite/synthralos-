@@ -155,6 +155,7 @@ export function TeamMembers({ teamId }: { teamId: string }) {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _getRoleColor = (role: string) => {
     switch (role) {
       case "owner":

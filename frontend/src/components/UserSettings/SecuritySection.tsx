@@ -21,25 +21,30 @@ import {
 } from "@/components/ui/table"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
+import type { LoginHistory, UserPreferences, UserSession } from "@/types/api"
 
 export function SecuritySection() {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
 
   // Fetch preferences for 2FA status
-  const { data: preferences } = useQuery({
+  const { data: preferences } = useQuery<UserPreferences>({
     queryKey: ["user-preferences"],
     queryFn: () => apiClient.users.getPreferences(),
   })
 
   // Fetch sessions
-  const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
+  const { data: sessions = [], isLoading: sessionsLoading } = useQuery<
+    UserSession[]
+  >({
     queryKey: ["user-sessions"],
     queryFn: () => apiClient.users.getSessions(),
   })
 
   // Fetch login history
-  const { data: loginHistory = [], isLoading: historyLoading } = useQuery({
+  const { data: loginHistory = [], isLoading: historyLoading } = useQuery<
+    LoginHistory[]
+  >({
     queryKey: ["user-login-history"],
     queryFn: () => apiClient.users.getLoginHistory(),
   })
@@ -183,7 +188,7 @@ export function SecuritySection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sessions.map((session: any) => (
+                  {sessions.map((session) => (
                     <TableRow key={session.id}>
                       <TableCell className="font-medium">
                         {session.device_info || "Unknown Device"}
@@ -257,7 +262,7 @@ export function SecuritySection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loginHistory.map((entry: any) => (
+                {loginHistory.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>
                       {new Date(entry.created_at).toLocaleString()}

@@ -37,7 +37,7 @@ import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
 import { supabase } from "@/lib/supabase"
-import { handleError } from "@/utils"
+import type { UserPreferences } from "@/types/api"
 
 const profileSchema = z.object({
   full_name: z.string().max(255).optional(),
@@ -81,10 +81,11 @@ export function ProfileSection() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
   // Fetch preferences
-  const { data: preferences, isLoading: preferencesLoading } = useQuery({
-    queryKey: ["user-preferences"],
-    queryFn: () => apiClient.users.getPreferences(),
-  })
+  const { data: preferences, isLoading: preferencesLoading } =
+    useQuery<UserPreferences>({
+      queryKey: ["user-preferences"],
+      queryFn: () => apiClient.users.getPreferences(),
+    })
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -133,9 +134,8 @@ export function ProfileSection() {
       queryClient.invalidateQueries({ queryKey: ["user-preferences"] })
       queryClient.invalidateQueries({ queryKey: ["current-user"] })
     },
-    onError: (error) => {
-      handleError(error)
-      showErrorToast("Failed to update profile", error.message)
+    onError: (error: any) => {
+      showErrorToast(error.message, "Failed to update profile")
     },
   })
 
@@ -143,11 +143,11 @@ export function ProfileSection() {
     const file = e.target.files?.[0]
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        showErrorToast("File too large", "Avatar must be less than 2MB")
+        showErrorToast("Avatar must be less than 2MB", "File too large")
         return
       }
       if (!file.type.startsWith("image/")) {
-        showErrorToast("Invalid file type", "Please upload an image file")
+        showErrorToast("Please upload an image file", "Invalid file type")
         return
       }
       setAvatarFile(file)
@@ -191,7 +191,7 @@ export function ProfileSection() {
       setAvatarFile(null)
       setAvatarPreview(null)
     } catch (error: any) {
-      showErrorToast("Failed to upload avatar", error.message)
+      showErrorToast(error.message, "Failed to upload avatar")
     }
   }
 

@@ -19,10 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import useAuth from "@/hooks/useAuth"
 import { apiClient } from "@/lib/apiClient"
+import type { Team } from "@/types/api"
 
 export function TeamsSection() {
-  const { data: teams = [], isLoading } = useQuery({
+  const { user: currentUser } = useAuth()
+  const { data: teams = [], isLoading } = useQuery<Team[]>({
     queryKey: ["user-teams"],
     queryFn: () => apiClient.teams.list(),
   })
@@ -70,25 +73,19 @@ export function TeamsSection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teams.map((team: any) => (
+                {teams.map((team) => (
                   <TableRow key={team.id}>
                     <TableCell className="font-medium">{team.name}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          team.role === "owner" ? "default" : "secondary"
-                        }
-                      >
-                        {team.role}
+                      <Badge variant="secondary">
+                        {team.owner_id === currentUser?.id ? "Owner" : "Member"}
                       </Badge>
                     </TableCell>
-                    <TableCell>{team.member_count || 0}</TableCell>
+                    <TableCell>-</TableCell>
                     <TableCell>
-                      {team.joined_at
-                        ? formatDistanceToNow(new Date(team.joined_at), {
-                            addSuffix: true,
-                          })
-                        : "Unknown"}
+                      {formatDistanceToNow(new Date(team.created_at), {
+                        addSuffix: true,
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <Link to="/teams">

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
+import type { UserPreferences } from "@/types/api"
 
 // Theme hook - simple implementation
 const useTheme = () => {
@@ -57,7 +58,7 @@ export function AppearanceSection() {
   const queryClient = useQueryClient()
   const { theme, setTheme } = useTheme()
 
-  const { data: preferences, isLoading } = useQuery({
+  const { data: preferences, isLoading } = useQuery<UserPreferences>({
     queryKey: ["user-preferences"],
     queryFn: () => apiClient.users.getPreferences(),
   })

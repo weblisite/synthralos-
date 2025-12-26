@@ -22,7 +22,14 @@ import {
   type UserUpdateMe,
   UtilsService,
 } from "@/client"
-import { apiRequest } from "./api"
+import type {
+  ConnectorConnection,
+  LoginHistory,
+  Team,
+  UserPreferences,
+  UserSession,
+} from "@/types/api"
+import { apiRequest, getApiPath } from "./api"
 
 /**
  * Unified API Client Interface
@@ -103,15 +110,19 @@ export const apiClient = {
     /**
      * Get user preferences
      */
-    getPreferences: async () => {
-      return apiRequest("/api/v1/users/me/preferences", { method: "GET" })
+    getPreferences: async (): Promise<UserPreferences> => {
+      return apiRequest<UserPreferences>("/api/v1/users/me/preferences", {
+        method: "GET",
+      })
     },
 
     /**
      * Update user preferences
      */
-    updatePreferences: async (data: any) => {
-      return apiRequest("/api/v1/users/me/preferences", {
+    updatePreferences: async (
+      data: Partial<UserPreferences>,
+    ): Promise<UserPreferences> => {
+      return apiRequest<UserPreferences>("/api/v1/users/me/preferences", {
         method: "PATCH",
         body: JSON.stringify(data),
       })
@@ -120,17 +131,20 @@ export const apiClient = {
     /**
      * Get user sessions
      */
-    getSessions: async (limit = 50) => {
-      return apiRequest(`/api/v1/users/me/sessions?limit=${limit}`, {
-        method: "GET",
-      })
+    getSessions: async (limit = 50): Promise<UserSession[]> => {
+      return apiRequest<UserSession[]>(
+        `/api/v1/users/me/sessions?limit=${limit}`,
+        {
+          method: "GET",
+        },
+      )
     },
 
     /**
      * Revoke a session
      */
-    revokeSession: async (sessionId: string) => {
-      return apiRequest(`/api/v1/users/me/sessions/${sessionId}`, {
+    revokeSession: async (sessionId: string): Promise<Message> => {
+      return apiRequest<Message>(`/api/v1/users/me/sessions/${sessionId}`, {
         method: "DELETE",
       })
     },
@@ -138,17 +152,22 @@ export const apiClient = {
     /**
      * Revoke all sessions except current
      */
-    revokeAllSessions: async () => {
-      return apiRequest("/api/v1/users/me/sessions", { method: "DELETE" })
+    revokeAllSessions: async (): Promise<Message> => {
+      return apiRequest<Message>("/api/v1/users/me/sessions", {
+        method: "DELETE",
+      })
     },
 
     /**
      * Get login history
      */
-    getLoginHistory: async (limit = 50) => {
-      return apiRequest(`/api/v1/users/me/login-history?limit=${limit}`, {
-        method: "GET",
-      })
+    getLoginHistory: async (limit = 50): Promise<LoginHistory[]> => {
+      return apiRequest<LoginHistory[]>(
+        `/api/v1/users/me/login-history?limit=${limit}`,
+        {
+          method: "GET",
+        },
+      )
     },
 
     /**
@@ -228,11 +247,16 @@ export const apiClient = {
     /**
      * List user's connector connections
      */
-    listConnections: async (connectorId?: string) => {
+    listConnections: async (
+      connectorId?: string,
+    ): Promise<{ connections: ConnectorConnection[]; total_count: number }> => {
       const url = connectorId
         ? `/api/v1/connectors/connections?connector_id=${connectorId}`
         : "/api/v1/connectors/connections"
-      return apiRequest(url, { method: "GET" })
+      return apiRequest<{
+        connections: ConnectorConnection[]
+        total_count: number
+      }>(url, { method: "GET" })
     },
   },
 
@@ -258,8 +282,12 @@ export const apiClient = {
     /**
      * List all teams for current user
      */
-    list: async () => {
-      return apiRequest("/teams", { method: "GET" })
+    list: async (): Promise<Team[]> => {
+      const response = await apiRequest<{ teams: Team[]; count: number }>(
+        "/teams",
+        { method: "GET" },
+      )
+      return response.teams
     },
 
     /**

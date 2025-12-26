@@ -156,7 +156,9 @@ export function CostAnalytics() {
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip
-                    formatter={(value: number) => `$${value.toFixed(2)}`}
+                    formatter={(value: number | undefined) =>
+                      `$${(value ?? 0).toFixed(2)}`
+                    }
                     labelStyle={{ color: "#000" }}
                     contentStyle={{ backgroundColor: "#fff" }}
                   />
@@ -184,7 +186,7 @@ export function CostAnalytics() {
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) =>
-                      `${name}: ${(percent * 100).toFixed(0)}%`
+                      `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
                     }
                     outerRadius={100}
                     fill="#8884d8"
@@ -208,7 +210,9 @@ export function CostAnalytics() {
                     })}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => `$${value.toFixed(2)}`}
+                    formatter={(value: number | undefined) =>
+                      `$${(value ?? 0).toFixed(2)}`
+                    }
                   />
                   <Legend />
                 </PieChart>
@@ -258,8 +262,8 @@ export function CostAnalytics() {
                               />
                               <YAxis tick={{ fontSize: 10 }} />
                               <Tooltip
-                                formatter={(value: number) =>
-                                  `$${value.toFixed(4)}`
+                                formatter={(value: number | undefined) =>
+                                  `$${(value ?? 0).toFixed(4)}`
                                 }
                                 labelStyle={{ color: "#000" }}
                                 contentStyle={{ backgroundColor: "#fff" }}
