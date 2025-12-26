@@ -85,18 +85,29 @@ export function ProfileSection() {
     data: preferences,
     isLoading: preferencesLoading,
     error: preferencesError,
-  } = useQuery<UserPreferences>({
+  } = useQuery<UserPreferences, Error>({
     queryKey: ["user-preferences"],
-    queryFn: () => apiClient.users.getPreferences(),
+    queryFn: async (): Promise<UserPreferences> => {
+      return apiClient.users.getPreferences()
+    },
     retry: 1,
-    onError: (error: any) => {
-      console.error("[ProfileSection] Error fetching preferences:", error)
+  })
+
+  // Handle errors (React Query v5 removed onError callback)
+  useEffect(() => {
+    if (preferencesError) {
+      console.error(
+        "[ProfileSection] Error fetching preferences:",
+        preferencesError,
+      )
       showErrorToast(
-        error.message || "Failed to load preferences",
+        preferencesError instanceof Error
+          ? preferencesError.message
+          : "Failed to load preferences",
         "Error loading profile",
       )
-    },
-  })
+    }
+  }, [preferencesError, showErrorToast])
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
