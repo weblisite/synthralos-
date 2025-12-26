@@ -1,8 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Camera, Upload } from "lucide-react"
-import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -90,24 +89,35 @@ export function ProfileSection() {
     queryFn: async (): Promise<UserPreferences> => {
       return apiClient.users.getPreferences()
     },
-    retry: 1,
+    retry: false, // Disable retries to prevent refresh loops
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
   })
 
   // Handle errors (React Query v5 removed onError callback)
+  // Use a ref to prevent showing the same error multiple times
+  const errorShownRef = useRef<string | null>(null)
   useEffect(() => {
     if (preferencesError) {
-      console.error(
-        "[ProfileSection] Error fetching preferences:",
-        preferencesError,
-      )
-      showErrorToast(
+      const errorMessage =
         preferencesError instanceof Error
           ? preferencesError.message
-          : "Failed to load preferences",
-        "Error loading profile",
-      )
+          : "Failed to load preferences"
+      
+      // Only show error if it's different from the last one shown
+      if (errorShownRef.current !== errorMessage) {
+        console.error(
+          "[ProfileSection] Error fetching preferences:",
+          preferencesError,
+        )
+        errorShownRef.current = errorMessage
+        showErrorToast(errorMessage, "Error loading profile")
+      }
+    } else {
+      // Reset error ref when error is cleared
+      errorShownRef.current = null
     }
-  }, [preferencesError, showErrorToast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferencesError])
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
