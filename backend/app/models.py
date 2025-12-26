@@ -65,6 +65,16 @@ class User(UserBase, table=True):
     owned_teams: list["Team"] = Relationship(back_populates="owner")
     team_memberships: list["TeamMember"] = Relationship()
     sent_invitations: list["TeamInvitation"] = Relationship()
+    preferences: "UserPreferences" | None = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"uselist": False, "cascade_delete": True},
+    )
+    sessions: list["UserSession"] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
+    login_history: list["LoginHistory"] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
 
 
 # Properties to return via API, id is always required

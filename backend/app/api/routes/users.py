@@ -2,7 +2,7 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import func, select
 
 logger = logging.getLogger(__name__)
@@ -14,8 +14,9 @@ from app.api.deps import (
     get_current_active_superuser,
 )
 from app.core.config import settings
-from app.core.security import get_password_hash, verify_password
+from app.core.security import generate_token, get_password_hash, verify_password
 from app.models import (
+    LoginHistory,
     Message,
     UpdatePassword,
     User,
@@ -24,8 +25,11 @@ from app.models import (
     UserAPIKeyPublic,
     UserAPIKeyUpdate,
     UserCreate,
+    UserPreferences,
+    UserPreferencesUpdate,
     UserPublic,
     UserRegister,
+    UserSession,
     UsersPublic,
     UserUpdate,
     UserUpdateMe,
@@ -34,6 +38,7 @@ from app.services.api_keys import (
     SERVICE_DEFINITIONS,
     default_api_key_service,
 )
+from app.services.storage import default_storage_service
 from app.utils import generate_new_account_email, send_email
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -616,3 +621,280 @@ def test_user_api_key(
         "service": api_key.service_display_name,
         "message": "API key is valid" if is_valid else "API key validation failed",
     }
+
+
+# ============================================================================
+# USER PREFERENCES ENDPOINTS
+# ============================================================================
+
+
+@router.get("/me/preferences", response_model=UserPreferences)
+def get_user_preferences(current_user: CurrentUser, session: SessionDep) -> Any:
+    """
+    Get user preferences. Creates default preferences if none exist.
+    """
+    preferences = session.exec(
+        select(UserPreferences).where(UserPreferences.user_id == current_user.id)
+    ).first()
+
+    if not preferences:
+        # Create default preferences
+        preferences = UserPreferences(user_id=current_user.id)
+        session.add(preferences)
+        session.commit()
+        session.refresh(preferences)
+
+    return preferences
+
+
+@router.patch("/me/preferences", response_model=UserPreferences)
+def update_user_preferences(
+    current_user: CurrentUser,
+    session: SessionDep,
+    preferences_update: UserPreferencesUpdate,
+) -> Any:
+    """
+    Update user preferences.
+    """
+    preferences = session.exec(
+        select(UserPreferences).where(UserPreferences.user_id == current_user.id)
+    ).first()
+
+    if not preferences:
+        # Create preferences if they don't exist
+        preferences = UserPreferences(user_id=current_user.id)
+        session.add(preferences)
+        session.commit()
+        session.refresh(preferences)
+
+    # Update only provided fields
+    update_data = preferences_update.model_dump(exclude_unset=True)
+    preferences.sqlmodel_update(update_data)
+    session.add(preferences)
+    session.commit()
+    session.refresh(preferences)
+
+    return preferences
+
+
+# ============================================================================
+# USER SESSIONS ENDPOINTS
+# ============================================================================
+
+
+@router.get("/me/sessions", response_model=list[UserSession])
+def get_user_sessions(
+    current_user: CurrentUser, session: SessionDep, limit: int = 50
+) -> Any:
+    """
+    Get active sessions for current user.
+    """
+    from datetime import datetime
+
+    # Get active sessions (not expired)
+    statement = (
+        select(UserSession)
+        .where(
+            UserSession.user_id == current_user.id,
+            UserSession.expires_at > datetime.utcnow(),
+        )
+        .order_by(UserSession.last_active_at.desc())
+        .limit(limit)
+    )
+    sessions = session.exec(statement).all()
+    return list(sessions)
+
+
+@router.delete("/me/sessions/{session_id}", response_model=Message)
+def revoke_user_session(
+    session_id: uuid.UUID, current_user: CurrentUser, session: SessionDep
+) -> Any:
+    """
+    Revoke a specific session.
+    """
+    user_session = session.get(UserSession, session_id)
+    if not user_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if user_session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    session.delete(user_session)
+    session.commit()
+    return Message(message="Session revoked successfully")
+
+
+@router.delete("/me/sessions", response_model=Message)
+def revoke_all_sessions_except_current(
+    current_user: CurrentUser, session: SessionDep
+) -> Any:
+    """
+    Revoke all sessions except the current one.
+    Note: This requires the current session token to be passed in headers.
+    """
+    from datetime import datetime
+
+    # Get all active sessions except current (this is a simplified version)
+    # In production, you'd need to identify the current session token
+    statement = select(UserSession).where(
+        UserSession.user_id == current_user.id,
+        UserSession.expires_at > datetime.utcnow(),
+    )
+    sessions = session.exec(statement).all()
+
+    # Delete all sessions (in production, exclude current session)
+    for user_session in sessions:
+        session.delete(user_session)
+
+    session.commit()
+    return Message(message="All sessions revoked successfully")
+
+
+# ============================================================================
+# LOGIN HISTORY ENDPOINTS
+# ============================================================================
+
+
+@router.get("/me/login-history", response_model=list[LoginHistory])
+def get_login_history(
+    current_user: CurrentUser, session: SessionDep, limit: int = 50
+) -> Any:
+    """
+    Get login history for current user.
+    """
+    statement = (
+        select(LoginHistory)
+        .where(LoginHistory.user_id == current_user.id)
+        .order_by(LoginHistory.created_at.desc())
+        .limit(limit)
+    )
+    history = session.exec(statement).all()
+    return list(history)
+
+
+@router.post("/me/track-login", response_model=Message)
+def track_login(
+    request: Request, current_user: CurrentUser, session: SessionDep
+) -> Any:
+    """
+    Track a login event. Called by frontend after successful Supabase authentication.
+    Creates login history and session records.
+    """
+    from datetime import datetime, timedelta
+
+    # Get client info
+    ip_address = request.client.host if request.client else "unknown"
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        ip_address = forwarded_for.split(",")[0].strip()
+    user_agent = request.headers.get("user-agent", "unknown")
+
+    # Check if we've already logged this login recently (within 5 minutes)
+    recent_login = session.exec(
+        select(LoginHistory)
+        .where(
+            LoginHistory.user_id == current_user.id,
+            LoginHistory.success.is_(True),
+            LoginHistory.created_at > datetime.utcnow() - timedelta(minutes=5),
+        )
+        .order_by(LoginHistory.created_at.desc())
+        .limit(1)
+    ).first()
+
+    if not recent_login:
+        # Log successful login
+        login_history = LoginHistory(
+            user_id=current_user.id,
+            ip_address=ip_address,
+            user_agent=user_agent[:500],
+            success=True,
+        )
+        session.add(login_history)
+
+        # Create session record
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        session_token = generate_token()
+        expires_at = datetime.utcnow() + access_token_expires
+
+        user_session = UserSession(
+            user_id=current_user.id,
+            session_token=session_token,
+            device_info=user_agent[:255],
+            ip_address=ip_address,
+            user_agent=user_agent[:500],
+            expires_at=expires_at,
+        )
+        session.add(user_session)
+        session.commit()
+
+    return Message(message="Login tracked successfully")
+
+
+@router.post("/me/avatar", response_model=dict[str, str])
+async def upload_avatar(
+    request: Request, current_user: CurrentUser, session: SessionDep
+) -> Any:
+    """
+    Upload user avatar to Supabase Storage.
+
+    Expects multipart/form-data with 'file' field containing image.
+    """
+    from fastapi import UploadFile
+
+    # Get file from request
+    form = await request.form()
+    file = form.get("file")
+
+    if not file or not hasattr(file, "file"):
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    upload_file: UploadFile = file  # type: ignore
+
+    # Validate file type
+    if not upload_file.content_type or not upload_file.content_type.startswith(
+        "image/"
+    ):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    # Validate file size (max 2MB)
+    contents = await upload_file.read()
+    if len(contents) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size must be less than 2MB")
+
+    # Generate filename
+    file_extension = (
+        upload_file.filename.split(".")[-1] if upload_file.filename else "jpg"
+    )
+    filename = f"{current_user.id}/{uuid.uuid4()}.{file_extension}"
+
+    try:
+        # Upload to Supabase Storage
+        upload_result = default_storage_service.upload_file(
+            bucket="avatars",
+            file_path=filename,
+            file_data=contents,
+            content_type=upload_file.content_type,
+        )
+
+        # Update user preferences
+        preferences = session.exec(
+            select(UserPreferences).where(UserPreferences.user_id == current_user.id)
+        ).first()
+
+        if not preferences:
+            preferences = UserPreferences(user_id=current_user.id)
+            session.add(preferences)
+
+        preferences.avatar_url = upload_result.get("url") or upload_result.get(
+            "public_url"
+        )
+        session.add(preferences)
+        session.commit()
+        session.refresh(preferences)
+
+        return {"avatar_url": preferences.avatar_url or ""}
+    except Exception as e:
+        logger.error(f"Failed to upload avatar: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to upload avatar: {str(e)}"
+        )

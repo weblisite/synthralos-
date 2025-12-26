@@ -121,6 +121,17 @@ export const useAuth = () => {
           // Only invalidate if we have a new session (not just a refresh)
           if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
             queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+
+            // Track login event for new sign-ins
+            if (event === "SIGNED_IN" && session) {
+              // Call backend to track login
+              try {
+                await apiClient.users.trackLogin()
+              } catch (error) {
+                // Don't fail auth if tracking fails
+                console.error("Failed to track login:", error)
+              }
+            }
           }
         } else if (hasEverHadSessionRef.current) {
           // If we've ever had a session, preserve true state even if current check fails
