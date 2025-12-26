@@ -79,6 +79,153 @@ class User(UserBase, table=True):
     )
 
 
+# ============================================================================
+# USER PREFERENCES MODEL
+# ============================================================================
+
+
+class UserPreferences(SQLModel, table=True):
+    """User preferences and settings"""
+
+    __tablename__ = "user_preferences"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        unique=True,
+        ondelete="CASCADE",
+        index=True,
+    )
+    theme: str = Field(default="system", max_length=50)  # light, dark, system
+    ui_density: str = Field(
+        default="comfortable", max_length=50
+    )  # comfortable, compact
+    timezone: str = Field(default="UTC", max_length=100)
+    language: str = Field(default="en", max_length=10)
+    date_format: str = Field(default="YYYY-MM-DD", max_length=50)
+    time_format: str = Field(default="24h", max_length=10)  # 12h, 24h
+    bio: str | None = Field(default=None, max_length=500)
+    company: str | None = Field(default=None, max_length=255)
+    avatar_url: str | None = Field(default=None, max_length=1000)
+    email_workflow_events: bool = Field(default=True)
+    email_system_alerts: bool = Field(default=True)
+    email_team_invitations: bool = Field(default=True)
+    email_marketing: bool = Field(default=False)
+    notification_frequency: str = Field(
+        default="realtime", max_length=50
+    )  # realtime, daily, weekly
+    quiet_hours_start: str | None = Field(default=None, max_length=10)  # HH:MM format
+    quiet_hours_end: str | None = Field(default=None, max_length=10)  # HH:MM format
+    in_app_notifications: bool = Field(default=True)
+    default_timeout: int = Field(default=300)  # seconds
+    default_retry_policy: dict[str, Any] = Field(
+        default_factory=dict, sa_column=Column(JSONB)
+    )
+    auto_save_interval: int = Field(default=30)  # seconds
+    auto_retry_on_failure: bool = Field(default=True)
+    failure_notification_threshold: int = Field(default=1)
+    analytics_enabled: bool = Field(default=True)
+    error_reporting_enabled: bool = Field(default=True)
+    two_factor_enabled: bool = Field(default=False)
+    two_factor_secret: str | None = Field(default=None, max_length=255)
+    two_factor_backup_codes: list[str] = Field(
+        default_factory=list, sa_column=Column(JSONB)
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True))
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime(timezone=True), onupdate=datetime.utcnow),
+    )
+
+    user: User | None = Relationship(back_populates="preferences")
+
+
+class UserPreferencesUpdate(SQLModel):
+    """Update user preferences request"""
+
+    theme: str | None = None
+    ui_density: str | None = None
+    timezone: str | None = None
+    language: str | None = None
+    date_format: str | None = None
+    time_format: str | None = None
+    bio: str | None = None
+    company: str | None = None
+    avatar_url: str | None = None
+    email_workflow_events: bool | None = None
+    email_system_alerts: bool | None = None
+    email_team_invitations: bool | None = None
+    email_marketing: bool | None = None
+    notification_frequency: str | None = None
+    quiet_hours_start: str | None = None
+    quiet_hours_end: str | None = None
+    in_app_notifications: bool | None = None
+    default_timeout: int | None = None
+    default_retry_policy: dict[str, Any] | None = None
+    auto_save_interval: int | None = None
+    auto_retry_on_failure: bool | None = None
+    failure_notification_threshold: int | None = None
+    analytics_enabled: bool | None = None
+    error_reporting_enabled: bool | None = None
+    two_factor_enabled: bool | None = None
+    two_factor_secret: str | None = None
+    two_factor_backup_codes: list[str] | None = None
+
+
+# ============================================================================
+# USER SESSION AND LOGIN HISTORY MODELS
+# ============================================================================
+
+
+class UserSession(SQLModel, table=True):
+    """User session tracking model"""
+
+    __tablename__ = "user_session"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
+    )
+    session_token: str = Field(unique=True, index=True, max_length=255)
+    device_info: str | None = Field(default=None, max_length=255)
+    ip_address: str | None = Field(default=None, max_length=255)
+    user_agent: str | None = Field(default=None, max_length=500)
+    location: str | None = Field(default=None, max_length=255)
+    last_active_at: datetime = Field(
+        default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True))
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True))
+    )
+    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
+
+    user: User | None = Relationship(back_populates="sessions")
+
+
+class LoginHistory(SQLModel, table=True):
+    """Login history tracking model"""
+
+    __tablename__ = "login_history"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
+    )
+    ip_address: str = Field(max_length=255)
+    user_agent: str = Field(max_length=500)
+    location: str | None = Field(default=None, max_length=255)
+    success: bool = Field(default=True)
+    failure_reason: str | None = Field(default=None, max_length=500)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True))
+    )
+
+    user: User | None = Relationship(back_populates="login_history")
+
+
 # Properties to return via API, id is always required
 class UserPublic(UserBase):
     id: uuid.UUID
