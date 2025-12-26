@@ -30,7 +30,19 @@ import { Route as LayoutChatRouteImport } from './routes/_layout/chat'
 import { Route as LayoutBrowserRouteImport } from './routes/_layout/browser'
 import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutSettingsIndexRouteImport } from './routes/_layout/settings/index'
 import { Route as TeamsInvitationsAcceptRouteImport } from './routes/teams/invitations/accept'
+import { Route as LayoutSettingsTeamsRouteImport } from './routes/_layout/settings/teams'
+import { Route as LayoutSettingsSecurityRouteImport } from './routes/_layout/settings/security'
+import { Route as LayoutSettingsProfileRouteImport } from './routes/_layout/settings/profile'
+import { Route as LayoutSettingsPreferencesRouteImport } from './routes/_layout/settings/preferences'
+import { Route as LayoutSettingsNotificationsRouteImport } from './routes/_layout/settings/notifications'
+import { Route as LayoutSettingsIntegrationsRouteImport } from './routes/_layout/settings/integrations'
+import { Route as LayoutSettingsDeveloperRouteImport } from './routes/_layout/settings/developer'
+import { Route as LayoutSettingsDataRouteImport } from './routes/_layout/settings/data'
+import { Route as LayoutSettingsDangerRouteImport } from './routes/_layout/settings/danger'
+import { Route as LayoutSettingsAppearanceRouteImport } from './routes/_layout/settings/appearance'
+import { Route as LayoutSettingsApiKeysRouteImport } from './routes/_layout/settings/api-keys'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -136,10 +148,74 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutSettingsIndexRoute = LayoutSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutSettingsRoute,
+} as any)
 const TeamsInvitationsAcceptRoute = TeamsInvitationsAcceptRouteImport.update({
   id: '/teams/invitations/accept',
   path: '/teams/invitations/accept',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LayoutSettingsTeamsRoute = LayoutSettingsTeamsRouteImport.update({
+  id: '/teams',
+  path: '/teams',
+  getParentRoute: () => LayoutSettingsRoute,
+} as any)
+const LayoutSettingsSecurityRoute = LayoutSettingsSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => LayoutSettingsRoute,
+} as any)
+const LayoutSettingsProfileRoute = LayoutSettingsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => LayoutSettingsRoute,
+} as any)
+const LayoutSettingsPreferencesRoute =
+  LayoutSettingsPreferencesRouteImport.update({
+    id: '/preferences',
+    path: '/preferences',
+    getParentRoute: () => LayoutSettingsRoute,
+  } as any)
+const LayoutSettingsNotificationsRoute =
+  LayoutSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => LayoutSettingsRoute,
+  } as any)
+const LayoutSettingsIntegrationsRoute =
+  LayoutSettingsIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => LayoutSettingsRoute,
+  } as any)
+const LayoutSettingsDeveloperRoute = LayoutSettingsDeveloperRouteImport.update({
+  id: '/developer',
+  path: '/developer',
+  getParentRoute: () => LayoutSettingsRoute,
+} as any)
+const LayoutSettingsDataRoute = LayoutSettingsDataRouteImport.update({
+  id: '/data',
+  path: '/data',
+  getParentRoute: () => LayoutSettingsRoute,
+} as any)
+const LayoutSettingsDangerRoute = LayoutSettingsDangerRouteImport.update({
+  id: '/danger',
+  path: '/danger',
+  getParentRoute: () => LayoutSettingsRoute,
+} as any)
+const LayoutSettingsAppearanceRoute =
+  LayoutSettingsAppearanceRouteImport.update({
+    id: '/appearance',
+    path: '/appearance',
+    getParentRoute: () => LayoutSettingsRoute,
+  } as any)
+const LayoutSettingsApiKeysRoute = LayoutSettingsApiKeysRouteImport.update({
+  id: '/api-keys',
+  path: '/api-keys',
+  getParentRoute: () => LayoutSettingsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -157,13 +233,25 @@ export interface FileRoutesByFullPath {
   '/osint': typeof LayoutOsintRoute
   '/rag': typeof LayoutRagRoute
   '/scraping': typeof LayoutScrapingRoute
-  '/settings': typeof LayoutSettingsRoute
+  '/settings': typeof LayoutSettingsRouteWithChildren
   '/social-monitoring': typeof LayoutSocialMonitoringRoute
   '/storage': typeof LayoutStorageRoute
   '/teams': typeof LayoutTeamsRoute
   '/workflows': typeof LayoutWorkflowsRoute
   '/': typeof LayoutIndexRoute
+  '/settings/api-keys': typeof LayoutSettingsApiKeysRoute
+  '/settings/appearance': typeof LayoutSettingsAppearanceRoute
+  '/settings/danger': typeof LayoutSettingsDangerRoute
+  '/settings/data': typeof LayoutSettingsDataRoute
+  '/settings/developer': typeof LayoutSettingsDeveloperRoute
+  '/settings/integrations': typeof LayoutSettingsIntegrationsRoute
+  '/settings/notifications': typeof LayoutSettingsNotificationsRoute
+  '/settings/preferences': typeof LayoutSettingsPreferencesRoute
+  '/settings/profile': typeof LayoutSettingsProfileRoute
+  '/settings/security': typeof LayoutSettingsSecurityRoute
+  '/settings/teams': typeof LayoutSettingsTeamsRoute
   '/teams/invitations/accept': typeof TeamsInvitationsAcceptRoute
+  '/settings/': typeof LayoutSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -180,13 +268,24 @@ export interface FileRoutesByTo {
   '/osint': typeof LayoutOsintRoute
   '/rag': typeof LayoutRagRoute
   '/scraping': typeof LayoutScrapingRoute
-  '/settings': typeof LayoutSettingsRoute
   '/social-monitoring': typeof LayoutSocialMonitoringRoute
   '/storage': typeof LayoutStorageRoute
   '/teams': typeof LayoutTeamsRoute
   '/workflows': typeof LayoutWorkflowsRoute
   '/': typeof LayoutIndexRoute
+  '/settings/api-keys': typeof LayoutSettingsApiKeysRoute
+  '/settings/appearance': typeof LayoutSettingsAppearanceRoute
+  '/settings/danger': typeof LayoutSettingsDangerRoute
+  '/settings/data': typeof LayoutSettingsDataRoute
+  '/settings/developer': typeof LayoutSettingsDeveloperRoute
+  '/settings/integrations': typeof LayoutSettingsIntegrationsRoute
+  '/settings/notifications': typeof LayoutSettingsNotificationsRoute
+  '/settings/preferences': typeof LayoutSettingsPreferencesRoute
+  '/settings/profile': typeof LayoutSettingsProfileRoute
+  '/settings/security': typeof LayoutSettingsSecurityRoute
+  '/settings/teams': typeof LayoutSettingsTeamsRoute
   '/teams/invitations/accept': typeof TeamsInvitationsAcceptRoute
+  '/settings': typeof LayoutSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -205,13 +304,25 @@ export interface FileRoutesById {
   '/_layout/osint': typeof LayoutOsintRoute
   '/_layout/rag': typeof LayoutRagRoute
   '/_layout/scraping': typeof LayoutScrapingRoute
-  '/_layout/settings': typeof LayoutSettingsRoute
+  '/_layout/settings': typeof LayoutSettingsRouteWithChildren
   '/_layout/social-monitoring': typeof LayoutSocialMonitoringRoute
   '/_layout/storage': typeof LayoutStorageRoute
   '/_layout/teams': typeof LayoutTeamsRoute
   '/_layout/workflows': typeof LayoutWorkflowsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/settings/api-keys': typeof LayoutSettingsApiKeysRoute
+  '/_layout/settings/appearance': typeof LayoutSettingsAppearanceRoute
+  '/_layout/settings/danger': typeof LayoutSettingsDangerRoute
+  '/_layout/settings/data': typeof LayoutSettingsDataRoute
+  '/_layout/settings/developer': typeof LayoutSettingsDeveloperRoute
+  '/_layout/settings/integrations': typeof LayoutSettingsIntegrationsRoute
+  '/_layout/settings/notifications': typeof LayoutSettingsNotificationsRoute
+  '/_layout/settings/preferences': typeof LayoutSettingsPreferencesRoute
+  '/_layout/settings/profile': typeof LayoutSettingsProfileRoute
+  '/_layout/settings/security': typeof LayoutSettingsSecurityRoute
+  '/_layout/settings/teams': typeof LayoutSettingsTeamsRoute
   '/teams/invitations/accept': typeof TeamsInvitationsAcceptRoute
+  '/_layout/settings/': typeof LayoutSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -236,7 +347,19 @@ export interface FileRouteTypes {
     | '/teams'
     | '/workflows'
     | '/'
+    | '/settings/api-keys'
+    | '/settings/appearance'
+    | '/settings/danger'
+    | '/settings/data'
+    | '/settings/developer'
+    | '/settings/integrations'
+    | '/settings/notifications'
+    | '/settings/preferences'
+    | '/settings/profile'
+    | '/settings/security'
+    | '/settings/teams'
     | '/teams/invitations/accept'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -253,13 +376,24 @@ export interface FileRouteTypes {
     | '/osint'
     | '/rag'
     | '/scraping'
-    | '/settings'
     | '/social-monitoring'
     | '/storage'
     | '/teams'
     | '/workflows'
     | '/'
+    | '/settings/api-keys'
+    | '/settings/appearance'
+    | '/settings/danger'
+    | '/settings/data'
+    | '/settings/developer'
+    | '/settings/integrations'
+    | '/settings/notifications'
+    | '/settings/preferences'
+    | '/settings/profile'
+    | '/settings/security'
+    | '/settings/teams'
     | '/teams/invitations/accept'
+    | '/settings'
   id:
     | '__root__'
     | '/_layout'
@@ -283,7 +417,19 @@ export interface FileRouteTypes {
     | '/_layout/teams'
     | '/_layout/workflows'
     | '/_layout/'
+    | '/_layout/settings/api-keys'
+    | '/_layout/settings/appearance'
+    | '/_layout/settings/danger'
+    | '/_layout/settings/data'
+    | '/_layout/settings/developer'
+    | '/_layout/settings/integrations'
+    | '/_layout/settings/notifications'
+    | '/_layout/settings/preferences'
+    | '/_layout/settings/profile'
+    | '/_layout/settings/security'
+    | '/_layout/settings/teams'
     | '/teams/invitations/accept'
+    | '/_layout/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -444,6 +590,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/settings/': {
+      id: '/_layout/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof LayoutSettingsIndexRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
     '/teams/invitations/accept': {
       id: '/teams/invitations/accept'
       path: '/teams/invitations/accept'
@@ -451,8 +604,119 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamsInvitationsAcceptRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/settings/teams': {
+      id: '/_layout/settings/teams'
+      path: '/teams'
+      fullPath: '/settings/teams'
+      preLoaderRoute: typeof LayoutSettingsTeamsRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/security': {
+      id: '/_layout/settings/security'
+      path: '/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof LayoutSettingsSecurityRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/profile': {
+      id: '/_layout/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof LayoutSettingsProfileRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/preferences': {
+      id: '/_layout/settings/preferences'
+      path: '/preferences'
+      fullPath: '/settings/preferences'
+      preLoaderRoute: typeof LayoutSettingsPreferencesRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/notifications': {
+      id: '/_layout/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof LayoutSettingsNotificationsRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/integrations': {
+      id: '/_layout/settings/integrations'
+      path: '/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof LayoutSettingsIntegrationsRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/developer': {
+      id: '/_layout/settings/developer'
+      path: '/developer'
+      fullPath: '/settings/developer'
+      preLoaderRoute: typeof LayoutSettingsDeveloperRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/data': {
+      id: '/_layout/settings/data'
+      path: '/data'
+      fullPath: '/settings/data'
+      preLoaderRoute: typeof LayoutSettingsDataRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/danger': {
+      id: '/_layout/settings/danger'
+      path: '/danger'
+      fullPath: '/settings/danger'
+      preLoaderRoute: typeof LayoutSettingsDangerRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/appearance': {
+      id: '/_layout/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof LayoutSettingsAppearanceRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
+    '/_layout/settings/api-keys': {
+      id: '/_layout/settings/api-keys'
+      path: '/api-keys'
+      fullPath: '/settings/api-keys'
+      preLoaderRoute: typeof LayoutSettingsApiKeysRouteImport
+      parentRoute: typeof LayoutSettingsRoute
+    }
   }
 }
+
+interface LayoutSettingsRouteChildren {
+  LayoutSettingsApiKeysRoute: typeof LayoutSettingsApiKeysRoute
+  LayoutSettingsAppearanceRoute: typeof LayoutSettingsAppearanceRoute
+  LayoutSettingsDangerRoute: typeof LayoutSettingsDangerRoute
+  LayoutSettingsDataRoute: typeof LayoutSettingsDataRoute
+  LayoutSettingsDeveloperRoute: typeof LayoutSettingsDeveloperRoute
+  LayoutSettingsIntegrationsRoute: typeof LayoutSettingsIntegrationsRoute
+  LayoutSettingsNotificationsRoute: typeof LayoutSettingsNotificationsRoute
+  LayoutSettingsPreferencesRoute: typeof LayoutSettingsPreferencesRoute
+  LayoutSettingsProfileRoute: typeof LayoutSettingsProfileRoute
+  LayoutSettingsSecurityRoute: typeof LayoutSettingsSecurityRoute
+  LayoutSettingsTeamsRoute: typeof LayoutSettingsTeamsRoute
+  LayoutSettingsIndexRoute: typeof LayoutSettingsIndexRoute
+}
+
+const LayoutSettingsRouteChildren: LayoutSettingsRouteChildren = {
+  LayoutSettingsApiKeysRoute: LayoutSettingsApiKeysRoute,
+  LayoutSettingsAppearanceRoute: LayoutSettingsAppearanceRoute,
+  LayoutSettingsDangerRoute: LayoutSettingsDangerRoute,
+  LayoutSettingsDataRoute: LayoutSettingsDataRoute,
+  LayoutSettingsDeveloperRoute: LayoutSettingsDeveloperRoute,
+  LayoutSettingsIntegrationsRoute: LayoutSettingsIntegrationsRoute,
+  LayoutSettingsNotificationsRoute: LayoutSettingsNotificationsRoute,
+  LayoutSettingsPreferencesRoute: LayoutSettingsPreferencesRoute,
+  LayoutSettingsProfileRoute: LayoutSettingsProfileRoute,
+  LayoutSettingsSecurityRoute: LayoutSettingsSecurityRoute,
+  LayoutSettingsTeamsRoute: LayoutSettingsTeamsRoute,
+  LayoutSettingsIndexRoute: LayoutSettingsIndexRoute,
+}
+
+const LayoutSettingsRouteWithChildren = LayoutSettingsRoute._addFileChildren(
+  LayoutSettingsRouteChildren,
+)
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
@@ -465,7 +729,7 @@ interface LayoutRouteChildren {
   LayoutOsintRoute: typeof LayoutOsintRoute
   LayoutRagRoute: typeof LayoutRagRoute
   LayoutScrapingRoute: typeof LayoutScrapingRoute
-  LayoutSettingsRoute: typeof LayoutSettingsRoute
+  LayoutSettingsRoute: typeof LayoutSettingsRouteWithChildren
   LayoutSocialMonitoringRoute: typeof LayoutSocialMonitoringRoute
   LayoutStorageRoute: typeof LayoutStorageRoute
   LayoutTeamsRoute: typeof LayoutTeamsRoute
@@ -484,7 +748,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutOsintRoute: LayoutOsintRoute,
   LayoutRagRoute: LayoutRagRoute,
   LayoutScrapingRoute: LayoutScrapingRoute,
-  LayoutSettingsRoute: LayoutSettingsRoute,
+  LayoutSettingsRoute: LayoutSettingsRouteWithChildren,
   LayoutSocialMonitoringRoute: LayoutSocialMonitoringRoute,
   LayoutStorageRoute: LayoutStorageRoute,
   LayoutTeamsRoute: LayoutTeamsRoute,

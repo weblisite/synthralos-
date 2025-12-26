@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { ProfileSection } from "@/components/UserSettings/ProfileSection"
 import { SettingsLayout } from "@/components/UserSettings/SettingsLayout"
 
-export const Route = createFileRoute("/_layout/settings/profile")({
+export const Route = createFileRoute("/_layout/settings/profile" as any)({
   component: ProfileSettings,
   head: () => ({
     meta: [

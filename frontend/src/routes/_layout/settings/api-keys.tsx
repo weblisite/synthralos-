@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { APIKeys } from "@/components/UserSettings/APIKeys"
 import { SettingsLayout } from "@/components/UserSettings/SettingsLayout"
 
-export const Route = createFileRoute("/_layout/settings/api-keys")({
+export const Route = createFileRoute("/_layout/settings/api-keys" as any)({
   component: APIKeysSettings,
   head: () => ({
     meta: [

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { DataPrivacySection } from "@/components/UserSettings/DataPrivacySection"
 import { SettingsLayout } from "@/components/UserSettings/SettingsLayout"
 
-export const Route = createFileRoute("/_layout/settings/data")({
+export const Route = createFileRoute("/_layout/settings/data" as any)({
   component: DataSettings,
   head: () => ({
     meta: [

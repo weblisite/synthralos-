@@ -155,9 +155,11 @@ export function TeamMembers({ teamId }: { teamId: string }) {
     }
   }
 
+  // Unused function - kept for potential future use
+  // @ts-expect-error - Unused function kept for future use
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _getRoleColor = (role: string) => {
-    switch (role) {
+  const _getRoleColor = (_role: string) => {
+    switch (_role) {
       case "owner":
         return "default"
       case "admin":

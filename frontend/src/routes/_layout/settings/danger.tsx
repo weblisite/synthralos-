@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import { SettingsLayout } from "@/components/UserSettings/SettingsLayout"
 
-export const Route = createFileRoute("/_layout/settings/danger")({
+export const Route = createFileRoute("/_layout/settings/danger" as any)({
   component: DangerZoneSettings,
   head: () => ({
     meta: [
