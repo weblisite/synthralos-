@@ -143,7 +143,8 @@ export function ProfileSection() {
         language: preferences.language ?? "en",
       })
     }
-  }, [preferences, currentUser, form])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferences, currentUser])
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
