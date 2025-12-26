@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 from typing import Any
@@ -47,32 +49,32 @@ class UpdatePassword(SQLModel):
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str = Field(default="")  # Empty for Supabase auth users
-    workflows: list["Workflow"] = Relationship(
+    workflows: list[Workflow] = Relationship(
         back_populates="owner", cascade_delete=True
     )
-    rag_indexes: list["RAGIndex"] = Relationship(
+    rag_indexes: list[RAGIndex] = Relationship(
         back_populates="owner", cascade_delete=True
     )
-    code_tools: list["CodeToolRegistry"] = Relationship(
+    code_tools: list[CodeToolRegistry] = Relationship(
         back_populates="owner", cascade_delete=True
     )
-    code_sandboxes: list["CodeSandbox"] = Relationship(
+    code_sandboxes: list[CodeSandbox] = Relationship(
         back_populates="owner", cascade_delete=True
     )
-    api_keys: list["UserAPIKey"] = Relationship(
+    api_keys: list[UserAPIKey] = Relationship(
         back_populates="user", cascade_delete=True
     )
-    owned_teams: list["Team"] = Relationship(back_populates="owner")
-    team_memberships: list["TeamMember"] = Relationship()
-    sent_invitations: list["TeamInvitation"] = Relationship()
-    preferences: "UserPreferences" | None = Relationship(
+    owned_teams: list[Team] = Relationship(back_populates="owner")
+    team_memberships: list[TeamMember] = Relationship()
+    sent_invitations: list[TeamInvitation] = Relationship()
+    preferences: UserPreferences | None = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"uselist": False, "cascade_delete": True},
     )
-    sessions: list["UserSession"] = Relationship(
+    sessions: list[UserSession] = Relationship(
         back_populates="user", cascade_delete=True
     )
-    login_history: list["LoginHistory"] = Relationship(
+    login_history: list[LoginHistory] = Relationship(
         back_populates="user", cascade_delete=True
     )
 
@@ -143,19 +145,19 @@ class Workflow(WorkflowBase, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     owner: User | None = Relationship(back_populates="workflows")
-    nodes: list["WorkflowNode"] = Relationship(
+    nodes: list[WorkflowNode] = Relationship(
         back_populates="workflow", cascade_delete=True
     )
-    executions: list["WorkflowExecution"] = Relationship(
+    executions: list[WorkflowExecution] = Relationship(
         back_populates="workflow", cascade_delete=True
     )
-    schedules: list["WorkflowSchedule"] = Relationship(
+    schedules: list[WorkflowSchedule] = Relationship(
         back_populates="workflow", cascade_delete=True
     )
-    webhook_subscriptions: list["WorkflowWebhookSubscription"] = Relationship(
+    webhook_subscriptions: list[WorkflowWebhookSubscription] = Relationship(
         back_populates="workflow", cascade_delete=True
     )
-    webhook_subscriptions: list["WorkflowWebhookSubscription"] = Relationship(
+    webhook_subscriptions: list[WorkflowWebhookSubscription] = Relationship(
         back_populates="workflow", cascade_delete=True
     )
 
@@ -206,10 +208,10 @@ class WorkflowExecution(SQLModel, table=True):
     next_retry_at: datetime | None = None
 
     workflow: Workflow | None = Relationship(back_populates="executions")
-    logs: list["ExecutionLog"] = Relationship(
+    logs: list[ExecutionLog] = Relationship(
         back_populates="execution", cascade_delete=True
     )
-    signals: list["WorkflowSignal"] = Relationship(
+    signals: list[WorkflowSignal] = Relationship(
         back_populates="execution", cascade_delete=True
     )
 
@@ -296,7 +298,7 @@ class Connector(SQLModel, table=True):
         default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
     )
 
-    versions: list["ConnectorVersion"] = Relationship(
+    versions: list[ConnectorVersion] = Relationship(
         back_populates="connector", cascade_delete=True
     )
 
@@ -312,7 +314,7 @@ class ConnectorVersion(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     connector: Connector | None = Relationship(back_populates="versions")
-    webhook_subscriptions: list["WebhookSubscription"] = Relationship(
+    webhook_subscriptions: list[WebhookSubscription] = Relationship(
         back_populates="connector_version", cascade_delete=True
     )
 
@@ -348,9 +350,7 @@ class AgentTask(SQLModel, table=True):
     completed_at: datetime | None = None
     error_message: str | None = None
 
-    logs: list["AgentTaskLog"] = Relationship(
-        back_populates="task", cascade_delete=True
-    )
+    logs: list[AgentTaskLog] = Relationship(back_populates="task", cascade_delete=True)
 
 
 class AgentTaskLog(SQLModel, table=True):
@@ -398,12 +398,10 @@ class RAGIndex(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     owner: User | None = Relationship(back_populates="rag_indexes")
-    documents: list["RAGDocument"] = Relationship(
+    documents: list[RAGDocument] = Relationship(
         back_populates="index", cascade_delete=True
     )
-    queries: list["RAGQuery"] = Relationship(
-        back_populates="index", cascade_delete=True
-    )
+    queries: list[RAGQuery] = Relationship(back_populates="index", cascade_delete=True)
 
 
 class RAGDocument(SQLModel, table=True):
@@ -582,7 +580,7 @@ class BrowserSession(SQLModel, table=True):
     started_at: datetime = Field(default_factory=datetime.utcnow)
     closed_at: datetime | None = None
 
-    actions: list["BrowserAction"] = Relationship(
+    actions: list[BrowserAction] = Relationship(
         back_populates="session", cascade_delete=True
     )
 
@@ -622,7 +620,7 @@ class OSINTStream(SQLModel, table=True):
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    signals: list["OSINTSignal"] = Relationship(
+    signals: list[OSINTSignal] = Relationship(
         back_populates="stream", cascade_delete=True
     )
 
@@ -731,10 +729,8 @@ class Team(SQLModel, table=True):
     settings: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
 
     owner: User | None = Relationship()
-    members: list["TeamMember"] = Relationship(
-        back_populates="team", cascade_delete=True
-    )
-    invitations: list["TeamInvitation"] = Relationship(
+    members: list[TeamMember] = Relationship(back_populates="team", cascade_delete=True)
+    invitations: list[TeamInvitation] = Relationship(
         back_populates="team", cascade_delete=True
     )
 
