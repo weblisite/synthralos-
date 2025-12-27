@@ -61,41 +61,27 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
         full_name = None
         supabase_user_id = None
 
+        # Try to verify token with Supabase first (preferred method)
+        # This validates signature and expiration
         try:
-            # Verify token with Supabase and get user info
-            # This validates the token signature and expiration
             user_response = supabase.auth.get_user(token)
+            if user_response and user_response.user:
+                supabase_user = user_response.user
+                user_email = supabase_user.email
+                supabase_user_id = supabase_user.id
+                
+                # Get full_name from user_metadata if available
+                if supabase_user.user_metadata:
+                    full_name = supabase_user.user_metadata.get("full_name")
+                
+                logger.info(f"Verified token via Supabase API for user: {user_email} (ID: {supabase_user_id})")
+            else:
+                raise ValueError("Supabase get_user returned no user")
+        except Exception as supabase_error:
+            # Fallback to JWT decode if Supabase API fails
+            logger.warning(f"Supabase get_user failed: {str(supabase_error)}, falling back to JWT decode")
             
-            if not user_response or not user_response.user:
-                logger.warning(f"Supabase get_user returned no user for token (length: {len(token)})")
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Invalid or expired token. Please refresh your session.",
-                )
-            
-            # Extract user info from Supabase user object
-            supabase_user = user_response.user
-            user_email = supabase_user.email
-            supabase_user_id = supabase_user.id
-            
-            # Get full_name from user_metadata if available
-            if supabase_user.user_metadata:
-                full_name = supabase_user.user_metadata.get("full_name")
-            
-            logger.debug(f"Verified token for user: {user_email} (ID: {supabase_user_id})")
-            
-        except HTTPException:
-            # Re-raise HTTP exceptions
-            raise
-        except Exception as e:
-            # Log the error for debugging
-            logger.error(
-                f"Error verifying token with Supabase: {str(e)}", 
-                exc_info=True
-            )
-            
-            # Fallback: Try to decode JWT directly if Supabase verification fails
-            # This might happen if the token format is unexpected
+            # Fallback: Decode JWT directly
             try:
                 # Basic JWT format check
                 token_parts = token.split(".")
@@ -134,17 +120,17 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
                     if isinstance(app_metadata, dict):
                         user_email = app_metadata.get("email")
                 
-                logger.warning(f"Used JWT fallback for user: {user_email}")
+                logger.info(f"Used JWT fallback for user: {user_email}")
                 
             except HTTPException:
                 raise
-            except Exception as fallback_error:
+            except Exception as jwt_error:
                 logger.error(
-                    f"JWT fallback also failed: {str(fallback_error)}, token length: {len(token)}"
+                    f"JWT decode fallback also failed: {str(jwt_error)}, token length: {len(token)}"
                 )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Could not validate token: {str(e)}. Please ensure you're using a valid Supabase access token.",
+                    detail=f"Could not validate token: {str(supabase_error)}. Please ensure you're using a valid Supabase access token.",
                 )
 
         if not user_email:
