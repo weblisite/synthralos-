@@ -9,11 +9,10 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlmodel import Session
-from supabase import Client, create_client
 
 from app.api.deps import CurrentUser, SessionDep, get_db
-from app.core.config import settings
 from app.services.chat_processor import default_chat_processor
+from app.services.clerk_service import verify_clerk_token
 from app.workflows.engine import WorkflowEngine
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -29,14 +28,14 @@ async def verify_websocket_token(
     websocket: WebSocket, token: str | None = None
 ) -> dict[str, Any]:
     """
-    Verify JWT token from WebSocket connection.
+    Verify Clerk JWT token from WebSocket connection.
 
     Args:
         websocket: WebSocket connection
         token: JWT token from query parameter
 
     Returns:
-        Decoded token payload
+        Decoded token payload with user_id and email
 
     Raises:
         HTTPException: If token is invalid
@@ -46,21 +45,12 @@ async def verify_websocket_token(
         raise HTTPException(status_code=401, detail="Missing authentication token")
 
     try:
-        # Use Supabase to verify the token
-        supabase: Client = create_client(
-            settings.SUPABASE_URL,
-            settings.SUPABASE_ANON_KEY,
-        )
-
-        # Verify token with Supabase
-        user_response = supabase.auth.get_user(token)
-        if not user_response.user:
-            await websocket.close(code=1008, reason="Invalid authentication token")
-            raise HTTPException(status_code=401, detail="Invalid authentication token")
+        # Verify token with Clerk
+        user_info = verify_clerk_token(token)
 
         return {
-            "user_id": user_response.user.id,
-            "email": user_response.user.email,
+            "user_id": user_info["user_id"],
+            "email": user_info["email"],
         }
     except Exception as e:
         await websocket.close(code=1008, reason="Authentication failed")

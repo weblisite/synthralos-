@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import EmailStr
 from sqlalchemy import JSON, Column, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
 from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    pass
 
 
 # Shared properties
@@ -48,34 +52,59 @@ class UpdatePassword(SQLModel):
 # Database model, database table inferred from class name
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    hashed_password: str = Field(default="")  # Empty for Supabase auth users
+    hashed_password: str = Field(default="")  # Empty for Clerk auth users
     workflows: list[Workflow] = Relationship(
-        back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "Workflow", back_populates="owner", cascade="all, delete-orphan"
+        )
     )
     rag_indexes: list[RAGIndex] = Relationship(
-        back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "RAGIndex", back_populates="owner", cascade="all, delete-orphan"
+        )
     )
     code_tools: list[CodeToolRegistry] = Relationship(
-        back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "CodeToolRegistry", back_populates="owner", cascade="all, delete-orphan"
+        )
     )
     code_sandboxes: list[CodeSandbox] = Relationship(
-        back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "CodeSandbox", back_populates="owner", cascade="all, delete-orphan"
+        )
     )
     api_keys: list[UserAPIKey] = Relationship(
-        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "UserAPIKey", back_populates="user", cascade="all, delete-orphan"
+        )
     )
-    owned_teams: list[Team] = Relationship(back_populates="owner")
-    team_memberships: list[TeamMember] = Relationship()
-    sent_invitations: list[TeamInvitation] = Relationship()
+    owned_teams: list[Team] = Relationship(
+        sa_relationship=relationship("Team", back_populates="owner")
+    )
+    team_memberships: list[TeamMember] = Relationship(
+        sa_relationship=relationship("TeamMember", foreign_keys="TeamMember.user_id")
+    )
+    sent_invitations: list[TeamInvitation] = Relationship(
+        sa_relationship=relationship("TeamInvitation")
+    )
     preferences: UserPreferences | None = Relationship(
-        back_populates="user",
-        sa_relationship_kwargs={"uselist": False, "cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "UserPreferences",
+            back_populates="user",
+            uselist=False,
+            cascade="all, delete-orphan",
+            foreign_keys="UserPreferences.user_id",
+        )
     )
     sessions: list[UserSession] = Relationship(
-        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "UserSession", back_populates="user", cascade="all, delete-orphan"
+        )
     )
     login_history: list[LoginHistory] = Relationship(
-        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "LoginHistory", back_populates="user", cascade="all, delete-orphan"
+        )
     )
 
 
@@ -140,7 +169,9 @@ class UserPreferences(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), onupdate=datetime.utcnow),
     )
 
-    user: User | None = Relationship(back_populates="preferences")
+    user: User | None = Relationship(
+        sa_relationship=relationship("User", back_populates="preferences")
+    )
 
 
 class UserPreferencesUpdate(SQLModel):
@@ -202,7 +233,9 @@ class UserSession(SQLModel, table=True):
     )
     expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
 
-    user: User | None = Relationship(back_populates="sessions")
+    user: User | None = Relationship(
+        sa_relationship=relationship("User", back_populates="sessions")
+    )
 
 
 class LoginHistory(SQLModel, table=True):
@@ -223,7 +256,9 @@ class LoginHistory(SQLModel, table=True):
         default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True))
     )
 
-    user: User | None = Relationship(back_populates="login_history")
+    user: User | None = Relationship(
+        sa_relationship=relationship("User", back_populates="login_history")
+    )
 
 
 # Properties to return via API, id is always required
@@ -291,22 +326,30 @@ class Workflow(WorkflowBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    owner: User | None = Relationship(back_populates="workflows")
+    owner: User | None = Relationship(
+        sa_relationship=relationship("User", back_populates="workflows")
+    )
     nodes: list[WorkflowNode] = Relationship(
-        back_populates="workflow",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "WorkflowNode", back_populates="workflow", cascade="all, delete-orphan"
+        )
     )
     executions: list[WorkflowExecution] = Relationship(
-        back_populates="workflow",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "WorkflowExecution", back_populates="workflow", cascade="all, delete-orphan"
+        )
     )
     schedules: list[WorkflowSchedule] = Relationship(
-        back_populates="workflow",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "WorkflowSchedule", back_populates="workflow", cascade="all, delete-orphan"
+        )
     )
     webhook_subscriptions: list[WorkflowWebhookSubscription] = Relationship(
-        back_populates="workflow",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "WorkflowWebhookSubscription",
+            back_populates="workflow",
+            cascade="all, delete-orphan",
+        )
     )
 
 
@@ -330,7 +373,9 @@ class WorkflowNode(SQLModel, table=True):
     position_y: float = Field(default=0.0)
     config: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
 
-    workflow: Workflow | None = Relationship(back_populates="nodes")
+    workflow: Workflow | None = Relationship(
+        sa_relationship=relationship("Workflow", back_populates="nodes")
+    )
 
 
 class WorkflowExecution(SQLModel, table=True):
@@ -355,14 +400,18 @@ class WorkflowExecution(SQLModel, table=True):
     retry_count: int = Field(default=0)
     next_retry_at: datetime | None = None
 
-    workflow: Workflow | None = Relationship(back_populates="executions")
+    workflow: Workflow | None = Relationship(
+        sa_relationship=relationship("Workflow", back_populates="executions")
+    )
     logs: list[ExecutionLog] = Relationship(
-        back_populates="execution",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "ExecutionLog", back_populates="execution", cascade="all, delete-orphan"
+        )
     )
     signals: list[WorkflowSignal] = Relationship(
-        back_populates="execution",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "WorkflowSignal", back_populates="execution", cascade="all, delete-orphan"
+        )
     )
 
 
@@ -376,7 +425,9 @@ class ExecutionLog(SQLModel, table=True):
     message: str = Field(max_length=5000)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    execution: WorkflowExecution | None = Relationship(back_populates="logs")
+    execution: WorkflowExecution | None = Relationship(
+        sa_relationship=relationship("WorkflowExecution", back_populates="logs")
+    )
 
 
 class WorkflowSchedule(SQLModel, table=True):
@@ -389,7 +440,9 @@ class WorkflowSchedule(SQLModel, table=True):
     next_run_at: datetime | None = None
     last_run_at: datetime | None = None
 
-    workflow: Workflow | None = Relationship(back_populates="schedules")
+    workflow: Workflow | None = Relationship(
+        sa_relationship=relationship("Workflow", back_populates="schedules")
+    )
 
 
 class WorkflowSignal(SQLModel, table=True):
@@ -404,7 +457,9 @@ class WorkflowSignal(SQLModel, table=True):
     received_at: datetime = Field(default_factory=datetime.utcnow)
     processed: bool = Field(default=False)
 
-    execution: WorkflowExecution | None = Relationship(back_populates="signals")
+    execution: WorkflowExecution | None = Relationship(
+        sa_relationship=relationship("WorkflowExecution", back_populates="signals")
+    )
 
 
 class WorkflowWebhookSubscription(SQLModel, table=True):
@@ -422,7 +477,9 @@ class WorkflowWebhookSubscription(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    workflow: Workflow | None = Relationship(back_populates="webhook_subscriptions")
+    workflow: Workflow | None = Relationship(
+        sa_relationship=relationship("Workflow", back_populates="webhook_subscriptions")
+    )
 
 
 # ============================================================================
@@ -449,8 +506,9 @@ class Connector(SQLModel, table=True):
     )
 
     versions: list[ConnectorVersion] = Relationship(
-        back_populates="connector",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "ConnectorVersion", back_populates="connector", cascade="all, delete-orphan"
+        )
     )
 
 
@@ -464,10 +522,15 @@ class ConnectorVersion(SQLModel, table=True):
     wheel_url: str | None = Field(default=None, max_length=1000)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    connector: Connector | None = Relationship(back_populates="versions")
+    connector: Connector | None = Relationship(
+        sa_relationship=relationship("Connector", back_populates="versions")
+    )
     webhook_subscriptions: list[WebhookSubscription] = Relationship(
-        back_populates="connector_version",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "WebhookSubscription",
+            back_populates="connector_version",
+            cascade="all, delete-orphan",
+        )
     )
 
 
@@ -482,7 +545,9 @@ class WebhookSubscription(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     connector_version: ConnectorVersion | None = Relationship(
-        back_populates="webhook_subscriptions"
+        sa_relationship=relationship(
+            "ConnectorVersion", back_populates="webhook_subscriptions"
+        )
     )
 
 
@@ -503,7 +568,9 @@ class AgentTask(SQLModel, table=True):
     error_message: str | None = None
 
     logs: list[AgentTaskLog] = Relationship(
-        back_populates="task", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "AgentTaskLog", back_populates="task", cascade="all, delete-orphan"
+        )
     )
 
 
@@ -516,7 +583,9 @@ class AgentTaskLog(SQLModel, table=True):
     message: str = Field(max_length=5000)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    task: AgentTask | None = Relationship(back_populates="logs")
+    task: AgentTask | None = Relationship(
+        sa_relationship=relationship("AgentTask", back_populates="logs")
+    )
 
 
 class AgentFrameworkConfig(SQLModel, table=True):
@@ -551,12 +620,18 @@ class RAGIndex(SQLModel, table=True):
     )
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    owner: User | None = Relationship(back_populates="rag_indexes")
+    owner: User | None = Relationship(
+        sa_relationship=relationship("User", back_populates="rag_indexes")
+    )
     documents: list[RAGDocument] = Relationship(
-        back_populates="index", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "RAGDocument", back_populates="index", cascade="all, delete-orphan"
+        )
     )
     queries: list[RAGQuery] = Relationship(
-        back_populates="index", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "RAGQuery", back_populates="index", cascade="all, delete-orphan"
+        )
     )
 
 
@@ -572,7 +647,9 @@ class RAGDocument(SQLModel, table=True):
     embedding: list[float] | None = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    index: RAGIndex | None = Relationship(back_populates="documents")
+    index: RAGIndex | None = Relationship(
+        sa_relationship=relationship("RAGIndex", back_populates="documents")
+    )
 
 
 class RAGQuery(SQLModel, table=True):
@@ -585,7 +662,9 @@ class RAGQuery(SQLModel, table=True):
     latency_ms: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    index: RAGIndex | None = Relationship(back_populates="queries")
+    index: RAGIndex | None = Relationship(
+        sa_relationship=relationship("RAGIndex", back_populates="queries")
+    )
 
 
 class RAGSwitchLog(SQLModel, table=True):
@@ -737,8 +816,9 @@ class BrowserSession(SQLModel, table=True):
     closed_at: datetime | None = None
 
     actions: list[BrowserAction] = Relationship(
-        back_populates="session",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "BrowserAction", back_populates="session", cascade="all, delete-orphan"
+        )
     )
 
 
@@ -752,7 +832,9 @@ class BrowserAction(SQLModel, table=True):
     result: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    session: BrowserSession | None = Relationship(back_populates="actions")
+    session: BrowserSession | None = Relationship(
+        sa_relationship=relationship("BrowserSession", back_populates="actions")
+    )
 
 
 class ChangeDetection(SQLModel, table=True):
@@ -778,8 +860,9 @@ class OSINTStream(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     signals: list[OSINTSignal] = Relationship(
-        back_populates="stream",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        sa_relationship=relationship(
+            "OSINTSignal", back_populates="stream", cascade="all, delete-orphan"
+        )
     )
 
 
@@ -808,7 +891,9 @@ class OSINTSignal(SQLModel, table=True):
     sentiment_score: float | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    stream: OSINTStream | None = Relationship(back_populates="signals")
+    stream: OSINTStream | None = Relationship(
+        sa_relationship=relationship("OSINTStream", back_populates="signals")
+    )
 
 
 # ============================================================================
@@ -850,7 +935,9 @@ class CodeToolRegistry(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    owner: User | None = Relationship(back_populates="code_tools")
+    owner: User | None = Relationship(
+        sa_relationship=relationship("User", back_populates="code_tools")
+    )
 
 
 class CodeSandbox(SQLModel, table=True):
@@ -863,7 +950,9 @@ class CodeSandbox(SQLModel, table=True):
     )
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    owner: User | None = Relationship(back_populates="code_sandboxes")
+    owner: User | None = Relationship(
+        sa_relationship=relationship("User", back_populates="code_sandboxes")
+    )
 
 
 # ============================================================================
@@ -886,12 +975,16 @@ class Team(SQLModel, table=True):
     is_active: bool = Field(default=True)
     settings: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
 
-    owner: User | None = Relationship()
+    owner: User | None = Relationship(sa_relationship=relationship("User"))
     members: list[TeamMember] = Relationship(
-        back_populates="team", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "TeamMember", back_populates="team", cascade="all, delete-orphan"
+        )
     )
     invitations: list[TeamInvitation] = Relationship(
-        back_populates="team", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        sa_relationship=relationship(
+            "TeamInvitation", back_populates="team", cascade="all, delete-orphan"
+        )
     )
 
 
@@ -911,8 +1004,12 @@ class TeamMember(SQLModel, table=True):
         default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
     )
 
-    team: Team | None = Relationship(back_populates="members")
-    user: User | None = Relationship()
+    team: Team | None = Relationship(
+        sa_relationship=relationship("Team", back_populates="members")
+    )
+    user: User | None = Relationship(
+        sa_relationship=relationship("User", foreign_keys="TeamMember.user_id")
+    )
 
 
 class TeamInvitation(SQLModel, table=True):
@@ -933,8 +1030,10 @@ class TeamInvitation(SQLModel, table=True):
     revoked_at: datetime | None = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    team: Team | None = Relationship(back_populates="invitations")
-    inviter: User | None = Relationship()
+    team: Team | None = Relationship(
+        sa_relationship=relationship("Team", back_populates="invitations")
+    )
+    inviter: User | None = Relationship(sa_relationship=relationship("User"))
 
 
 # ============================================================================
@@ -1001,6 +1100,38 @@ class EventLog(SQLModel, table=True):
     context: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     status: str = Field(max_length=50)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class SystemAlert(SQLModel, table=True):
+    """
+    System-level alerts for admin dashboard.
+    Tracks critical system issues like database connection failures, circuit breakers, etc.
+    """
+
+    __tablename__ = "system_alert"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    alert_type: str = Field(
+        index=True, max_length=100
+    )  # circuit_breaker, database_error, service_unavailable, etc.
+    severity: str = Field(
+        max_length=50, default="warning"
+    )  # info, warning, error, critical
+    title: str = Field(max_length=255)
+    message: str = Field(max_length=5000)
+    details: dict[str, Any] = Field(
+        default_factory=dict, sa_column=Column(JSONB)
+    )  # Additional context/metadata
+    is_resolved: bool = Field(default=False, index=True)
+    resolved_at: datetime | None = None
+    resolved_by: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", nullable=True
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"onupdate": datetime.utcnow},
+    )
 
 
 # ============================================================================
@@ -1140,4 +1271,6 @@ class UserAPIKey(UserAPIKeyBase, table=True):
     )
 
     # Relationships
-    user: User = Relationship(back_populates="api_keys")
+    user: User = Relationship(
+        sa_relationship=relationship("User", back_populates="api_keys")
+    )

@@ -7,6 +7,7 @@ from app.api.routes import (
     agents,
     browser,
     chat,
+    clerk_webhooks,
     code,
     connectors,
     dashboard_ws,
@@ -49,6 +50,7 @@ api_router.include_router(storage.router)
 api_router.include_router(dashboard_ws.router)
 api_router.include_router(teams.router)
 api_router.include_router(email_templates.router)
+api_router.include_router(clerk_webhooks.router)
 
 
 if settings.ENVIRONMENT == "local":

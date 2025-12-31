@@ -26,8 +26,8 @@ def parse_cors(v: Any) -> list[str] | str:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        # Use top level .env file (one level above ./backend/)
-        env_file="../.env",
+        # Use .env file in backend directory and root directory
+        env_file=[".env", "../.env"],
         env_ignore_empty=True,
         extra="ignore",
     )
@@ -45,9 +45,32 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def all_cors_origins(self) -> list[str]:
-        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
-            self.FRONTEND_HOST
-        ]
+        """
+        Get all allowed CORS origins.
+
+        Includes:
+        - BACKEND_CORS_ORIGINS from environment
+        - FRONTEND_HOST from environment
+        - Production frontend URLs (if in production/staging)
+        """
+        origins = [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS]
+
+        # Add FRONTEND_HOST if set
+        if self.FRONTEND_HOST:
+            origins.append(str(self.FRONTEND_HOST).rstrip("/"))
+
+        # Add production frontend URLs for production/staging environments
+        if self.ENVIRONMENT in ["staging", "production"]:
+            production_origins = [
+                "https://app.synthralos.ai",
+                "https://synthralos-frontend.onrender.com",
+                "https://www.synthralos.ai",
+            ]
+            for origin in production_origins:
+                if origin not in origins:
+                    origins.append(origin)
+
+        return origins
 
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
@@ -58,7 +81,12 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = ""
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
-    # Supabase Configuration
+    # Clerk Configuration (Authentication)
+    CLERK_SECRET_KEY: str = ""
+    CLERK_PUBLISHABLE_KEY: str = ""
+    CLERK_WEBHOOK_SECRET: str = ""
+    CLERK_JWKS_URL: str = ""  # JWKS endpoint for token verification
+    # Supabase Configuration (Database & Storage only)
     SUPABASE_URL: str = ""
     SUPABASE_ANON_KEY: str = ""
     # Supabase Database Configuration (preferred)
@@ -181,6 +209,34 @@ class Settings(BaseSettings):
                 "postgresql+psycopg://"
             ):
                 db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+            # CRITICAL: Properly URL-encode the password to handle special characters
+            # Passwords with special characters like [ ] need to be URL-encoded
+            import re
+            from urllib.parse import quote, unquote
+
+            # Extract and re-encode the password part
+            # Format: postgresql://user:password@host:port/db
+            password_match = re.search(r"://([^:]+):([^@]+)@", db_url)
+            if password_match:
+                username = password_match.group(1)
+                password_raw = password_match.group(2)
+                # Decode first (in case it's already encoded), then re-encode properly
+                password_decoded = unquote(password_raw)
+                password_encoded = quote(password_decoded, safe="")
+                # Replace the password in the URL
+                db_url = db_url.replace(f":{password_raw}@", f":{password_encoded}@")
+
+            # CIRCUIT BREAKER MITIGATION: Ensure pooler connections use correct port
+            # Pooler connections (port 6543) are more reliable and have better connection management
+            # than direct connections (port 5432) for serverless environments
+            if ".pooler.supabase.com" in db_url and ":5432/" in db_url:
+                # Fix incorrect port: pooler hostnames MUST use port 6543
+                db_url = db_url.replace(":5432/", ":6543/")
+                warnings.warn(
+                    "Fixed pooler connection port: Changed from 5432 to 6543. "
+                    "Pooler connections require port 6543 to avoid connection issues."
+                )
 
             # If using direct connection (port 5432), try to convert to pooler if we have SUPABASE_URL
             # This helps avoid IPv6 resolution issues on Render

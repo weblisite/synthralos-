@@ -14,9 +14,9 @@ import {
   useRef,
   useState,
 } from "react"
+import { OpenAPI } from "@/client"
 import { getApiUrl } from "@/lib/api"
 import { apiClient } from "@/lib/apiClient"
-import { supabase } from "@/lib/supabase"
 
 interface ChatMessage {
   id: string
@@ -74,12 +74,11 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
     let connectionTimeout: ReturnType<typeof setTimeout> | null = null
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+      // Get Clerk token
+      const token = await OpenAPI.TOKEN()
 
-      if (!session) {
-        // Silently fail if no session - don't spam console
+      if (!token) {
+        // Silently fail if no token - don't spam console
         return
       }
 
@@ -89,7 +88,7 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
       const wsHost = apiUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
 
       // WebSocket endpoint for ag-ui bridge
-      const wsUrl = `${wsProtocol}://${wsHost}/api/v1/agws?token=${session.access_token}`
+      const wsUrl = `${wsProtocol}://${wsHost}/api/v1/agws?token=${token}`
       const ws = new WebSocket(wsUrl)
       wsConnectionRef.current = ws
 
@@ -195,11 +194,10 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
       setIsLoading(true)
 
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
+        // Get Clerk token
+        const token = await OpenAPI.TOKEN()
 
-        if (!session) {
+        if (!token) {
           throw new Error("You must be logged in to send messages")
         }
 

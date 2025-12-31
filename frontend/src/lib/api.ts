@@ -4,8 +4,8 @@
  * Provides a centralized way to construct API URLs and make authenticated requests.
  */
 
+import { OpenAPI } from "@/client"
 import { getCsrfToken } from "./csrf"
-import { supabase } from "./supabase"
 
 /**
  * Get the base API URL from environment variable
@@ -16,6 +16,10 @@ import { supabase } from "./supabase"
  */
 export function getApiUrl(): string {
   let apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000"
+
+  // CRITICAL: Remove /api/v1 from base URL if present, since paths already include it
+  // This prevents URL duplication like /api/v1/api/v1/users/me
+  apiUrl = apiUrl.replace(/\/api\/v1\/?$/, "")
 
   // Always convert HTTP to HTTPS for production domains (Render, etc.)
   // This prevents Mixed Content errors when frontend is served over HTTPS
@@ -102,11 +106,16 @@ export async function apiRequest<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  // Get Clerk token - this will be set by useAuth hook
+  // For now, we'll get it from OpenAPI.TOKEN which is set by useAuth
+  let token = ""
+  try {
+    token = await OpenAPI.TOKEN()
+  } catch (error) {
+    console.error("[apiRequest] Error getting token:", error)
+  }
 
-  if (!session) {
+  if (!token) {
     throw new Error("You must be logged in to make API requests")
   }
 
@@ -149,7 +158,11 @@ export async function apiRequest<T = unknown>(
   }
 
   const headers = new Headers(options.headers)
-  headers.set("Authorization", `Bearer ${session.access_token}`)
+
+  // Set Authorization header with Clerk token
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`)
+  }
 
   // Add CSRF token for state-changing requests (POST, PUT, DELETE, PATCH)
   const method = options.method?.toUpperCase() || "GET"

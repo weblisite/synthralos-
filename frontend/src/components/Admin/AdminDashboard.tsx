@@ -10,6 +10,7 @@ import { ConnectorStats } from "./ConnectorStats"
 import { CostAnalytics } from "./CostAnalytics"
 import { ExecutionHistory } from "./ExecutionHistory"
 import { RetryManagement } from "./RetryManagement"
+import { SystemAlerts } from "./SystemAlerts"
 import { SystemHealth } from "./SystemHealth"
 import { SystemMetrics } from "./SystemMetrics"
 
@@ -25,12 +26,13 @@ export function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="executions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="executions">Executions</TabsTrigger>
           <TabsTrigger value="retries">Retries</TabsTrigger>
           <TabsTrigger value="costs">Costs</TabsTrigger>
           <TabsTrigger value="connectors">Connectors</TabsTrigger>
           <TabsTrigger value="health">Health</TabsTrigger>
+          <TabsTrigger value="alerts">Alerts</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
@@ -53,6 +55,10 @@ export function AdminDashboard() {
 
         <TabsContent value="health" className="space-y-4">
           <SystemHealth />
+        </TabsContent>
+
+        <TabsContent value="alerts" className="space-y-4">
+          <SystemAlerts />
         </TabsContent>
 
         <TabsContent value="metrics" className="space-y-4">

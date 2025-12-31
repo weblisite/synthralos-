@@ -1,7 +1,7 @@
 """
 Authentication tracking middleware.
 
-Tracks login history and sessions when users authenticate via Supabase.
+Tracks login history and sessions when users authenticate via Clerk.
 This middleware is called on first authentication to log login events.
 """
 

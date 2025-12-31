@@ -9,50 +9,37 @@ from typing import Any
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from sqlmodel import Session
-from supabase import Client, create_client
 
 from app.api.deps import get_db
-from app.core.config import settings
+from app.services.clerk_service import verify_clerk_token
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 async def verify_websocket_token(
     websocket: WebSocket, token: str | None = None
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     """
-    Verify JWT token from WebSocket connection.
+    Verify Clerk JWT token from WebSocket connection.
 
     Args:
         websocket: WebSocket connection
         token: JWT token from query parameter
 
     Returns:
-        Decoded token payload
-
-    Raises:
-        HTTPException: If token is invalid
+        Decoded token payload with user_id and email, or None if invalid
     """
     if not token:
         await websocket.close(code=1008, reason="Missing authentication token")
         return None
 
     try:
-        # Use Supabase to verify the token
-        supabase: Client = create_client(
-            settings.SUPABASE_URL,
-            settings.SUPABASE_ANON_KEY,
-        )
-
-        # Verify token with Supabase
-        user_response = supabase.auth.get_user(token)
-        if not user_response.user:
-            await websocket.close(code=1008, reason="Invalid authentication token")
-            return None
+        # Verify token with Clerk
+        user_info = verify_clerk_token(token)
 
         return {
-            "user_id": user_response.user.id,
-            "email": user_response.user.email,
+            "user_id": user_info["user_id"],
+            "email": user_info["email"],
         }
     except Exception:
         await websocket.close(code=1008, reason="Authentication failed")

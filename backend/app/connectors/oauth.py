@@ -16,8 +16,15 @@ from sqlmodel import Session
 from app.connectors.pkce import generate_pkce_pair
 from app.connectors.registry import default_connector_registry
 from app.core.config import settings
-from app.services.nango import NangoError, default_nango_service
+from app.services.exceptions import NangoError
 from app.services.secrets import SecretsService, default_secrets_service
+
+
+# Lazy import to avoid circular dependency
+def _get_nango_service():
+    from app.services.nango import default_nango_service
+
+    return default_nango_service
 
 
 class OAuthError(Exception):
@@ -59,7 +66,14 @@ class ConnectorOAuthService:
         """
         self.secrets_service = secrets_service or default_secrets_service
         self.registry = default_connector_registry
-        self.nango_service = default_nango_service
+        self._nango_service = None  # Lazy load to avoid circular import
+
+    @property
+    def nango_service(self):
+        """Get Nango service (lazy loaded)."""
+        if self._nango_service is None:
+            self._nango_service = _get_nango_service()
+        return self._nango_service
         # In-memory state storage (in production, use Redis or database)
         self._oauth_states: dict[str, dict[str, Any]] = {}
 
@@ -118,7 +132,9 @@ class ConnectorOAuthService:
                     "scopes": scopes or [],
                     "use_nango": True,
                     "connection_id": result.get("connection_id"),
-                    "code_verifier": result.get("code_verifier"),  # PKCE: Store verifier for Nango flows
+                    "code_verifier": result.get(
+                        "code_verifier"
+                    ),  # PKCE: Store verifier for Nango flows
                 }
                 return {
                     "authorization_url": result["authorization_url"],

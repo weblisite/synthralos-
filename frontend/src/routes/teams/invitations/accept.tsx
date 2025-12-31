@@ -1,5 +1,6 @@
+import { useAuth as useClerkAuth } from "@clerk/clerk-react"
 import { useMutation } from "@tanstack/react-query"
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { CheckCircle2, Loader2, XCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { z } from "zod"
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/card"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import { supabase } from "@/lib/supabase"
 
 const searchSchema = z.object({
   token: z.string().min(1, "Invitation token is required"),
@@ -24,22 +24,7 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/teams/invitations/accept")({
   component: AcceptInvitation,
   validateSearch: searchSchema,
-  beforeLoad: async ({ search }) => {
-    // Check if user is authenticated
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
-      // Redirect to login with return URL and token
-      const redirectUrl = `/teams/invitations/accept?token=${encodeURIComponent(search.token)}`
-      throw redirect({
-        to: "/login",
-        search: {
-          redirect: redirectUrl,
-        },
-      })
-    }
-  },
+  // Authentication check happens in component using Clerk
   head: () => ({
     meta: [
       {
@@ -53,8 +38,22 @@ function AcceptInvitation() {
   const navigate = useNavigate()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { token } = Route.useSearch()
+  const { isLoaded, isSignedIn } = useClerkAuth()
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle")
   const [errorMessage, setErrorMessage] = useState<string>("")
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      const redirectUrl = `/teams/invitations/accept?token=${encodeURIComponent(token)}`
+      navigate({
+        to: "/login",
+        search: {
+          redirect: redirectUrl,
+        },
+      })
+    }
+  }, [isLoaded, isSignedIn, token, navigate])
 
   // Accept invitation mutation
   const acceptMutation = useMutation({

@@ -3,6 +3,7 @@ from pydantic.networks import EmailStr
 
 from app.api.deps import get_current_active_superuser
 from app.api.middleware.csrf import get_csrf_token
+from app.core.db import get_circuit_breaker_status
 from app.models import Message
 from app.utils import generate_test_email, send_email
 
@@ -30,6 +31,20 @@ def test_email(email_to: EmailStr) -> Message:
 @router.get("/health-check")
 async def health_check() -> bool:
     return True
+
+
+@router.get("/circuit-breaker-status")
+def get_circuit_breaker_status_endpoint() -> dict:
+    """
+    Get database circuit breaker status.
+
+    This endpoint does NOT attempt a database connection, so it won't trigger
+    the circuit breaker. Use this to check if the circuit breaker is open.
+
+    Returns:
+        dict with circuit breaker status information
+    """
+    return get_circuit_breaker_status()
 
 
 @router.get("/csrf-token")

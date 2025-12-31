@@ -21,6 +21,7 @@ from app.models import (
     OSINTStream,
     RAGIndex,
     ScrapeJob,
+    SystemAlert,
     User,
     Workflow,
     WorkflowExecution,
@@ -68,6 +69,34 @@ def get_system_health(
                 "message": f"Database connection failed: {str(e)}",
             }
         )
+        # Create system alert for database errors
+        try:
+            from app.services.system_alerts import handle_database_error
+
+            handle_database_error(session, e)
+        except Exception as alert_error:
+            # Don't fail if alert creation fails
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to create system alert: {alert_error}")
+
+    # Get unresolved alerts count
+    try:
+        unresolved_alerts = (
+            session.exec(
+                select(func.count(SystemAlert.id)).where(
+                    SystemAlert.is_resolved == False
+                )
+            ).one()
+            or 0
+        )
+        health_status["unresolved_alerts"] = unresolved_alerts
+        if unresolved_alerts > 0:
+            health_status["status"] = "degraded"
+    except Exception:
+        # If SystemAlert table doesn't exist yet, skip
+        health_status["unresolved_alerts"] = 0
 
     # Check service availability (based on configuration)
     services = {
@@ -275,4 +304,104 @@ def get_recent_activity(
         "activity": activity[:limit],
         "total": len(activity),
         "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/alerts")
+def get_system_alerts(
+    session: SessionDep,
+    current_user: User = Depends(get_current_active_superuser),
+    limit: int = 50,
+    resolved: bool | None = None,
+    severity: str | None = None,
+) -> Any:
+    """
+    Get system alerts (admin only).
+
+    Args:
+        session: Database session
+        current_user: Current admin user
+        limit: Maximum number of alerts to return
+        resolved: Filter by resolved status (True/False/None for all)
+        severity: Filter by severity level
+
+    Returns:
+        List of system alerts
+    """
+    query = select(SystemAlert)
+
+    # Apply filters
+    if resolved is not None:
+        query = query.where(SystemAlert.is_resolved == resolved)
+    if severity:
+        query = query.where(SystemAlert.severity == severity)
+
+    # Order by created_at descending (newest first)
+    query = query.order_by(SystemAlert.created_at.desc())
+
+    alerts = session.exec(query.limit(limit)).all()
+
+    return {
+        "alerts": [
+            {
+                "id": str(alert.id),
+                "alert_type": alert.alert_type,
+                "severity": alert.severity,
+                "title": alert.title,
+                "message": alert.message,
+                "details": alert.details,
+                "is_resolved": alert.is_resolved,
+                "resolved_at": alert.resolved_at.isoformat()
+                if alert.resolved_at
+                else None,
+                "resolved_by": str(alert.resolved_by) if alert.resolved_by else None,
+                "created_at": alert.created_at.isoformat(),
+                "updated_at": alert.updated_at.isoformat(),
+            }
+            for alert in alerts
+        ],
+        "total": len(alerts),
+        "unresolved_count": session.exec(
+            select(func.count(SystemAlert.id)).where(SystemAlert.is_resolved == False)
+        ).one()
+        or 0,
+    }
+
+
+@router.post("/alerts/{alert_id}/resolve", status_code=200)
+def resolve_system_alert(
+    alert_id: str,
+    session: SessionDep,
+    current_user: User = Depends(get_current_active_superuser),
+) -> Any:
+    """
+    Resolve a system alert (admin only).
+
+    Args:
+        alert_id: Alert ID to resolve
+        session: Database session
+        current_user: Current admin user
+
+    Returns:
+        Updated alert details
+    """
+    from app.services.system_alerts import resolve_alert
+
+    alert = resolve_alert(session, alert_id, str(current_user.id))
+    if not alert:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Alert {alert_id} not found"
+        )
+
+    return {
+        "id": str(alert.id),
+        "alert_type": alert.alert_type,
+        "severity": alert.severity,
+        "title": alert.title,
+        "message": alert.message,
+        "is_resolved": alert.is_resolved,
+        "resolved_at": alert.resolved_at.isoformat() if alert.resolved_at else None,
+        "resolved_by": str(alert.resolved_by) if alert.resolved_by else None,
     }

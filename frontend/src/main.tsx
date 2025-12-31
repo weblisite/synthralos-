@@ -12,7 +12,6 @@ import { ApiError, OpenAPI } from "./client"
 import { ThemeProvider } from "./components/theme-provider"
 import { Toaster } from "./components/ui/sonner"
 import { getApiUrl } from "./lib/api"
-import { supabase } from "./lib/supabase"
 import "./index.css"
 import { routeTree } from "./routeTree.gen"
 
@@ -257,6 +256,10 @@ const setOpenApiBase = () => {
   // CRITICAL: Ensure no trailing slash (OpenAPI SDK may add one)
   finalUrl = finalUrl.replace(/\/$/, "")
 
+  // CRITICAL: Remove /api/v1 from BASE if present, since generated client paths already include it
+  // This prevents URL duplication like /api/v1/api/v1/users/me
+  finalUrl = finalUrl.replace(/\/api\/v1\/?$/, "")
+
   OpenAPI.BASE = finalUrl
   console.log("[main.tsx] OpenAPI.BASE set to:", OpenAPI.BASE)
 }
@@ -277,48 +280,16 @@ if (typeof window !== "undefined") {
   // Also set on window load as final fallback
   window.addEventListener("load", setOpenApiBase)
 }
+// OpenAPI.TOKEN will be set dynamically from useAuth hook
+// This is a placeholder that will be replaced
 OpenAPI.TOKEN = async () => {
-  try {
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession()
-
-    if (error) {
-      console.error("[OpenAPI.TOKEN] Error getting session:", error)
-      return ""
-    }
-
-    if (!session) {
-      console.warn("[OpenAPI.TOKEN] No session found")
-      return ""
-    }
-
-    const token = session.access_token || ""
-
-    if (!token) {
-      console.warn("[OpenAPI.TOKEN] No access token found in session", {
-        hasSession: !!session,
-        hasUser: !!session.user,
-        expiresAt: session.expires_at,
-      })
-    } else {
-      console.log("[OpenAPI.TOKEN] Token retrieved successfully", {
-        tokenLength: token.length,
-        tokenPrefix: `${token.substring(0, 20)}...`,
-      })
-    }
-
-    return token
-  } catch (error) {
-    console.error("[OpenAPI.TOKEN] Exception getting session:", error)
-    return ""
-  }
+  // This will be set by the auth hook
+  return ""
 }
 
 const handleApiError = (error: Error) => {
   if (error instanceof ApiError && [401, 403].includes(error.status)) {
-    supabase.auth.signOut()
+    // Redirect to login - Clerk will handle sign out
     window.location.href = "/login"
   }
 }

@@ -1,4 +1,5 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { useAuth as useClerkAuth } from "@clerk/clerk-react"
+import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { useEffect } from "react"
 import { AgUIProvider } from "@/components/Chat/AgUIProvider"
 import { Footer } from "@/components/Common/Footer"
@@ -9,32 +10,63 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { fetchCsrfToken } from "@/lib/csrf"
-import { supabase } from "@/lib/supabase"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
-  beforeLoad: async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
-      throw redirect({
-        to: "/login",
-        replace: true, // Replace history entry to prevent back navigation
-      })
-    }
+  beforeLoad: async ({ context }) => {
+    // Clerk authentication check happens in the component
+    // We can't use hooks in beforeLoad, so we'll check in the component
+    // For now, allow the route to load and check in component
   },
 })
 
 function Layout() {
+  const { isLoaded, isSignedIn } = useClerkAuth()
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      const currentPath = window.location.pathname
+      // Only redirect if not already on login/signup pages
+      if (currentPath !== "/login" && currentPath !== "/signup") {
+        const redirectUrl = `/login?redirect=${encodeURIComponent(currentPath)}`
+        window.location.href = redirectUrl
+      }
+    }
+  }, [isLoaded, isSignedIn])
+
   // Initialize CSRF token on mount
   useEffect(() => {
-    // Fetch CSRF token when layout loads (user is authenticated)
-    fetchCsrfToken().catch((error) => {
-      // Log but don't fail - CSRF may not be enabled in local dev
-      console.warn("Failed to initialize CSRF token:", error)
-    })
-  }, [])
+    if (isSignedIn) {
+      // Fetch CSRF token when layout loads (user is authenticated)
+      fetchCsrfToken().catch((error) => {
+        // Log but don't fail - CSRF may not be enabled in local dev
+        console.warn("Failed to initialize CSRF token:", error)
+      })
+    }
+  }, [isSignedIn])
+
+  // Show loading state while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading/redirecting state if not signed in (redirect is in progress)
+  if (!isSignedIn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="text-muted-foreground">Redirecting to login...</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <AgUIProvider>

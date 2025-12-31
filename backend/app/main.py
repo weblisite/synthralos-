@@ -27,14 +27,16 @@ app = FastAPI(
 )
 
 # Set all CORS enabled origins
-if settings.all_cors_origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.all_cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# Always add CORS middleware, but use empty list if no origins configured
+# This ensures CORS headers are always handled properly
+cors_origins = settings.all_cors_origins if settings.all_cors_origins else []
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Add CSRF protection middleware (after CORS, before guardrails)
 # CSRF protection is enabled in production and staging

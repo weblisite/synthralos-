@@ -11,14 +11,21 @@ from typing import Any
 import httpx
 from sqlmodel import Session
 
-from app.connectors.pkce import generate_pkce_pair
 from app.core.config import settings
 
 
-class NangoError(Exception):
-    """Base exception for Nango errors."""
+# Lazy import to avoid circular dependency
+def _get_pkce_generator():
+    from app.connectors.pkce import generate_pkce_pair
 
-    pass
+    return generate_pkce_pair
+
+
+# Lazy import NangoError to avoid circular dependency
+def _get_nango_error():
+    from app.services.exceptions import NangoError
+
+    return NangoError
 
 
 class NangoService:
@@ -87,6 +94,7 @@ class NangoService:
             NangoError: If Nango request fails
         """
         if not self.enabled:
+            NangoError = _get_nango_error()
             raise NangoError("Nango integration is not enabled or configured")
 
         # Get connector to verify it exists
@@ -97,6 +105,7 @@ class NangoService:
                 session, connector_slug
             )
         except ConnectorNotFoundError:
+            NangoError = _get_nango_error()
             raise NangoError(f"Connector '{connector_slug}' not found")
 
         # Get Nango provider key from manifest (defaults to slug)
@@ -116,6 +125,7 @@ class NangoService:
             requested_scopes = oauth_config.get("default_scopes", [])
 
         # Generate PKCE code verifier and challenge for enhanced security
+        generate_pkce_pair = _get_pkce_generator()
         code_verifier, code_challenge = generate_pkce_pair()
 
         # Build Nango authorization URL
@@ -173,6 +183,7 @@ class NangoService:
             NangoError: If token retrieval fails
         """
         if not self.enabled:
+            NangoError = _get_nango_error()
             raise NangoError("Nango integration is not enabled or configured")
 
         # Get connector
@@ -183,6 +194,7 @@ class NangoService:
                 session, connector_slug
             )
         except ConnectorNotFoundError:
+            NangoError = _get_nango_error()
             raise NangoError(f"Connector '{connector_slug}' not found")
 
         # Get Nango provider key
@@ -241,12 +253,14 @@ class NangoService:
                     "tokens": tokens,
                 }
         except httpx.HTTPStatusError as e:
+            NangoError = _get_nango_error()
             if e.response.status_code == 404:
                 raise NangoError(f"Connection '{connection_id}' not found in Nango")
             raise NangoError(
                 f"Failed to retrieve connection from Nango: {e.response.text}"
             )
         except httpx.HTTPError as e:
+            NangoError = _get_nango_error()
             raise NangoError(f"Failed to retrieve connection from Nango: {e}")
 
     def get_tokens(
@@ -326,6 +340,7 @@ class NangoService:
             NangoError: If refresh fails
         """
         if not self.enabled:
+            NangoError = _get_nango_error()
             raise NangoError("Nango integration is not enabled or configured")
 
         try:
@@ -357,10 +372,12 @@ class NangoService:
                     "token_type": credentials.get("token_type", "Bearer"),
                 }
         except httpx.HTTPStatusError as e:
+            NangoError = _get_nango_error()
             if e.response.status_code == 404:
                 raise NangoError(f"Connection '{connection_id}' not found in Nango")
             raise NangoError(f"Failed to refresh tokens via Nango: {e.response.text}")
         except httpx.HTTPError as e:
+            NangoError = _get_nango_error()
             raise NangoError(f"Failed to refresh tokens via Nango: {e}")
 
 
@@ -400,12 +417,29 @@ class _DefaultNangoService:
     """Wrapper to maintain backward compatibility with existing code."""
 
     def __getattr__(self, name):
+        # Lazy import to avoid circular dependency
+        from app.services.exceptions import NangoError
+
         service = get_default_nango_service()
         if service is None:
+            NangoError = _get_nango_error()
             raise NangoError(
                 "Nango service is not configured. Set NANGO_SECRET_KEY and NANGO_BASE_URL environment variables."
             )
         return getattr(service, name)
 
 
-default_nango_service = _DefaultNangoService()
+# Create a proxy that lazily initializes to avoid circular imports
+class _DefaultNangoServiceProxy:
+    """Proxy for default_nango_service to avoid circular imports."""
+
+    _instance: _DefaultNangoService | None = None
+
+    def __getattr__(self, name):
+        if self._instance is None:
+            self._instance = _DefaultNangoService()
+        return getattr(self._instance, name)
+
+
+# Export proxy instead of direct instance
+default_nango_service = _DefaultNangoServiceProxy()

@@ -1,35 +1,65 @@
 from collections.abc import Generator
 from typing import Annotated
 
-import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlmodel import Session
-from supabase import Client, create_client
+from sqlalchemy.exc import DatabaseError, OperationalError
+from sqlmodel import Session, select
 
-from app.core.config import settings
 from app.core.db import engine
 from app.models import User
+from app.services.clerk_service import verify_clerk_token
+from app.services.system_alerts import create_system_alert
 
-# Use HTTPBearer instead of OAuth2PasswordBearer for Supabase tokens
+# Use HTTPBearer for Clerk tokens
 security_scheme = HTTPBearer()
-
-# Initialize Supabase client for token verification
-supabase_client: Client | None = None
-
-
-def get_supabase_client() -> Client:
-    global supabase_client
-    if supabase_client is None:
-        supabase_client = create_client(
-            settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY
-        )
-    return supabase_client
 
 
 def get_db() -> Generator[Session, None, None]:
-    with Session(engine) as session:
-        yield session
+    """
+    Get database session with circuit breaker protection.
+
+    Raises HTTPException with 503 if circuit breaker is open.
+    """
+    from datetime import datetime
+
+    from app.core.db import _circuit_breaker_open_until
+
+    # Check if circuit breaker is open
+    if _circuit_breaker_open_until and datetime.now() < _circuit_breaker_open_until:
+        remaining = int((_circuit_breaker_open_until - datetime.now()).total_seconds())
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                f"Database circuit breaker is open. Please wait {remaining} seconds before retrying. "
+                f"This is a Supabase protection mechanism that activates after too many failed authentication attempts. "
+                f"Resets at {_circuit_breaker_open_until.strftime('%H:%M:%S')}"
+            ),
+        )
+
+    try:
+        with Session(engine) as session:
+            yield session
+    except OperationalError as e:
+        error_str = str(e).lower()
+        if "circuit breaker" in error_str:
+            from app.core.db import (
+                _circuit_breaker_wait_time,
+                _handle_circuit_breaker_error,
+            )
+
+            _handle_circuit_breaker_error(e)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    f"Database circuit breaker detected. Please wait {_circuit_breaker_wait_time} seconds before retrying. "
+                    f"This is a Supabase protection mechanism."
+                ),
+            )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database connection error: {str(e)}",
+        )
 
 
 SessionDep = Annotated[Session, Depends(get_db)]
@@ -38,7 +68,7 @@ TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(security_scheme)]
 
 def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
     """
-    Verify Supabase JWT token and get the current user from the database.
+    Verify Clerk JWT token and get the current user from the database.
     """
     token = credentials.credentials
 
@@ -53,113 +83,56 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
         import logging
 
         logger = logging.getLogger(__name__)
-        
-        # Use Supabase to verify the token and get user info
-        # This is the most reliable way to validate tokens and get user details
-        supabase = get_supabase_client()
-        user_email = None
-        full_name = None
-        supabase_user_id = None
 
-        # Try to verify token with Supabase first (preferred method)
-        # This validates signature and expiration
-        try:
-            user_response = supabase.auth.get_user(token)
-            if user_response and user_response.user:
-                supabase_user = user_response.user
-                user_email = supabase_user.email
-                supabase_user_id = supabase_user.id
-                
-                # Get full_name from user_metadata if available
-                if supabase_user.user_metadata:
-                    full_name = supabase_user.user_metadata.get("full_name")
-                
-                logger.info(f"Verified token via Supabase API for user: {user_email} (ID: {supabase_user_id})")
-            else:
-                raise ValueError("Supabase get_user returned no user")
-        except Exception as supabase_error:
-            # Fallback to JWT decode if Supabase API fails
-            logger.warning(f"Supabase get_user failed: {str(supabase_error)}, falling back to JWT decode")
-            
-            # Fallback: Decode JWT directly
-            try:
-                # Basic JWT format check
-                token_parts = token.split(".")
-                if len(token_parts) != 3:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"Invalid token format: Not enough segments (expected 3, got {len(token_parts)}). Please ensure you're using a valid Supabase access token.",
-                    )
+        # Verify token with Clerk
+        user_info = verify_clerk_token(token)
+        user_email = user_info["email"]
+        clerk_user_id = user_info["user_id"]
+        full_name = user_info.get("full_name")
 
-                # Decode without verification as fallback
-                payload = jwt.decode(token, options={"verify_signature": False})
-
-                # Check token expiration
-                import time
-                exp = payload.get("exp")
-                if exp and exp < time.time():
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Token has expired. Please refresh your session.",
-                    )
-
-                # Extract user info from JWT payload
-                user_email = payload.get("email")
-                supabase_user_id = payload.get("sub")
-
-                # Try to get email from user_metadata if not directly in payload
-                if not user_email:
-                    user_metadata = payload.get("user_metadata", {})
-                    if isinstance(user_metadata, dict):
-                        user_email = user_metadata.get("email")
-                        full_name = user_metadata.get("full_name")
-
-                # Try app_metadata as last resort
-                if not user_email:
-                    app_metadata = payload.get("app_metadata", {})
-                    if isinstance(app_metadata, dict):
-                        user_email = app_metadata.get("email")
-                
-                logger.info(f"Used JWT fallback for user: {user_email}")
-                
-            except HTTPException:
-                raise
-            except Exception as jwt_error:
-                logger.error(
-                    f"JWT decode fallback also failed: {str(jwt_error)}, token length: {len(token)}"
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Could not validate token: {str(supabase_error)}. Please ensure you're using a valid Supabase access token.",
-                )
-
-        if not user_email:
-            logger.error(
-                f"Email not found after token verification. User ID: {supabase_user_id}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User email not found in token. Please ensure you're using a valid user access token.",
-            )
+        logger.info(
+            f"Verified Clerk token for user: {user_email} (ID: {clerk_user_id})"
+        )
 
         # Find user in our database by email
-        from sqlmodel import select
+        try:
+            statement = select(User).where(User.email == user_email)
+            user = session.exec(statement).first()
+        except (OperationalError, DatabaseError) as db_error:
+            logger.error(
+                f"Database connection error while fetching user: {str(db_error)}",
+                exc_info=True,
+            )
+            try:
+                create_system_alert(
+                    session,
+                    title="Database Connection Error",
+                    message=f"Failed to connect to database during user authentication: {str(db_error)}",
+                    severity="critical",
+                    category="database",
+                    metadata_={"error": str(db_error)},
+                )
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Database connection error: {str(db_error)}. Please try again later.",
+            )
+        except Exception as db_error:
+            logger.error(
+                f"Database error while fetching user: {str(db_error)}", exc_info=True
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database error: {str(db_error)}",
+            )
 
-        statement = select(User).where(User.email == user_email)
-        user = session.exec(statement).first()
-
+        # Create user if doesn't exist (Clerk handles auth)
         if not user:
-            # User exists in Supabase but not in our DB - create it
-            # For Supabase auth users, we don't store passwords in our DB
-            # User is already imported at the top of the file
-
-            # Create user directly without password (Supabase handles auth)
-            # full_name is already extracted above
-
             try:
                 new_user = User(
                     email=user_email,
-                    hashed_password="",  # Empty for Supabase auth users
+                    hashed_password="",  # Empty for Clerk auth users
                     full_name=full_name,
                     is_active=True,
                 )
@@ -167,17 +140,12 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
                 session.commit()
                 session.refresh(new_user)
                 user = new_user
+                logger.info(f"Created new user in database: {user_email}")
             except Exception as create_error:
-                # Handle race condition: user might have been created by another request
-                # Rollback and try to fetch again
-                import logging
-
-                logger = logging.getLogger(__name__)
                 logger.warning(f"Error creating user, retrying: {str(create_error)}")
                 session.rollback()
                 user = session.exec(statement).first()
                 if not user:
-                    # Log the error and re-raise with better message
                     logger.error(
                         f"Failed to create user after retry: {str(create_error)}",
                         exc_info=True,
@@ -192,45 +160,26 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
 
         return user
 
-    except HTTPException as http_exc:
-        # Log authentication failure to Wazuh
-
-        from app.observability.wazuh import default_wazuh_client
-
-        # Try to get IP address from request context if available
-        ip_address = None
-        try:
-            # This is a workaround - FastAPI doesn't expose request in deps easily
-            # In production, you might want to pass request explicitly
-            pass
-        except Exception:
-            pass
-
-        default_wazuh_client.log_security_event(
-            event_type="authentication_failure",
-            severity="medium",
-            message=f"Authentication failed: {http_exc.detail}",
-            ip_address=ip_address,
-            metadata={"status_code": http_exc.status_code},
-        )
-        # Re-raise HTTP exceptions as-is
+    except HTTPException:
         raise
     except Exception as e:
-        # Log the error for debugging
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.error(f"Error verifying Supabase token: {str(e)}", exc_info=True)
+        logger.error(f"Error verifying Clerk token: {str(e)}", exc_info=True)
 
         # Log authentication error to Wazuh
-        from app.observability.wazuh import default_wazuh_client
+        try:
+            from app.observability.wazuh import default_wazuh_client
 
-        default_wazuh_client.log_security_event(
-            event_type="authentication_error",
-            severity="high",
-            message=f"Token verification error: {str(e)}",
-            metadata={"error_type": type(e).__name__},
-        )
+            default_wazuh_client.log_security_event(
+                event_type="authentication_error",
+                severity="high",
+                message=f"Token verification error: {str(e)}",
+                metadata={"error_type": type(e).__name__},
+            )
+        except Exception:
+            pass
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

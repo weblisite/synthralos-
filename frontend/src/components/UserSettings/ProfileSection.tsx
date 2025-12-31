@@ -4,6 +4,7 @@ import { Camera, Upload } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import { OpenAPI } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,7 +36,6 @@ import { Textarea } from "@/components/ui/textarea"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { apiClient } from "@/lib/apiClient"
-import { supabase } from "@/lib/supabase"
 import type { UserPreferences } from "@/types/api"
 
 const profileSchema = z.object({
@@ -102,7 +102,7 @@ export function ProfileSection() {
         preferencesError instanceof Error
           ? preferencesError.message
           : "Failed to load preferences"
-      
+
       // Only show error if it's different from the last one shown
       if (errorShownRef.current !== errorMessage) {
         console.error(
@@ -117,7 +117,7 @@ export function ProfileSection() {
       errorShownRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preferencesError])
+  }, [preferencesError, showErrorToast])
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -144,7 +144,7 @@ export function ProfileSection() {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preferences, currentUser])
+  }, [preferences, currentUser, form.reset])
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
@@ -199,10 +199,13 @@ export function ProfileSection() {
       const formData = new FormData()
       formData.append("file", avatarFile)
 
+      // Get Clerk token for authorization
+      const token = await OpenAPI.TOKEN()
+
       const response = await fetch("/api/v1/users/me/avatar", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       })

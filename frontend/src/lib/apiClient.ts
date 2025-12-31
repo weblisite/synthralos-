@@ -171,7 +171,7 @@ export const apiClient = {
     },
 
     /**
-     * Track login event (called after Supabase authentication)
+     * Track login event (called after Clerk authentication)
      */
     trackLogin: async () => {
       return apiRequest("/api/v1/users/me/track-login", {

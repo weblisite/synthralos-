@@ -777,7 +777,7 @@ def track_login(
     request: Request, current_user: CurrentUser, session: SessionDep
 ) -> Any:
     """
-    Track a login event. Called by frontend after successful Supabase authentication.
+    Track a login event. Called by frontend after successful Clerk authentication.
     Creates login history and session records.
     """
     from datetime import datetime, timedelta
