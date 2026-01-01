@@ -110,7 +110,13 @@ export async function apiRequest<T = unknown>(
   // For now, we'll get it from OpenAPI.TOKEN which is set by useAuth
   let token = ""
   try {
-    token = await OpenAPI.TOKEN()
+    if (typeof OpenAPI.TOKEN === "function") {
+      // OpenAPI.TOKEN can be Resolver<string> which requires options, but we set it as () => string
+      // Cast to any to handle our custom implementation
+      token = await (OpenAPI.TOKEN as any)()
+    } else if (typeof OpenAPI.TOKEN === "string") {
+      token = OpenAPI.TOKEN
+    }
   } catch (error) {
     console.error("[apiRequest] Error getting token:", error)
   }

@@ -75,7 +75,14 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
 
     try {
       // Get Clerk token
-      const token = await OpenAPI.TOKEN()
+      let token = ""
+      if (typeof OpenAPI.TOKEN === "function") {
+        // OpenAPI.TOKEN can be Resolver<string> which requires options, but we set it as () => string
+        // Cast to any to handle our custom implementation
+        token = await (OpenAPI.TOKEN as any)()
+      } else if (typeof OpenAPI.TOKEN === "string") {
+        token = OpenAPI.TOKEN
+      }
 
       if (!token) {
         // Silently fail if no token - don't spam console
@@ -195,7 +202,14 @@ export function AgUIProvider({ children }: AgUIProviderProps) {
 
       try {
         // Get Clerk token
-        const token = await OpenAPI.TOKEN()
+        let token = ""
+        if (typeof OpenAPI.TOKEN === "function") {
+          // OpenAPI.TOKEN can be Resolver<string> which requires options, but we set it as () => string
+          // Cast to any to handle our custom implementation
+          token = await (OpenAPI.TOKEN as any)()
+        } else if (typeof OpenAPI.TOKEN === "string") {
+          token = OpenAPI.TOKEN
+        }
 
         if (!token) {
           throw new Error("You must be logged in to send messages")

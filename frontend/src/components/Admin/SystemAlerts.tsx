@@ -104,21 +104,6 @@ export function SystemAlerts() {
     )
   }
 
-  const _getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "critical":
-        return "bg-red-500"
-      case "error":
-        return "bg-orange-500"
-      case "warning":
-        return "bg-yellow-500"
-      case "info":
-        return "bg-blue-500"
-      default:
-        return "bg-gray-500"
-    }
-  }
-
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case "critical":

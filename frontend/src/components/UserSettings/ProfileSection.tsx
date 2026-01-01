@@ -200,7 +200,14 @@ export function ProfileSection() {
       formData.append("file", avatarFile)
 
       // Get Clerk token for authorization
-      const token = await OpenAPI.TOKEN()
+      let token = ""
+      if (typeof OpenAPI.TOKEN === "function") {
+        // OpenAPI.TOKEN can be Resolver<string> which requires options, but we set it as () => string
+        // Cast to any to handle our custom implementation
+        token = await (OpenAPI.TOKEN as any)()
+      } else if (typeof OpenAPI.TOKEN === "string") {
+        token = OpenAPI.TOKEN
+      }
 
       const response = await fetch("/api/v1/users/me/avatar", {
         method: "POST",

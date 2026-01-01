@@ -235,35 +235,82 @@ class Settings(BaseSettings):
                 db_url = db_url.replace(":5432/", ":6543/")
                 warnings.warn(
                     "Fixed pooler connection port: Changed from 5432 to 6543. "
-                    "Pooler connections require port 6543 to avoid connection issues."
+                    "Pooler connections require port 6543 to avoid connection issues.",
+                    stacklevel=2,
                 )
 
-            # If using direct connection (port 5432), try to convert to pooler if we have SUPABASE_URL
-            # This helps avoid IPv6 resolution issues on Render
+            # If using direct connection (port 5432), automatically convert to pooler if we have SUPABASE_URL
+            # This helps avoid IPv6 resolution issues on Render and circuit breaker problems
             if self.SUPABASE_URL and ":5432/" in db_url:
                 try:
                     parsed = urlparse(self.SUPABASE_URL)
                     project_ref = parsed.netloc.split(".")[0] if parsed.netloc else ""
-                    if project_ref and f"db.{project_ref}.supabase.co" in db_url:
-                        # Extract password from connection string
+                    if project_ref:
                         import re
 
-                        match = re.search(r":([^@]+)@", db_url)
-                        if match:
-                            password = match.group(1)
-                            # Use pooler connection instead (more reliable for serverless)
-                            warnings.warn(
-                                "Using direct connection (port 5432). Consider using pooler connection "
-                                "(port 6543) from Supabase dashboard for better serverless compatibility. "
-                                "Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
-                            )
-                except Exception:
-                    pass  # Continue with original connection string
+                        # Extract region from the direct connection hostname
+                        # Format options:
+                        # 1. aws-0-[REGION].compute.amazonaws.com:5432
+                        # 2. db.[PROJECT_REF].supabase.co:5432 (need to infer region)
+                        # 3. IP address (54.241.103.102) - need to infer region
+                        region_match = re.search(
+                            r"aws-0-([^.]+)\.compute\.amazonaws\.com", db_url
+                        )
+                        if region_match:
+                            region = region_match.group(1)
+                        else:
+                            # If using db.[PROJECT_REF].supabase.co format or IP address, infer region
+                            # Most Supabase projects default to us-west-1, but we'll try common regions
+                            # Check if it's an IP address (like 54.241.103.102)
+                            ip_match = re.search(r"@(\d+\.\d+\.\d+\.\d+):", db_url)
+                            if ip_match:
+                                # IP address detected - default to us-west-1 (most common)
+                                region = "us-west-1"
+                            else:
+                                # Try to extract from SUPABASE_URL or default to us-west-1
+                                region = "us-west-1"
+
+                        # Extract username (usually "postgres")
+                        username_match = re.search(r"postgresql://([^:]+):", db_url)
+                        username = (
+                            username_match.group(1) if username_match else "postgres"
+                        )
+
+                        # Extract password (should already be URL-encoded in connection string)
+                        password_match = re.search(r":([^@]+)@", db_url)
+                        password = password_match.group(1) if password_match else ""
+                        # Password should already be URL-encoded, keep as-is
+
+                        # Extract database name (usually "postgres")
+                        db_match = re.search(r":5432/([^?]+)", db_url)
+                        database = (
+                            db_match.group(1).split("?")[0] if db_match else "postgres"
+                        )
+
+                        # Build pooler connection string
+                        # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+                        db_url = f"postgresql://{username}.{project_ref}:{password}@aws-0-{region}.pooler.supabase.com:6543/{database}"
+
+                        warnings.warn(
+                            "Automatically converted direct connection (port 5432) to pooler connection "
+                            "(port 6543) for better serverless compatibility. This helps avoid connection "
+                            "issues and circuit breaker problems.",
+                            stacklevel=2,
+                        )
+                except Exception as e:
+                    # If conversion fails, warn but continue with original connection string
+                    warnings.warn(
+                        f"Failed to convert direct connection to pooler: {e}. "
+                        f"Consider manually setting SUPABASE_DB_URL to use pooler connection (port 6543).",
+                        stacklevel=2,
+                    )
 
             try:
                 return PostgresDsn(db_url)
             except Exception as e:
-                warnings.warn(f"Failed to parse SUPABASE_DB_URL: {e}. Using as-is.")
+                warnings.warn(
+                    f"Failed to parse SUPABASE_DB_URL: {e}. Using as-is.", stacklevel=2
+                )
                 return PostgresDsn(db_url)
 
         # Option 2: Build from Supabase URL and password
@@ -288,7 +335,8 @@ class Settings(BaseSettings):
                     warnings.warn(
                         "Using direct Supabase connection (port 5432). For Render/serverless deployments, "
                         "use the connection pooler (port 6543) from Supabase dashboard to avoid IPv6 issues. "
-                        "Get it from: Settings > Database > Connection string > Connection pooling"
+                        "Get it from: Settings > Database > Connection string > Connection pooling",
+                        stacklevel=2,
                     )
                     return PostgresDsn.build(
                         scheme="postgresql+psycopg",
@@ -300,7 +348,8 @@ class Settings(BaseSettings):
                     )
             except Exception as e:
                 warnings.warn(
-                    f"Failed to build Supabase connection string: {e}. Falling back to legacy config."
+                    f"Failed to build Supabase connection string: {e}. Falling back to legacy config.",
+                    stacklevel=2,
                 )
 
         # Option 3: Legacy PostgreSQL configuration (backward compatibility)

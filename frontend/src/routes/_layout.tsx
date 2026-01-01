@@ -13,7 +13,7 @@ import { fetchCsrfToken } from "@/lib/csrf"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async () => {
     // Clerk authentication check happens in the component
     // We can't use hooks in beforeLoad, so we'll check in the component
     // For now, allow the route to load and check in component
