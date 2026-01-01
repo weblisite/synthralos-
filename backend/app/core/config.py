@@ -259,18 +259,15 @@ class Settings(BaseSettings):
                         # 2. aws-1-[REGION].pooler.supabase.com:5432 (wrong port)
                         # 3. db.[PROJECT_REF].supabase.co:5432 (need to infer region)
                         # 4. IP address (54.241.103.102) - need to infer region
-                        region_match = re.search(
-                            r"aws-[01]-([^.]+)\.", original_hostname
-                        )
+                        hostname = db_parsed.hostname or ""
+                        region_match = re.search(r"aws-[01]-([^.]+)\.", hostname)
                         if region_match:
                             region = region_match.group(1)
                         else:
                             # If using db.[PROJECT_REF].supabase.co format or IP address, infer region
                             # Most Supabase projects default to us-west-1
                             # Check if it's an IP address
-                            ip_match = re.match(
-                                r"^\d+\.\d+\.\d+\.\d+$", original_hostname
-                            )
+                            ip_match = re.match(r"^\d+\.\d+\.\d+\.\d+$", hostname)
                             if ip_match:
                                 # IP address detected - default to us-west-1 (most common)
                                 region = "us-west-1"
