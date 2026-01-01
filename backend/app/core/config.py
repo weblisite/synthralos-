@@ -247,49 +247,89 @@ class Settings(BaseSettings):
                     project_ref = parsed.netloc.split(".")[0] if parsed.netloc else ""
                     if project_ref:
                         import re
+                        from urllib.parse import urlparse as parse_url
+
+                        # Parse the connection string properly using urlparse
+                        # Note: urlparse handles PostgreSQL connection strings correctly
+                        db_parsed = parse_url(db_url)
 
                         # Extract region from the direct connection hostname
                         # Format options:
                         # 1. aws-0-[REGION].compute.amazonaws.com:5432
-                        # 2. db.[PROJECT_REF].supabase.co:5432 (need to infer region)
-                        # 3. IP address (54.241.103.102) - need to infer region
+                        # 2. aws-1-[REGION].pooler.supabase.com:5432 (wrong port)
+                        # 3. db.[PROJECT_REF].supabase.co:5432 (need to infer region)
+                        # 4. IP address (54.241.103.102) - need to infer region
                         region_match = re.search(
-                            r"aws-0-([^.]+)\.compute\.amazonaws\.com", db_url
+                            r"aws-[01]-([^.]+)\.", original_hostname
                         )
                         if region_match:
                             region = region_match.group(1)
                         else:
                             # If using db.[PROJECT_REF].supabase.co format or IP address, infer region
-                            # Most Supabase projects default to us-west-1, but we'll try common regions
-                            # Check if it's an IP address (like 54.241.103.102)
-                            ip_match = re.search(r"@(\d+\.\d+\.\d+\.\d+):", db_url)
+                            # Most Supabase projects default to us-west-1
+                            # Check if it's an IP address
+                            ip_match = re.match(
+                                r"^\d+\.\d+\.\d+\.\d+$", original_hostname
+                            )
                             if ip_match:
                                 # IP address detected - default to us-west-1 (most common)
                                 region = "us-west-1"
                             else:
-                                # Try to extract from SUPABASE_URL or default to us-west-1
+                                # Default to us-west-1
                                 region = "us-west-1"
 
-                        # Extract username (usually "postgres")
-                        username_match = re.search(r"postgresql://([^:]+):", db_url)
-                        username = (
-                            username_match.group(1) if username_match else "postgres"
-                        )
+                        # Extract username - handle both "postgres" and "postgres.[PROJECT_REF]" formats
+                        raw_username = db_parsed.username or "postgres"
+
+                        # If username already contains project_ref (e.g., "postgres.lorefpaifkembnzmlodm"),
+                        # use it as-is. Otherwise, build it as "postgres.[PROJECT_REF]"
+                        if (
+                            raw_username.startswith("postgres.")
+                            and project_ref in raw_username
+                        ):
+                            username = raw_username  # Already has project_ref
+                        else:
+                            # Extract just "postgres" if it's "postgres.[something]"
+                            base_username = (
+                                raw_username.split(".")[0]
+                                if "." in raw_username
+                                else raw_username
+                            )
+                            username = f"{base_username}.{project_ref}"
 
                         # Extract password (should already be URL-encoded in connection string)
-                        password_match = re.search(r":([^@]+)@", db_url)
-                        password = password_match.group(1) if password_match else ""
+                        password = db_parsed.password or ""
                         # Password should already be URL-encoded, keep as-is
 
                         # Extract database name (usually "postgres")
-                        db_match = re.search(r":5432/([^?]+)", db_url)
-                        database = (
-                            db_match.group(1).split("?")[0] if db_match else "postgres"
+                        database = (db_parsed.path or "/postgres").lstrip("/").split(
+                            "?"
+                        )[0] or "postgres"
+
+                        # Build pooler connection string manually to ensure correct format
+                        # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+                        # Username can contain dots (like postgres.lorefpaifkembnzmlodm), don't URL-encode it
+                        if password:
+                            # Build netloc: username:password@hostname:port
+                            netloc = f"{username}:{password}@aws-0-{region}.pooler.supabase.com:6543"
+                        else:
+                            netloc = (
+                                f"{username}@aws-0-{region}.pooler.supabase.com:6543"
+                            )
+
+                        # Construct the full URL
+                        db_url = (
+                            f"{db_parsed.scheme or 'postgresql'}://{netloc}/{database}"
                         )
 
-                        # Build pooler connection string
-                        # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-                        db_url = f"postgresql://{username}.{project_ref}:{password}@aws-0-{region}.pooler.supabase.com:6543/{database}"
+                        # Validate the constructed URL by parsing it back
+                        # This ensures the format is correct
+                        test_parsed = parse_url(db_url)
+                        if not test_parsed.hostname or test_parsed.hostname == username:
+                            # If hostname is wrong, fall back to manual construction
+                            raise ValueError(
+                                f"Invalid connection string format after conversion: hostname={test_parsed.hostname}"
+                            )
 
                         warnings.warn(
                             "Automatically converted direct connection (port 5432) to pooler connection "
