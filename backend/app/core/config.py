@@ -238,6 +238,15 @@ class Settings(BaseSettings):
                     f"db.[PROJECT_REF].supabase.co or aws-0-[REGION].pooler.supabase.com",
                     stacklevel=2,
                 )
+            elif hostname:
+                # Log the hostname being used (helps debug connection issues)
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.info(
+                    f"Using Supabase database connection: hostname={hostname}, "
+                    f"port={parsed.port or 5432}, database={parsed.path or '/postgres'}"
+                )
 
             try:
                 return PostgresDsn(db_url)
