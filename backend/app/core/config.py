@@ -1,7 +1,6 @@
 import secrets
 import warnings
 from typing import Annotated, Any, Literal
-from urllib.parse import urlparse
 
 from pydantic import (
     AnyUrl,
@@ -216,7 +215,7 @@ class Settings(BaseSettings):
             # CRITICAL: Properly URL-encode the password to handle special characters
             # Passwords with special characters like [ ] need to be URL-encoded
             import re
-            from urllib.parse import quote, unquote
+            from urllib.parse import quote, unquote, urlparse
 
             # Extract and re-encode the password part
             # Format: postgresql://user:password@host:port/db
@@ -228,6 +227,17 @@ class Settings(BaseSettings):
                 password_encoded = quote(password_decoded, safe="")
                 # Replace the password in the URL
                 db_url = db_url.replace(f":{password_raw}@", f":{password_encoded}@")
+
+            # Check if using IP address instead of hostname (can cause connection issues)
+            parsed = urlparse(db_url)
+            hostname = parsed.hostname or ""
+            if hostname and re.match(r"^\d+\.\d+\.\d+\.\d+$", hostname):
+                warnings.warn(
+                    f"Connection string uses IP address ({hostname}) instead of hostname. "
+                    f"This can cause connection failures. Use hostname format instead: "
+                    f"db.[PROJECT_REF].supabase.co or aws-0-[REGION].pooler.supabase.com",
+                    stacklevel=2,
+                )
 
             try:
                 return PostgresDsn(db_url)
