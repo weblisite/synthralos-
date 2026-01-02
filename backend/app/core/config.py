@@ -91,7 +91,11 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str = ""
     # Supabase Database Configuration (preferred)
     # Option 1: Full connection string (recommended)
-    # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+    # Format examples:
+    # - Direct: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
+    # - Session pooler: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-1-[REGION].pooler.supabase.com:5432/postgres
+    # - Transaction pooler: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+    # For non-serverless platforms with persistent connections, use direct connection (port 5432)
     SUPABASE_DB_URL: str = ""
     # Option 2: Database password (will build connection from SUPABASE_URL)
     # If SUPABASE_DB_URL is not set, will use this to construct connection string
@@ -218,7 +222,6 @@ class Settings(BaseSettings):
             # Format: postgresql://user:password@host:port/db
             password_match = re.search(r"://([^:]+):([^@]+)@", db_url)
             if password_match:
-                username = password_match.group(1)
                 password_raw = password_match.group(2)
                 # Decode first (in case it's already encoded), then re-encode properly
                 password_decoded = unquote(password_raw)
