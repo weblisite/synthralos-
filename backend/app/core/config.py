@@ -243,22 +243,9 @@ class Settings(BaseSettings):
                 project_ref = parsed.netloc.split(".")[0] if parsed.netloc else ""
 
                 if project_ref:
-                    # Use Supabase connection pooler (recommended for serverless/Render)
-                    # Port 6543 is the pooler (better for serverless, avoids IPv6 issues)
-                    # Port 5432 is direct connection (may resolve to IPv6 which Render can't reach)
-                    #
-                    # NOTE: The pooler connection string format requires the exact hostname from Supabase dashboard:
-                    # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-                    #
-                    # For now, we'll use direct connection but warn the user
-                    # Users should get the pooler connection string from Supabase dashboard for production
+                    # Build direct connection string
+                    # Users can use SUPABASE_DB_URL to set any connection type (direct, session pooler, or transaction pooler)
                     host = f"db.{project_ref}.supabase.co"
-                    warnings.warn(
-                        "Using direct Supabase connection (port 5432). For Render/serverless deployments, "
-                        "use the connection pooler (port 6543) from Supabase dashboard to avoid IPv6 issues. "
-                        "Get it from: Settings > Database > Connection string > Connection pooling",
-                        stacklevel=2,
-                    )
                     return PostgresDsn.build(
                         scheme="postgresql+psycopg",
                         username="postgres",
