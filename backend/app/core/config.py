@@ -96,11 +96,6 @@ class Settings(BaseSettings):
     # Option 2: Database password (will build connection from SUPABASE_URL)
     # If SUPABASE_DB_URL is not set, will use this to construct connection string
     SUPABASE_DB_PASSWORD: str = ""
-    # Set to True to disable automatic conversion of direct connections to pooler
-    # Useful for non-serverless deployments that need persistent connections
-    # Pooler is optimized for serverless/brief connections, but direct connections
-    # may be better for long-running services with persistent connections
-    SUPABASE_DISABLE_POOLER_CONVERSION: bool = False
 
     # Workflow Engine Configuration
     WORKFLOW_WORKER_CONCURRENCY: int = 10
@@ -200,16 +195,15 @@ class Settings(BaseSettings):
         """
         # Option 1: Use Supabase full connection string if provided
         if self.SUPABASE_DB_URL:
-            # Parse the connection string and convert to PostgresDsn
-            # Supabase connection strings are typically:
-            # postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres (pooler - recommended)
-            # or: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres (direct)
-            # We need to ensure it uses postgresql+psycopg:// for psycopg3
-            # IMPORTANT: For Render/serverless, prefer the pooler connection (port 6543) over direct (port 5432)
-            # The pooler avoids IPv6 resolution issues and is optimized for serverless environments
+            # Use the connection string as-is - no automatic conversion
+            # Supports both direct connections (port 5432) and pooler connections (port 5432/6543)
+            # Users should set the connection string format they need:
+            # - Direct: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
+            # - Session pooler: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-1-[REGION].pooler.supabase.com:5432/postgres
+            # - Transaction pooler: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
             db_url = str(self.SUPABASE_DB_URL)
 
-            # Convert postgresql:// to postgresql+psycopg:// if not already converted
+            # Convert postgresql:// to postgresql+psycopg:// if not already converted (required for psycopg3)
             if db_url.startswith("postgresql://") and not db_url.startswith(
                 "postgresql+psycopg://"
             ):
@@ -231,142 +225,6 @@ class Settings(BaseSettings):
                 password_encoded = quote(password_decoded, safe="")
                 # Replace the password in the URL
                 db_url = db_url.replace(f":{password_raw}@", f":{password_encoded}@")
-
-            # CIRCUIT BREAKER MITIGATION: Only convert DIRECT connections to pooler
-            # Supabase has two pooler types:
-            # 1. Session pooler: port 5432, IPv4 proxied (aws-1-us-west-1.pooler.supabase.com:5432)
-            # 2. Transaction pooler: port 6543 (aws-0-us-west-1.pooler.supabase.com:6543)
-            # Both pooler types work fine - we only need to convert DIRECT connections (db.*.supabase.co:5432)
-            
-            # Check if this is already a pooler connection (session or transaction)
-            is_pooler = ".pooler.supabase.com" in db_url
-            is_direct = "db." in db_url and ".supabase.co" in db_url
-            
-            # If using direct connection (port 5432 with db.*.supabase.co hostname), convert to pooler
-            # This helps avoid IPv6 resolution issues on Render and circuit breaker problems
-            # Can be disabled with SUPABASE_DISABLE_POOLER_CONVERSION=true for non-serverless deployments
-            # that need persistent connections (pooler is optimized for serverless/brief connections)
-            if (
-                not self.SUPABASE_DISABLE_POOLER_CONVERSION
-                and self.SUPABASE_URL
-                and is_direct
-                and ":5432/" in db_url
-            ):
-                try:
-                    parsed = urlparse(self.SUPABASE_URL)
-                    # Extract project_ref from SUPABASE_URL
-                    # Format: https://[PROJECT_REF].supabase.co
-                    # Example: https://lorefpaifkembnzmlodm.supabase.co -> project_ref = "lorefpaifkembnzmlodm"
-                    project_ref = parsed.netloc.split(".")[0] if parsed.netloc else ""
-                    if not project_ref:
-                        # Fallback: try to extract from hostname if netloc parsing fails
-                        hostname = parsed.hostname or ""
-                        if hostname:
-                            project_ref = hostname.split(".")[0]
-                    
-                    if project_ref:
-                        import re
-                        from urllib.parse import urlparse as parse_url
-
-                        # Parse the connection string properly using urlparse
-                        # Note: urlparse handles PostgreSQL connection strings correctly
-                        db_parsed = parse_url(db_url)
-
-                        # Extract region from the direct connection hostname
-                        # Format options:
-                        # 1. aws-0-[REGION].compute.amazonaws.com:5432
-                        # 2. aws-1-[REGION].pooler.supabase.com:5432 (wrong port)
-                        # 3. db.[PROJECT_REF].supabase.co:5432 (need to infer region)
-                        # 4. IP address (54.241.103.102) - need to infer region
-                        hostname = db_parsed.hostname or ""
-                        region_match = re.search(r"aws-[01]-([^.]+)\.", hostname)
-                        if region_match:
-                            region = region_match.group(1)
-                        else:
-                            # If using db.[PROJECT_REF].supabase.co format or IP address, infer region
-                            # Most Supabase projects default to us-west-1
-                            # Check if it's an IP address
-                            ip_match = re.match(r"^\d+\.\d+\.\d+\.\d+$", hostname)
-                            if ip_match:
-                                # IP address detected - default to us-west-1 (most common)
-                                region = "us-west-1"
-                            else:
-                                # Default to us-west-1
-                                region = "us-west-1"
-
-                        # Extract username - always construct as "postgres.[PROJECT_REF]" for pooler connections
-                        # The project_ref from SUPABASE_URL is the source of truth
-                        raw_username = db_parsed.username or "postgres"
-                        
-                        # Extract base username (should be "postgres")
-                        # Handle cases where username might already be "postgres.[something]"
-                        if raw_username.startswith("postgres."):
-                            # If it's already "postgres.[something]", extract just "postgres"
-                            # Split on first dot to get base username
-                            base_username = raw_username.split(".", 1)[0]
-                        else:
-                            # Use as-is (should be "postgres")
-                            base_username = raw_username
-                        
-                        # Always construct username as "postgres.[PROJECT_REF]" using project_ref from SUPABASE_URL
-                        # This ensures consistency and correctness
-                        # Format must be exactly: postgres.[PROJECT_REF] (e.g., postgres.lorefpaifkembnzmlodm)
-                        username = f"{base_username}.{project_ref}"
-                        
-                        # Validate username format
-                        if not username.startswith("postgres.") or username.count(".") != 1:
-                            raise ValueError(
-                                f"Invalid username format constructed: {username}. "
-                                f"Expected format: postgres.[PROJECT_REF], project_ref={project_ref}"
-                            )
-
-                        # Extract password (should already be URL-encoded in connection string)
-                        password = db_parsed.password or ""
-                        # Password should already be URL-encoded, keep as-is
-
-                        # Extract database name (usually "postgres")
-                        database = (db_parsed.path or "/postgres").lstrip("/").split(
-                            "?"
-                        )[0] or "postgres"
-
-                        # Build pooler connection string manually to ensure correct format
-                        # Format: postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-                        # Username can contain dots (like postgres.lorefpaifkembnzmlodm), don't URL-encode it
-                        if password:
-                            # Build netloc: username:password@hostname:port
-                            netloc = f"{username}:{password}@aws-0-{region}.pooler.supabase.com:6543"
-                        else:
-                            netloc = (
-                                f"{username}@aws-0-{region}.pooler.supabase.com:6543"
-                            )
-
-                        # Construct the full URL
-                        db_url = (
-                            f"{db_parsed.scheme or 'postgresql'}://{netloc}/{database}"
-                        )
-
-                        # Validate the constructed URL by parsing it back
-                        # This ensures the format is correct
-                        test_parsed = parse_url(db_url)
-                        if not test_parsed.hostname or test_parsed.hostname == username:
-                            # If hostname is wrong, fall back to manual construction
-                            raise ValueError(
-                                f"Invalid connection string format after conversion: hostname={test_parsed.hostname}"
-                            )
-
-                        warnings.warn(
-                            "Automatically converted direct connection (port 5432) to pooler connection "
-                            "(port 6543) for better serverless compatibility. This helps avoid connection "
-                            "issues and circuit breaker problems.",
-                            stacklevel=2,
-                        )
-                except Exception as e:
-                    # If conversion fails, warn but continue with original connection string
-                    warnings.warn(
-                        f"Failed to convert direct connection to pooler: {e}. "
-                        f"Consider manually setting SUPABASE_DB_URL to use pooler connection (port 6543).",
-                        stacklevel=2,
-                    )
 
             try:
                 return PostgresDsn(db_url)
