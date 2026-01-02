@@ -96,6 +96,11 @@ class Settings(BaseSettings):
     # Option 2: Database password (will build connection from SUPABASE_URL)
     # If SUPABASE_DB_URL is not set, will use this to construct connection string
     SUPABASE_DB_PASSWORD: str = ""
+    # Set to True to disable automatic conversion of direct connections to pooler
+    # Useful for non-serverless deployments that need persistent connections
+    # Pooler is optimized for serverless/brief connections, but direct connections
+    # may be better for long-running services with persistent connections
+    SUPABASE_DISABLE_POOLER_CONVERSION: bool = False
 
     # Workflow Engine Configuration
     WORKFLOW_WORKER_CONCURRENCY: int = 10
@@ -239,7 +244,14 @@ class Settings(BaseSettings):
             
             # If using direct connection (port 5432 with db.*.supabase.co hostname), convert to pooler
             # This helps avoid IPv6 resolution issues on Render and circuit breaker problems
-            if self.SUPABASE_URL and is_direct and ":5432/" in db_url:
+            # Can be disabled with SUPABASE_DISABLE_POOLER_CONVERSION=true for non-serverless deployments
+            # that need persistent connections (pooler is optimized for serverless/brief connections)
+            if (
+                not self.SUPABASE_DISABLE_POOLER_CONVERSION
+                and self.SUPABASE_URL
+                and is_direct
+                and ":5432/" in db_url
+            ):
                 try:
                     parsed = urlparse(self.SUPABASE_URL)
                     # Extract project_ref from SUPABASE_URL
