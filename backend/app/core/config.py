@@ -227,21 +227,19 @@ class Settings(BaseSettings):
                 # Replace the password in the URL
                 db_url = db_url.replace(f":{password_raw}@", f":{password_encoded}@")
 
-            # CIRCUIT BREAKER MITIGATION: Ensure pooler connections use correct port
-            # Pooler connections (port 6543) are more reliable and have better connection management
-            # than direct connections (port 5432) for serverless environments
-            if ".pooler.supabase.com" in db_url and ":5432/" in db_url:
-                # Fix incorrect port: pooler hostnames MUST use port 6543
-                db_url = db_url.replace(":5432/", ":6543/")
-                warnings.warn(
-                    "Fixed pooler connection port: Changed from 5432 to 6543. "
-                    "Pooler connections require port 6543 to avoid connection issues.",
-                    stacklevel=2,
-                )
-
-            # If using direct connection (port 5432), automatically convert to pooler if we have SUPABASE_URL
+            # CIRCUIT BREAKER MITIGATION: Only convert DIRECT connections to pooler
+            # Supabase has two pooler types:
+            # 1. Session pooler: port 5432, IPv4 proxied (aws-1-us-west-1.pooler.supabase.com:5432)
+            # 2. Transaction pooler: port 6543 (aws-0-us-west-1.pooler.supabase.com:6543)
+            # Both pooler types work fine - we only need to convert DIRECT connections (db.*.supabase.co:5432)
+            
+            # Check if this is already a pooler connection (session or transaction)
+            is_pooler = ".pooler.supabase.com" in db_url
+            is_direct = "db." in db_url and ".supabase.co" in db_url
+            
+            # If using direct connection (port 5432 with db.*.supabase.co hostname), convert to pooler
             # This helps avoid IPv6 resolution issues on Render and circuit breaker problems
-            if self.SUPABASE_URL and ":5432/" in db_url:
+            if self.SUPABASE_URL and is_direct and ":5432/" in db_url:
                 try:
                     parsed = urlparse(self.SUPABASE_URL)
                     # Extract project_ref from SUPABASE_URL
