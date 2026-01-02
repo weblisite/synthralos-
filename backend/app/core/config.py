@@ -244,7 +244,16 @@ class Settings(BaseSettings):
             if self.SUPABASE_URL and ":5432/" in db_url:
                 try:
                     parsed = urlparse(self.SUPABASE_URL)
+                    # Extract project_ref from SUPABASE_URL
+                    # Format: https://[PROJECT_REF].supabase.co
+                    # Example: https://lorefpaifkembnzmlodm.supabase.co -> project_ref = "lorefpaifkembnzmlodm"
                     project_ref = parsed.netloc.split(".")[0] if parsed.netloc else ""
+                    if not project_ref:
+                        # Fallback: try to extract from hostname if netloc parsing fails
+                        hostname = parsed.hostname or ""
+                        if hostname:
+                            project_ref = hostname.split(".")[0]
+                    
                     if project_ref:
                         import re
                         from urllib.parse import urlparse as parse_url
@@ -283,14 +292,23 @@ class Settings(BaseSettings):
                         # Handle cases where username might already be "postgres.[something]"
                         if raw_username.startswith("postgres."):
                             # If it's already "postgres.[something]", extract just "postgres"
-                            base_username = "postgres"
+                            # Split on first dot to get base username
+                            base_username = raw_username.split(".", 1)[0]
                         else:
                             # Use as-is (should be "postgres")
                             base_username = raw_username
                         
                         # Always construct username as "postgres.[PROJECT_REF]" using project_ref from SUPABASE_URL
                         # This ensures consistency and correctness
+                        # Format must be exactly: postgres.[PROJECT_REF] (e.g., postgres.lorefpaifkembnzmlodm)
                         username = f"{base_username}.{project_ref}"
+                        
+                        # Validate username format
+                        if not username.startswith("postgres.") or username.count(".") != 1:
+                            raise ValueError(
+                                f"Invalid username format constructed: {username}. "
+                                f"Expected format: postgres.[PROJECT_REF], project_ref={project_ref}"
+                            )
 
                         # Extract password (should already be URL-encoded in connection string)
                         password = db_parsed.password or ""
