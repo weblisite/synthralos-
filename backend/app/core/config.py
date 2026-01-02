@@ -275,24 +275,22 @@ class Settings(BaseSettings):
                                 # Default to us-west-1
                                 region = "us-west-1"
 
-                        # Extract username - handle both "postgres" and "postgres.[PROJECT_REF]" formats
+                        # Extract username - always construct as "postgres.[PROJECT_REF]" for pooler connections
+                        # The project_ref from SUPABASE_URL is the source of truth
                         raw_username = db_parsed.username or "postgres"
-
-                        # If username already contains project_ref (e.g., "postgres.lorefpaifkembnzmlodm"),
-                        # use it as-is. Otherwise, build it as "postgres.[PROJECT_REF]"
-                        if (
-                            raw_username.startswith("postgres.")
-                            and project_ref in raw_username
-                        ):
-                            username = raw_username  # Already has project_ref
+                        
+                        # Extract base username (should be "postgres")
+                        # Handle cases where username might already be "postgres.[something]"
+                        if raw_username.startswith("postgres."):
+                            # If it's already "postgres.[something]", extract just "postgres"
+                            base_username = "postgres"
                         else:
-                            # Extract just "postgres" if it's "postgres.[something]"
-                            base_username = (
-                                raw_username.split(".")[0]
-                                if "." in raw_username
-                                else raw_username
-                            )
-                            username = f"{base_username}.{project_ref}"
+                            # Use as-is (should be "postgres")
+                            base_username = raw_username
+                        
+                        # Always construct username as "postgres.[PROJECT_REF]" using project_ref from SUPABASE_URL
+                        # This ensures consistency and correctness
+                        username = f"{base_username}.{project_ref}"
 
                         # Extract password (should already be URL-encoded in connection string)
                         password = db_parsed.password or ""
