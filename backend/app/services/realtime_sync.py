@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Try to import Supabase client
 try:
-    from supabase import Client, create_client
+    from supabase import create_client
 
     SUPABASE_AVAILABLE = True
 except ImportError:
