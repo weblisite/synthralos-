@@ -6,9 +6,17 @@ set -e
 
 echo "Starting backend pre-start checks..."
 
+# Validate database configuration first
+echo "Validating database configuration..."
+cd /app
+python -m app.scripts.validate_db_config || {
+    echo "❌ Database configuration validation failed!"
+    echo "Please check the error message above and update SUPABASE_DB_URL in Render environment variables."
+    exit 1
+}
+
 # Run database migrations
 echo "Running database migrations..."
-cd /app
 python -m alembic upgrade head
 
 # Run any initialization scripts if needed
