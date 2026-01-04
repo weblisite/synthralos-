@@ -1,6 +1,9 @@
+import logging
+import re
 import secrets
 import warnings
 from typing import Annotated, Any, Literal
+from urllib.parse import quote, unquote, urlparse
 
 from pydantic import (
     AnyUrl,
@@ -13,6 +16,8 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
+
+logger = logging.getLogger(__name__)
 
 
 def parse_cors(v: Any) -> list[str] | str:
@@ -214,9 +219,6 @@ class Settings(BaseSettings):
 
             # CRITICAL: Properly URL-encode the password to handle special characters
             # Passwords with special characters like [ ] need to be URL-encoded
-            import re
-            from urllib.parse import quote, unquote, urlparse
-
             # Extract and re-encode the password part
             # Format: postgresql://user:password@host:port/db
             password_match = re.search(r"://([^:]+):([^@]+)@", db_url)
@@ -232,17 +234,21 @@ class Settings(BaseSettings):
             parsed = urlparse(db_url)
             hostname = parsed.hostname or ""
             if hostname and re.match(r"^\d+\.\d+\.\d+\.\d+$", hostname):
-                warnings.warn(
-                    f"Connection string uses IP address ({hostname}) instead of hostname. "
-                    f"This can cause connection failures. Use hostname format instead: "
-                    f"db.[PROJECT_REF].supabase.co or aws-0-[REGION].pooler.supabase.com",
-                    stacklevel=2,
+                error_msg = (
+                    f"CRITICAL: Connection string uses IP address ({hostname}) instead of hostname. "
+                    f"This will cause connection failures on Render and other cloud platforms. "
+                    f"\n\nPlease update SUPABASE_DB_URL in Render to use one of these formats:\n"
+                    f"1. Session Pooler (RECOMMENDED): "
+                    f"postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-1-[REGION].pooler.supabase.com:5432/postgres\n"
+                    f"2. Direct Connection: "
+                    f"postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres\n"
+                    f"\nGet the correct connection string from: "
+                    f"Supabase Dashboard → Settings → Database → Connection string → Connection pooling → Session mode"
                 )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
             elif hostname:
                 # Log the hostname being used (helps debug connection issues)
-                import logging
-
-                logger = logging.getLogger(__name__)
                 logger.info(
                     f"Using Supabase database connection: hostname={hostname}, "
                     f"port={parsed.port or 5432}, database={parsed.path or '/postgres'}"
