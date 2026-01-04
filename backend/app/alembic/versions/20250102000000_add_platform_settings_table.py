@@ -1,7 +1,7 @@
 """add_platform_settings_table
 
 Revision ID: 20250102000000
-Revises: 20251226131615
+Revises: c1d1196b0e7d
 Create Date: 2025-01-02 00:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '20250102000000'
-down_revision = '20251226131615'
+down_revision = 'c1d1196b0e7d'
 branch_labels = None
 depends_on = None
 
