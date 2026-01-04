@@ -18,23 +18,37 @@ depends_on = None
 
 
 def upgrade():
-    # Add clerk_user_id column to user table
-    op.add_column('user', sa.Column('clerk_user_id', sa.String(length=255), nullable=True))
+    # Check if columns exist before adding them (idempotent migration)
+    # This handles the case where migration was already applied via Supabase MCP
 
-    # Add index on clerk_user_id for faster lookups
-    op.create_index(op.f('ix_user_clerk_user_id'), 'user', ['clerk_user_id'], unique=True)
+    # Check and add clerk_user_id column
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('user')]
 
-    # Add phone_number column
-    op.add_column('user', sa.Column('phone_number', sa.String(length=50), nullable=True))
+    if 'clerk_user_id' not in columns:
+        op.add_column('user', sa.Column('clerk_user_id', sa.String(length=255), nullable=True))
 
-    # Add email_verified column
-    op.add_column('user', sa.Column('email_verified', sa.Boolean(), nullable=False, server_default='false'))
+    # Check and create index on clerk_user_id
+    indexes = [idx['name'] for idx in inspector.get_indexes('user')]
+    if 'ix_user_clerk_user_id' not in indexes:
+        op.create_index(op.f('ix_user_clerk_user_id'), 'user', ['clerk_user_id'], unique=True)
 
-    # Add clerk_metadata column (JSONB for storing additional Clerk metadata)
-    op.add_column('user', sa.Column('clerk_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True, server_default='{}'))
+    # Check and add phone_number column
+    if 'phone_number' not in columns:
+        op.add_column('user', sa.Column('phone_number', sa.String(length=50), nullable=True))
 
-    # Create index on email_verified for filtering
-    op.create_index(op.f('ix_user_email_verified'), 'user', ['email_verified'], unique=False)
+    # Check and add email_verified column
+    if 'email_verified' not in columns:
+        op.add_column('user', sa.Column('email_verified', sa.Boolean(), nullable=False, server_default='false'))
+
+    # Check and add clerk_metadata column
+    if 'clerk_metadata' not in columns:
+        op.add_column('user', sa.Column('clerk_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True, server_default='{}'))
+
+    # Check and create index on email_verified
+    if 'ix_user_email_verified' not in indexes:
+        op.create_index(op.f('ix_user_email_verified'), 'user', ['email_verified'], unique=False)
 
 
 def downgrade():
