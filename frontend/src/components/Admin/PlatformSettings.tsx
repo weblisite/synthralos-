@@ -4,8 +4,9 @@
  * Manages platform-wide configuration and settings.
  */
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Save, Settings } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -19,9 +20,11 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import { apiClient } from "@/lib/apiClient"
 
 export function PlatformSettings() {
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const queryClient = useQueryClient()
 
   const [settings, setSettings] = useState({
     platformName: "SynthralOS",
@@ -33,16 +36,64 @@ export function PlatformSettings() {
     maintenanceMessage: "",
   })
 
-  const handleSave = async () => {
-    try {
-      // TODO: Implement backend endpoint for saving platform settings
+  // Fetch platform settings
+  const { data: platformSettings, isLoading } = useQuery({
+    queryKey: ["platformSettings"],
+    queryFn: async () => {
+      return await apiClient.request<Record<string, { value: any }>>(
+        "/api/v1/admin/system/settings",
+      )
+    },
+  })
+
+  // Update settings when data loads
+  useEffect(() => {
+    if (platformSettings) {
+      setSettings({
+        platformName: platformSettings.platform_name?.value || "SynthralOS",
+        maintenanceMode: platformSettings.maintenance_mode?.value || false,
+        registrationEnabled:
+          platformSettings.registration_enabled?.value ?? true,
+        maxUsers: platformSettings.max_users?.value || 1000,
+        maxWorkflowsPerUser:
+          platformSettings.max_workflows_per_user?.value || 100,
+        defaultExecutionTimeout:
+          platformSettings.default_execution_timeout?.value || 300,
+        maintenanceMessage: platformSettings.maintenance_message?.value || "",
+      })
+    }
+  }, [platformSettings])
+
+  // Save settings mutation
+  const saveMutation = useMutation({
+    mutationFn: async (settingsToSave: typeof settings) => {
+      return await apiClient.request("/api/v1/admin/system/settings", {
+        method: "PUT",
+        body: JSON.stringify({
+          platform_name: settingsToSave.platformName,
+          maintenance_mode: settingsToSave.maintenanceMode,
+          registration_enabled: settingsToSave.registrationEnabled,
+          max_users: settingsToSave.maxUsers,
+          max_workflows_per_user: settingsToSave.maxWorkflowsPerUser,
+          default_execution_timeout: settingsToSave.defaultExecutionTimeout,
+          maintenance_message: settingsToSave.maintenanceMessage,
+        }),
+      })
+    },
+    onSuccess: () => {
       showSuccessToast("Settings saved", "Platform settings have been updated")
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ["platformSettings"] })
+    },
+    onError: (error: Error) => {
       showErrorToast(
         "Failed to save settings",
         error instanceof Error ? error.message : "Unknown error",
       )
-    }
+    },
+  })
+
+  const handleSave = async () => {
+    saveMutation.mutate(settings)
   }
 
   return (
@@ -188,9 +239,12 @@ export function PlatformSettings() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button
+          onClick={handleSave}
+          disabled={saveMutation.isPending || isLoading}
+        >
           <Save className="mr-2 h-4 w-4" />
-          Save Settings
+          {saveMutation.isPending ? "Saving..." : "Save Settings"}
         </Button>
       </div>
 

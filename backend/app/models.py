@@ -791,6 +791,22 @@ class DomainProfile(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class PlatformSettings(SQLModel, table=True):
+    """Platform-wide settings stored in database"""
+
+    __tablename__ = "platform_settings"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    key: str = Field(unique=True, index=True, max_length=255)
+    value: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
+    description: str | None = Field(default=None, max_length=500)
+    updated_by: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", ondelete="SET NULL"
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class ContentChecksum(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     url: str = Field(index=True, max_length=2000)

@@ -19,6 +19,7 @@ from app.models import (
     Connector,
     OCRJob,
     OSINTStream,
+    PlatformSettings,
     RAGIndex,
     ScrapeJob,
     SystemAlert,
@@ -33,7 +34,7 @@ router = APIRouter(prefix="/admin/system", tags=["admin", "system"])
 @router.get("/health")
 def get_system_health(
     session: SessionDep,
-    current_user: User = Depends(get_current_active_superuser),
+    _current_user: User = Depends(get_current_active_superuser),
 ) -> Any:
     """
     Get system health status (admin only).
@@ -86,7 +87,7 @@ def get_system_health(
         unresolved_alerts = (
             session.exec(
                 select(func.count(SystemAlert.id)).where(
-                    SystemAlert.is_resolved == False
+                    SystemAlert.is_resolved.is_(False)
                 )
             ).one()
             or 0
@@ -138,7 +139,7 @@ def get_system_health(
 @router.get("/metrics")
 def get_system_metrics(
     session: SessionDep,
-    current_user: User = Depends(get_current_active_superuser),
+    _current_user: User = Depends(get_current_active_superuser),
 ) -> Any:
     """
     Get system-wide metrics (admin only).
@@ -152,11 +153,13 @@ def get_system_metrics(
     # User statistics
     total_users = session.exec(select(func.count(User.id))).one() or 0
     active_users = (
-        session.exec(select(func.count(User.id)).where(User.is_active == True)).one()
+        session.exec(select(func.count(User.id)).where(User.is_active.is_(True))).one()
         or 0
     )
     admin_users = (
-        session.exec(select(func.count(User.id)).where(User.is_superuser == True)).one()
+        session.exec(
+            select(func.count(User.id)).where(User.is_superuser.is_(True))
+        ).one()
         or 0
     )
 
@@ -164,7 +167,7 @@ def get_system_metrics(
     total_workflows = session.exec(select(func.count(Workflow.id))).one() or 0
     active_workflows = (
         session.exec(
-            select(func.count(Workflow.id)).where(Workflow.is_active == True)
+            select(func.count(Workflow.id)).where(Workflow.is_active.is_(True))
         ).one()
         or 0
     )
@@ -259,7 +262,7 @@ def get_system_metrics(
 @router.get("/activity")
 def get_recent_activity(
     session: SessionDep,
-    current_user: User = Depends(get_current_active_superuser),
+    _current_user: User = Depends(get_current_active_superuser),
     limit: int = 50,
 ) -> Any:
     """
@@ -280,9 +283,7 @@ def get_recent_activity(
         .limit(limit)
     ).all()
 
-    # Get recent users (last 7 days)
-    last_7d = datetime.utcnow() - timedelta(days=7)
-    # Note: User model doesn't have created_at, so we'll skip this for now
+    # Note: User model doesn't have created_at, so we'll skip recent users for now
 
     # Format activity log
     activity = []
@@ -310,7 +311,7 @@ def get_recent_activity(
 @router.get("/alerts")
 def get_system_alerts(
     session: SessionDep,
-    current_user: User = Depends(get_current_active_superuser),
+    _current_user: User = Depends(get_current_active_superuser),
     limit: int = 50,
     resolved: bool | None = None,
     severity: str | None = None,
@@ -362,7 +363,7 @@ def get_system_alerts(
         ],
         "total": len(alerts),
         "unresolved_count": session.exec(
-            select(func.count(SystemAlert.id)).where(SystemAlert.is_resolved == False)
+            select(func.count(SystemAlert.id)).where(SystemAlert.is_resolved.is_(False))
         ).one()
         or 0,
     }
@@ -405,3 +406,119 @@ def resolve_system_alert(
         "resolved_at": alert.resolved_at.isoformat() if alert.resolved_at else None,
         "resolved_by": str(alert.resolved_by) if alert.resolved_by else None,
     }
+
+
+@router.get("/settings")
+def get_platform_settings(
+    session: SessionDep,
+    _current_user: User = Depends(get_current_active_superuser),
+) -> Any:
+    """
+    Get platform settings (admin only).
+
+    Returns:
+        Platform settings as key-value pairs
+    """
+    settings = session.exec(select(PlatformSettings)).all()
+
+    # Convert to dictionary format
+    result = {}
+    for setting in settings:
+        # Extract value from dict if it's stored as {"value": ...}
+        value = setting.value
+        if isinstance(value, dict) and "value" in value:
+            value = value["value"]
+
+        result[setting.key] = {
+            "value": value,
+            "description": setting.description,
+            "updated_at": setting.updated_at.isoformat(),
+            "updated_by": str(setting.updated_by) if setting.updated_by else None,
+        }
+
+    # Return default settings if none exist
+    if not result:
+        return {
+            "platform_name": {"value": "SynthralOS", "description": None},
+            "maintenance_mode": {"value": False, "description": None},
+            "registration_enabled": {"value": True, "description": None},
+            "max_users": {"value": 1000, "description": None},
+            "max_workflows_per_user": {"value": 100, "description": None},
+            "default_execution_timeout": {"value": 300, "description": None},
+            "maintenance_message": {"value": "", "description": None},
+        }
+
+    return result
+
+
+@router.put("/settings")
+def update_platform_settings(
+    settings: dict[str, Any],
+    session: SessionDep,
+    current_user: User = Depends(get_current_active_superuser),
+) -> Any:
+    """
+    Update platform settings (admin only).
+
+    Args:
+        settings: Dictionary of settings to update (key-value pairs)
+        session: Database session
+        current_user: Current admin user
+
+    Returns:
+        Updated settings
+    """
+    updated_settings = {}
+
+    for key, value in settings.items():
+        # Get existing setting or create new one
+        existing = session.exec(
+            select(PlatformSettings).where(PlatformSettings.key == key)
+        ).first()
+
+        # Store value as dict (for consistency)
+        value_dict = value if isinstance(value, dict) else {"value": value}
+
+        if existing:
+            existing.value = value_dict
+            existing.updated_by = current_user.id
+            existing.updated_at = datetime.utcnow()
+            session.add(existing)
+            updated_settings[key] = {
+                "value": existing.value.get("value")
+                if isinstance(existing.value, dict) and "value" in existing.value
+                else existing.value,
+                "description": existing.description,
+                "updated_at": existing.updated_at.isoformat(),
+                "updated_by": str(existing.updated_by),
+            }
+        else:
+            new_setting = PlatformSettings(
+                key=key,
+                value=value_dict,
+                updated_by=current_user.id,
+            )
+            session.add(new_setting)
+            updated_settings[key] = {
+                "value": value_dict.get("value")
+                if isinstance(value_dict, dict) and "value" in value_dict
+                else value_dict,
+                "description": new_setting.description,
+                "updated_at": new_setting.updated_at.isoformat(),
+                "updated_by": str(new_setting.updated_by),
+            }
+
+    session.commit()
+
+    # Log admin action
+    from app.observability.wazuh import default_wazuh_client
+
+    default_wazuh_client.log_audit_event(
+        action="update_platform_settings",
+        resource="platform_settings",
+        user_id=str(current_user.id),
+        success=True,
+        metadata={"updated_keys": list(settings.keys())},
+    )
+
+    return {"settings": updated_settings, "message": "Settings updated successfully"}

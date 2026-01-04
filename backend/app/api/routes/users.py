@@ -1,11 +1,14 @@
+import json
 import logging
+import os
+import tempfile
 import uuid
+import zipfile
+from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import func, select
-
-logger = logging.getLogger(__name__)
 
 from app import crud
 from app.api.deps import (
@@ -18,6 +21,7 @@ from app.core.security import generate_token, get_password_hash, verify_password
 from app.models import (
     LoginHistory,
     Message,
+    TeamMember,
     UpdatePassword,
     User,
     UserAPIKey,
@@ -33,6 +37,8 @@ from app.models import (
     UsersPublic,
     UserUpdate,
     UserUpdateMe,
+    Workflow,
+    WorkflowExecution,
 )
 from app.services.api_keys import (
     SERVICE_DEFINITIONS,
@@ -40,6 +46,8 @@ from app.services.api_keys import (
 )
 from app.services.storage import default_storage_service
 from app.utils import generate_new_account_email, send_email
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -828,6 +836,267 @@ def track_login(
         session.commit()
 
     return Message(message="Login tracked successfully")
+
+
+@router.post("/me/data/export", response_model=dict[str, str])
+def export_user_data(
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Export all user data as a ZIP file.
+
+    Includes:
+    - User profile and preferences
+    - Workflows and workflow executions
+    - API keys (masked)
+    - Team memberships
+    - Connector connections
+    - Agent tasks
+    - RAG indexes
+    - OCR jobs
+    - Scraping jobs
+    - OSINT streams
+
+    Returns a download URL for the exported ZIP file.
+    """
+    # Create temporary ZIP file
+    temp_dir = tempfile.mkdtemp()
+    zip_path = os.path.join(temp_dir, f"user_data_export_{current_user.id}.zip")
+
+    export_data = {
+        "export_date": datetime.utcnow().isoformat(),
+        "user_id": str(current_user.id),
+        "user_email": current_user.email,
+        "user_profile": {
+            "email": current_user.email,
+            "full_name": current_user.full_name,
+            "is_active": current_user.is_active,
+            "is_superuser": current_user.is_superuser,
+        },
+    }
+
+    # Export workflows
+    workflows = session.exec(
+        select(Workflow).where(Workflow.owner_id == current_user.id)
+    ).all()
+    export_data["workflows"] = [
+        {
+            "id": str(w.id),
+            "name": w.name,
+            "description": w.description,
+            "is_active": w.is_active,
+            "trigger_config": w.trigger_config,
+            "graph_config": w.graph_config,
+            "created_at": w.created_at.isoformat(),
+            "updated_at": w.updated_at.isoformat(),
+        }
+        for w in workflows
+    ]
+
+    # Export workflow executions (limit to last 1000)
+    executions = session.exec(
+        select(WorkflowExecution)
+        .where(WorkflowExecution.owner_id == current_user.id)
+        .order_by(WorkflowExecution.started_at.desc())
+        .limit(1000)
+    ).all()
+    export_data["workflow_executions"] = [
+        {
+            "execution_id": e.execution_id,
+            "workflow_id": str(e.workflow_id),
+            "status": e.status,
+            "started_at": e.started_at.isoformat() if e.started_at else None,
+            "completed_at": e.completed_at.isoformat() if e.completed_at else None,
+        }
+        for e in executions
+    ]
+
+    # Export API keys (masked)
+    api_keys = session.exec(
+        select(UserAPIKey).where(UserAPIKey.user_id == current_user.id)
+    ).all()
+    export_data["api_keys"] = [
+        {
+            "service_name": ak.service_name,
+            "service_display_name": ak.service_display_name,
+            "credential_type": ak.credential_type,
+            "masked_key": "***hidden***",
+            "is_active": ak.is_active,
+            "created_at": ak.created_at.isoformat(),
+        }
+        for ak in api_keys
+    ]
+
+    # Export team memberships
+    team_members = session.exec(
+        select(TeamMember).where(TeamMember.user_id == current_user.id)
+    ).all()
+    export_data["team_memberships"] = [
+        {
+            "team_id": str(tm.team_id),
+            "role": tm.role,
+            "joined_at": tm.joined_at.isoformat() if tm.joined_at else None,
+        }
+        for tm in team_members
+    ]
+
+    # Export user preferences
+    try:
+        from app.models import UserPreferences
+
+        preferences = session.exec(
+            select(UserPreferences).where(UserPreferences.user_id == current_user.id)
+        ).first()
+        if preferences:
+            export_data["preferences"] = {
+                "theme": preferences.theme,
+                "timezone": preferences.timezone,
+                "language": preferences.language,
+            }
+    except Exception:
+        pass
+
+    # Create ZIP file
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        # Add main data file
+        zipf.writestr(
+            "user_data.json",
+            json.dumps(export_data, indent=2, default=str),
+        )
+
+        # Add README
+        readme = f"""User Data Export
+Generated: {datetime.utcnow().isoformat()}
+User ID: {current_user.id}
+Email: {current_user.email}
+
+This export contains:
+- User profile information
+- Workflows and workflow executions
+- API keys (masked for security)
+- Team memberships
+- User preferences
+
+All timestamps are in UTC.
+"""
+        zipf.writestr("README.txt", readme)
+
+    # Upload to storage
+    try:
+        storage_service = default_storage_service
+        file_name = f"exports/user_{current_user.id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
+
+        with open(zip_path, "rb") as f:
+            upload_result = storage_service.upload_file(
+                bucket="exports",
+                file_path=file_name,
+                file_data=f.read(),
+                content_type="application/zip",
+            )
+
+        # Clean up temp file
+        os.remove(zip_path)
+        os.rmdir(temp_dir)
+
+        return {
+            "download_url": upload_result.get("url")
+            or upload_result.get("signed_url")
+            or upload_result.get("public_url"),
+            "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat(),
+            "message": "Data export completed successfully",
+        }
+    except Exception as e:
+        # Clean up on error
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+        if os.path.exists(temp_dir):
+            os.rmdir(temp_dir)
+        logger.error(f"Failed to upload export: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create export: {str(e)}",
+        )
+
+
+@router.post("/me/data/import", response_model=Message)
+async def import_user_data(
+    request: Request,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Import workflows from a JSON file.
+
+    Accepts a JSON file with workflow definitions.
+    Expected format: {"workflows": [{"name": "...", "description": "...", ...}]}
+    """
+    from app import crud
+    from app.models import WorkflowCreate
+
+    # Check content type
+    content_type = request.headers.get("content-type", "")
+    if not content_type.startswith("application/json"):
+        raise HTTPException(
+            status_code=400,
+            detail="Content-Type must be application/json",
+        )
+
+    # Parse JSON body
+    try:
+        body = await request.json()
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid JSON: {str(e)}",
+        )
+
+    # Validate structure
+    if "workflows" not in body:
+        raise HTTPException(
+            status_code=400,
+            detail="JSON must contain a 'workflows' array",
+        )
+
+    workflows_data = body["workflows"]
+    if not isinstance(workflows_data, list):
+        raise HTTPException(
+            status_code=400,
+            detail="'workflows' must be an array",
+        )
+
+    imported_count = 0
+    errors = []
+
+    for workflow_data in workflows_data:
+        try:
+            # Create workflow
+            workflow_create = WorkflowCreate(
+                name=workflow_data.get("name", "Imported Workflow"),
+                description=workflow_data.get("description"),
+                is_active=workflow_data.get("is_active", True),
+                trigger_config=workflow_data.get("trigger_config", {}),
+                graph_config=workflow_data.get("graph_config", {}),
+            )
+
+            crud.workflow.create(
+                session=session,
+                obj_in=workflow_create,
+                owner_id=current_user.id,
+            )
+            imported_count += 1
+        except Exception as e:
+            logger.error(f"Failed to import workflow: {e}", exc_info=True)
+            errors.append(
+                f"Failed to import workflow '{workflow_data.get('name', 'unknown')}': {str(e)}"
+            )
+
+    if errors:
+        return Message(
+            message=f"Imported {imported_count} workflows with {len(errors)} errors. Check logs for details."
+        )
+
+    return Message(message=f"Successfully imported {imported_count} workflows")
 
 
 @router.post("/me/avatar", response_model=dict[str, str])

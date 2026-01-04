@@ -40,18 +40,23 @@ export function DataPrivacySection() {
 
   const exportDataMutation = useMutation({
     mutationFn: async () => {
-      // TODO: Implement data export endpoint
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({ download_url: "#" })
-        }, 2000)
+      return await apiClient.request<{
+        download_url: string
+        expires_at: string
+        message: string
+      }>("/api/v1/users/me/data/export", {
+        method: "POST",
       })
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       showSuccessToast(
-        "Data export started",
-        "You'll receive an email when it's ready",
+        "Data export completed",
+        "Your data export is ready for download",
       )
+      // Open download URL in new tab
+      if (data.download_url && data.download_url !== "#") {
+        window.open(data.download_url, "_blank")
+      }
     },
     onError: (error: any) => {
       showErrorToast("Failed to export data", error.message)
@@ -149,11 +154,32 @@ export function DataPrivacySection() {
               accept=".json"
               className="hidden"
               id="workflow-import"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0]
                 if (file) {
-                  // TODO: Implement import
-                  showSuccessToast("Import", "Workflow import coming soon")
+                  try {
+                    const text = await file.text()
+                    const jsonData = JSON.parse(text)
+
+                    const response = await apiClient.request<{
+                      message: string
+                    }>("/api/v1/users/me/data/import", {
+                      method: "POST",
+                      body: JSON.stringify(jsonData),
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                    })
+
+                    showSuccessToast("Import successful", response.message)
+                    // Refresh workflows list if on workflows page
+                    queryClient.invalidateQueries({ queryKey: ["workflows"] })
+                  } catch (error: any) {
+                    showErrorToast(
+                      "Import failed",
+                      error.message || "Invalid file format",
+                    )
+                  }
                 }
               }}
             />
