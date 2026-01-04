@@ -32,6 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/hooks/useAuth"
 import { apiClient } from "@/lib/apiClient"
 
 interface DashboardStats {
@@ -175,6 +176,8 @@ const ActivityItem = ({
 }
 
 export function DashboardStats() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+
   const {
     data: stats,
     isLoading,
@@ -182,6 +185,7 @@ export function DashboardStats() {
   } = useQuery({
     queryKey: ["dashboardStats"],
     queryFn: fetchDashboardStats,
+    enabled: isAuthenticated && !authLoading, // Only fetch when authenticated
     refetchInterval: 30000, // Refresh every 30 seconds
   })
 

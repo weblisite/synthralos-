@@ -88,8 +88,10 @@ class Settings(BaseSettings):
     # Clerk Configuration (Authentication)
     CLERK_SECRET_KEY: str = ""
     CLERK_PUBLISHABLE_KEY: str = ""
+    CLERK_FRONTEND_API_URL: str = ""  # Frontend API URL from Clerk (e.g., https://ethical-hare-79.clerk.accounts.dev)
+    CLERK_BACKEND_API_URL: str = "https://api.clerk.com"  # Backend API URL from Clerk (default: https://api.clerk.com)
     CLERK_WEBHOOK_SECRET: str = ""
-    CLERK_JWKS_URL: str = ""  # JWKS endpoint for token verification
+    CLERK_JWKS_URL: str = ""  # JWKS endpoint for token verification (auto-constructed from CLERK_FRONTEND_API_URL if not set)
     # Supabase Configuration (Database & Storage only)
     SUPABASE_URL: str = ""
     SUPABASE_ANON_KEY: str = ""

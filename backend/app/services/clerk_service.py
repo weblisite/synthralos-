@@ -47,10 +47,22 @@ def get_jwks_client() -> PyJWKClient:
     """Get or create JWKS client for token verification."""
     global jwks_client
     if jwks_client is None:
-        jwks_url = (
-            settings.CLERK_JWKS_URL
-            or "https://ethical-hare-79.clerk.accounts.dev/.well-known/jwks.json"
-        )
+        # Use CLERK_JWKS_URL if set, otherwise construct from CLERK_FRONTEND_API_URL
+        if settings.CLERK_JWKS_URL:
+            jwks_url = settings.CLERK_JWKS_URL
+        elif settings.CLERK_FRONTEND_API_URL:
+            # Construct JWKS URL from Frontend API URL
+            frontend_url = settings.CLERK_FRONTEND_API_URL.rstrip("/")
+            jwks_url = f"{frontend_url}/.well-known/jwks.json"
+        else:
+            # Fallback to hardcoded URL (for backward compatibility)
+            jwks_url = (
+                "https://ethical-hare-79.clerk.accounts.dev/.well-known/jwks.json"
+            )
+            logger.warning(
+                "CLERK_JWKS_URL and CLERK_FRONTEND_API_URL not set, using fallback JWKS URL. "
+                "This may not work for your Clerk instance. Please set CLERK_FRONTEND_API_URL."
+            )
         jwks_client = PyJWKClient(jwks_url)
     return jwks_client
 
@@ -117,8 +129,12 @@ def verify_clerk_token(token: str) -> dict[str, Any]:
                     "Authorization": f"Bearer {settings.CLERK_SECRET_KEY}",
                     "Content-Type": "application/json",
                 }
+                # Use CLERK_BACKEND_API_URL if set, otherwise default to https://api.clerk.com
+                backend_api_url = (
+                    settings.CLERK_BACKEND_API_URL or "https://api.clerk.com"
+                )
                 response = httpx.get(
-                    f"https://api.clerk.com/v1/users/{user_id}",
+                    f"{backend_api_url}/v1/users/{user_id}",
                     headers=headers,
                     timeout=10.0,
                 )

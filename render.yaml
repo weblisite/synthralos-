@@ -75,6 +75,57 @@ services:
         #   sync: false  # Get from: Supabase Dashboard > Settings > Database > Database password
 
       # ========================================================================
+      # Clerk Authentication Configuration (REQUIRED)
+      # ========================================================================
+      # Clerk is used for user authentication and JWT token verification.
+      # See docs/CLERK_SUPABASE_SYNC.md for authentication flow details.
+      #
+      # Setup Instructions:
+      # 1. Create a Clerk account at https://clerk.com
+      # 2. Create a new application
+      # 3. Get your keys from Clerk Dashboard > API Keys
+      # 4. Set these values in Render dashboard after creating the service
+      # ========================================================================
+      - key: CLERK_SECRET_KEY
+        sync: false  # REQUIRED: Set manually in Render dashboard
+        # Get from: Clerk Dashboard > API Keys > Secret Key
+        # This is used by the backend to verify JWT tokens from Clerk
+
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false  # REQUIRED: Set manually in Render dashboard
+        # Get from: Clerk Dashboard > API Keys > Publishable Key
+        # Note: Frontend also needs VITE_CLERK_PUBLISHABLE_KEY (see frontend section)
+
+      - key: CLERK_FRONTEND_API_URL
+        sync: false  # REQUIRED: Set manually in Render dashboard
+        # Get from: Clerk Dashboard > API Keys > Frontend API URL
+        # Format: https://[YOUR_CLERK_DOMAIN].clerk.accounts.dev
+        # Example: https://ethical-hare-79.clerk.accounts.dev
+        # This is used to construct the JWKS URL for token verification
+
+      - key: CLERK_BACKEND_API_URL
+        sync: false  # REQUIRED: Set manually in Render dashboard
+        # Get from: Clerk Dashboard > API Keys > Backend API URL
+        # Format: https://api.clerk.com
+        # This is Clerk's REST API endpoint for fetching user details
+
+      - key: CLERK_JWKS_URL
+        sync: false  # Optional: JWKS endpoint for token verification (auto-constructed if not set)
+        # Format: https://[YOUR_CLERK_DOMAIN]/.well-known/jwks.json
+        # If CLERK_FRONTEND_API_URL is set, this will be auto-constructed as:
+        # {CLERK_FRONTEND_API_URL}/.well-known/jwks.json
+        # Example: https://ethical-hare-79.clerk.accounts.dev/.well-known/jwks.json
+        # You can set this manually if you prefer, otherwise it's auto-constructed
+        # NOTE: JWKS uses JSON Web Key (JWK) format, NOT PEM format. The endpoint
+        # automatically provides public keys in the correct format. You don't need
+        # to manually set PEM public keys - the JWKS endpoint handles this.
+
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false  # Optional: For webhook signature verification
+        # Get from: Clerk Dashboard > Webhooks > [Your Webhook] > Signing Secret
+        # Only needed if you're using Clerk webhooks to sync user data
+
+      # ========================================================================
       # Frontend Configuration
       # ========================================================================
       - key: FRONTEND_HOST
@@ -212,11 +263,20 @@ services:
     plan: starter
     buildCommand: ""
     envVars:
+      # ========================================================================
+      # Backend API Configuration (REQUIRED)
+      # ========================================================================
+      # This tells the frontend where to send API requests.
+      # Set this to your backend service URL after it's deployed.
+      # ========================================================================
       - key: VITE_API_URL
         sync: false  # REQUIRED: Set to backend base URL after backend deploys
         # Format: https://synthralos-backend.onrender.com
-        # IMPORTANT: Do NOT include /api/v1 - OpenAPI SDK adds it automatically
-        # Backend must be deployed first to get the URL
+        # IMPORTANT:
+        # - Do NOT include /api/v1 - OpenAPI SDK adds it automatically
+        # - Use HTTPS (not HTTP) for production
+        # - Backend must be deployed first to get the URL
+        # - After setting, redeploy frontend for changes to take effect
 
       - key: VITE_SUPABASE_URL
         sync: false  # REQUIRED: Set to your Supabase project URL
@@ -226,6 +286,24 @@ services:
       - key: VITE_SUPABASE_ANON_KEY
         sync: false  # REQUIRED: Set to your Supabase anon key
         # Get from: Supabase Dashboard > Settings > API > Project API keys > anon/public key
+
+      # ========================================================================
+      # Clerk Authentication Configuration (REQUIRED)
+      # ========================================================================
+      # Clerk is used for user authentication in the frontend.
+      # The frontend needs the publishable key to initialize Clerk SDK.
+      #
+      # Setup Instructions:
+      # 1. Create a Clerk account at https://clerk.com (if not already done)
+      # 2. Create a new application (or use existing one)
+      # 3. Get your publishable key from Clerk Dashboard > API Keys
+      # 4. Set this value in Render dashboard after creating the service
+      # ========================================================================
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        sync: false  # REQUIRED: Set manually in Render dashboard
+        # Get from: Clerk Dashboard > API Keys > Publishable Key
+        # Format: pk_test_... or pk_live_... (depending on environment)
+        # This is used by the frontend to initialize Clerk React SDK
 
   # ========================================================================
   # Workflow Worker - Processes workflow executions
