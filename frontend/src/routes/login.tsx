@@ -3,17 +3,25 @@ import { createFileRoute } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      redirect: (search.redirect as string) || undefined,
+    }
+  },
 })
 
 function LoginPage() {
+  const { redirect } = Route.useSearch()
+  // Default to dashboard ("/") if no redirect parameter is provided
+  const afterSignInUrl = redirect || "/"
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md">
         <SignIn
-          routing="path"
-          path="/login"
+          routing="virtual"
           signUpUrl="/signup"
-          afterSignInUrl="/"
+          afterSignInUrl={afterSignInUrl}
           appearance={{
             elements: {
               rootBox: "mx-auto",

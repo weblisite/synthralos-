@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains how Clerk (authentication provider) communicates with and syncs user data to your Supabase PostgreSQL database and storage.
+This document explains how Clerk (authentication provider) communicates with and syncs user data to your Supabase PostgreSQL database and storage, including real-time synchronization.
 
 ## Architecture Flow
 
@@ -54,19 +54,22 @@ Clerk sends webhook events to your backend when user data changes:
 **`user.created`**
 - Triggered when a new user signs up in Clerk
 - Backend creates corresponding user record in Supabase database
-- Sets: `email`, `full_name`, `is_active=True`
+- Sets: `email`, `full_name`, `clerk_user_id`, `phone_number`, `email_verified`, `clerk_metadata`, `is_active=True`
 - Password field is empty (Clerk handles auth)
+- Publishes real-time event to frontend
 
 **`user.updated`**
 - Triggered when user updates profile in Clerk
 - Backend updates user record in database
-- Syncs: `full_name`, `avatar_url` (from Clerk's image_url)
+- Syncs: `full_name`, `clerk_user_id`, `phone_number`, `email_verified`, `clerk_metadata`, `avatar_url` (from Clerk's image_url)
 - Updates `UserPreferences.avatar_url` if changed
+- Publishes real-time event to frontend
 
 **`user.deleted`**
 - Triggered when user deletes account in Clerk
 - Backend sets `is_active=False` in database (soft delete)
 - Preserves user data for audit purposes
+- Publishes real-time event to frontend
 
 **Code Location**: `backend/app/api/routes/clerk_webhooks.py`
 
@@ -101,11 +104,19 @@ CREATE TABLE "user" (
     email VARCHAR(255) UNIQUE NOT NULL,
     hashed_password VARCHAR(255) DEFAULT '',  -- Empty for Clerk users
     full_name VARCHAR(255),
+    clerk_user_id VARCHAR(255) UNIQUE,  -- Clerk's user ID for direct mapping
+    phone_number VARCHAR(50),
+    email_verified BOOLEAN DEFAULT FALSE,
+    clerk_metadata JSONB DEFAULT '{}',  -- Stores Clerk metadata (public, private, unsafe)
     is_active BOOLEAN DEFAULT TRUE,
     is_superuser BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );
+
+-- Indexes for faster lookups
+CREATE INDEX ix_user_clerk_user_id ON "user"(clerk_user_id);
+CREATE INDEX ix_user_email_verified ON "user"(email_verified);
 ```
 
 ### UserPreferences Table
@@ -276,6 +287,74 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
    - Monitor connection pool usage
    - Check for connection timeout errors
 
+## Real-time Synchronization
+
+### How It Works
+
+When user data changes (via webhook or lazy creation), the backend publishes events to Supabase Realtime:
+
+1. **Backend publishes events** via `backend/app/services/realtime_sync.py`
+2. **Frontend subscribes** via `frontend/src/hooks/useUserRealtime.ts`
+3. **UI updates automatically** when user data changes
+
+### Events Published
+
+- `user_created` - When a new user is created
+- `user_updated` - When user data is updated (name, email, phone, etc.)
+- `user_deleted` - When a user is deactivated
+
+### Frontend Usage
+
+```typescript
+import { useUserRealtime } from "@/hooks/useUserRealtime"
+
+function MyComponent() {
+  // Automatically subscribes to user updates
+  useUserRealtime()
+
+  // Component will automatically re-render when user data changes
+  return <div>...</div>
+}
+```
+
+### Backend Configuration
+
+The realtime sync service requires:
+- `SUPABASE_URL` - Your Supabase project URL
+- `SUPABASE_ANON_KEY` - Your Supabase anonymous key
+
+These are automatically used if configured. Real-time sync gracefully degrades if not configured.
+
+## Enhanced Sync Features
+
+### Clerk User ID Mapping
+
+Users are now mapped by `clerk_user_id` in addition to email:
+- **More reliable** - Works even if email changes
+- **Faster lookups** - Direct ID-based queries
+- **Better sync** - Webhook handler matches by Clerk ID first
+
+### Additional Fields Synced
+
+- ✅ **Phone Number** - Primary phone number from Clerk
+- ✅ **Email Verified** - Email verification status
+- ✅ **Clerk Metadata** - Public, private, and unsafe metadata
+- ✅ **Avatar URL** - Profile picture URL (synced to UserPreferences)
+
+### Metadata Structure
+
+```json
+{
+  "public_metadata": {},
+  "private_metadata": {},
+  "unsafe_metadata": {},
+  "external_id": "optional-external-id",
+  "username": "optional-username",
+  "created_at": "2025-01-04T00:00:00Z",
+  "updated_at": "2025-01-04T00:00:00Z"
+}
+```
+
 ## Future Enhancements
 
 1. **Avatar Migration to Supabase Storage**:
@@ -287,10 +366,6 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
    - Sync custom fields from database to Clerk metadata
    - Update Clerk user metadata when preferences change
 
-3. **Real-time Sync**:
-   - Use Supabase Realtime to notify frontend of user updates
-   - Update UI immediately when webhook processes
-
-4. **User Migration Tool**:
+3. **User Migration Tool**:
    - Script to migrate existing Supabase Auth users to Clerk
    - Preserve user data and relationships

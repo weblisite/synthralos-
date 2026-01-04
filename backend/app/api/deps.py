@@ -94,10 +94,19 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
             f"Verified Clerk token for user: {user_email} (ID: {clerk_user_id})"
         )
 
-        # Find user in our database by email
+        # Find user in our database by clerk_user_id first, then email
         try:
-            statement = select(User).where(User.email == user_email)
-            user = session.exec(statement).first()
+            user = None
+            if clerk_user_id:
+                # Try to find by clerk_user_id first (more reliable)
+                user = session.exec(
+                    select(User).where(User.clerk_user_id == clerk_user_id)
+                ).first()
+
+            # Fallback to email if not found by clerk_user_id
+            if not user:
+                statement = select(User).where(User.email == user_email)
+                user = session.exec(statement).first()
         except (OperationalError, DatabaseError) as db_error:
             logger.error(
                 f"Database connection error while fetching user: {str(db_error)}",
@@ -130,17 +139,54 @@ def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
         # Create user if doesn't exist (Clerk handles auth)
         if not user:
             try:
+                # Extract additional info from user_info
+                phone_number = None
+                if "phone_numbers" in user_info.get("metadata", {}):
+                    phone_numbers = user_info["metadata"].get("phone_numbers", [])
+                    if phone_numbers and isinstance(phone_numbers, list):
+                        phone_number = (
+                            phone_numbers[0].get("phone_number")
+                            if isinstance(phone_numbers[0], dict)
+                            else None
+                        )
+
                 new_user = User(
                     email=user_email,
                     hashed_password="",  # Empty for Clerk auth users
                     full_name=full_name,
+                    clerk_user_id=clerk_user_id,
+                    phone_number=phone_number,
+                    email_verified=user_info.get("email_verified", False),
+                    clerk_metadata=user_info.get("metadata", {}),
                     is_active=True,
                 )
                 session.add(new_user)
                 session.commit()
                 session.refresh(new_user)
                 user = new_user
-                logger.info(f"Created new user in database: {user_email}")
+                logger.info(
+                    f"Created new user in database: {user_email} "
+                    f"(Clerk ID: {clerk_user_id})"
+                )
+
+                # Publish real-time update
+                try:
+                    from app.services.realtime_sync import publish_user_created
+
+                    publish_user_created(
+                        str(user.id),
+                        {
+                            "email": user.email,
+                            "full_name": user.full_name,
+                            "clerk_user_id": user.clerk_user_id,
+                            "is_active": user.is_active,
+                        },
+                    )
+                except Exception as rt_error:
+                    # Don't fail user creation if realtime sync fails
+                    logger.warning(
+                        f"Failed to publish real-time update: {str(rt_error)}"
+                    )
             except Exception as create_error:
                 logger.warning(f"Error creating user, retrying: {str(create_error)}")
                 session.rollback()

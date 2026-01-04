@@ -10,8 +10,7 @@ function SignUpPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md">
         <SignUp
-          routing="path"
-          path="/signup"
+          routing="virtual"
           signInUrl="/login"
           afterSignUpUrl="/"
           appearance={{

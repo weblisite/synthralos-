@@ -9,6 +9,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { useUserRealtime } from "@/hooks/useUserRealtime"
 import { fetchCsrfToken } from "@/lib/csrf"
 
 export const Route = createFileRoute("/_layout")({
@@ -22,6 +23,9 @@ export const Route = createFileRoute("/_layout")({
 
 function Layout() {
   const { isLoaded, isSignedIn } = useClerkAuth()
+
+  // Subscribe to real-time user updates
+  useUserRealtime()
 
   // Redirect to login if not authenticated
   useEffect(() => {

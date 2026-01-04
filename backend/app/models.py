@@ -20,6 +20,12 @@ class UserBase(SQLModel):
     is_active: bool = True
     is_superuser: bool = False
     full_name: str | None = Field(default=None, max_length=255)
+    clerk_user_id: str | None = Field(
+        default=None, max_length=255, index=True, unique=True
+    )
+    phone_number: str | None = Field(default=None, max_length=50)
+    email_verified: bool = Field(default=False, index=True)
+    clerk_metadata: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
 
 
 # Properties to receive via API on creation
@@ -53,6 +59,7 @@ class UpdatePassword(SQLModel):
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str = Field(default="")  # Empty for Clerk auth users
+    # Note: clerk_user_id, phone_number, email_verified, clerk_metadata are inherited from UserBase
     workflows: list[Workflow] = Relationship(
         sa_relationship=relationship(
             "Workflow", back_populates="owner", cascade="all, delete-orphan"
