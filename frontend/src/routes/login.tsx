@@ -1,13 +1,14 @@
 import { SignIn } from "@clerk/clerk-react"
 import { createFileRoute } from "@tanstack/react-router"
+import { z } from "zod"
+
+const searchSchema = z.object({
+  redirect: z.string().optional(),
+})
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
-  validateSearch: (search: Record<string, unknown>) => {
-    return {
-      redirect: (search.redirect as string) || undefined,
-    }
-  },
+  validateSearch: searchSchema,
 })
 
 function LoginPage() {
