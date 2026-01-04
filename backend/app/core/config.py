@@ -201,6 +201,18 @@ class Settings(BaseSettings):
         2. Build from SUPABASE_URL + SUPABASE_DB_PASSWORD - if Supabase configured
         3. Legacy POSTGRES_* variables - for backward compatibility
         """
+        # Log which configuration path we're taking (for debugging)
+        if self.SUPABASE_DB_URL:
+            logger.info(
+                f"Using SUPABASE_DB_URL (length: {len(self.SUPABASE_DB_URL)} chars, "
+                f"starts with: {self.SUPABASE_DB_URL[:30]}...)"
+            )
+        elif self.SUPABASE_URL and self.SUPABASE_DB_PASSWORD:
+            logger.warning(
+                "SUPABASE_DB_URL not set, falling back to building connection from "
+                f"SUPABASE_URL + SUPABASE_DB_PASSWORD (hostname will be: db.{self.SUPABASE_URL.split('.')[0].replace('https://', '')}.supabase.co)"
+            )
+
         # Option 1: Use Supabase full connection string if provided
         if self.SUPABASE_DB_URL:
             # Use the connection string as-is - no automatic conversion

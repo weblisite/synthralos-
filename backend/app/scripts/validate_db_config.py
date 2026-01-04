@@ -75,6 +75,27 @@ def main():
 
         logger.info("Validating database configuration...")
 
+        # Log which environment variables are set (for debugging)
+        import os
+
+        has_db_url = bool(os.getenv("SUPABASE_DB_URL"))
+        has_supabase_url = bool(os.getenv("SUPABASE_URL"))
+        has_db_password = bool(os.getenv("SUPABASE_DB_PASSWORD"))
+
+        logger.info(
+            f"Environment variables check: "
+            f"SUPABASE_DB_URL={'SET' if has_db_url else 'NOT SET'}, "
+            f"SUPABASE_URL={'SET' if has_supabase_url else 'NOT SET'}, "
+            f"SUPABASE_DB_PASSWORD={'SET' if has_db_password else 'NOT SET'}"
+        )
+
+        if not has_db_url:
+            logger.warning(
+                "⚠️  SUPABASE_DB_URL is not set in environment variables! "
+                "The system will fall back to building connection from SUPABASE_URL + SUPABASE_DB_PASSWORD, "
+                "which creates a direct connection (not recommended for Render)."
+            )
+
         # Get the database URL (this will trigger our validation in config.py)
         db_url = str(settings.SQLALCHEMY_DATABASE_URI)
 
